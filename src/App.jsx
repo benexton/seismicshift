@@ -7,7 +7,7 @@ const BRAND = '#17638f'
 const BRAND_DARK = '#17638f'
 const BRAND_TINT = '#eef1f3'
 
-function Model({ src = '/QD155.glb', rotation = [Math.PI / 2, 0, 0], scale = [1.5, 1.5, 1.5] }) {
+function Model({ src = '/QD155_compressed.glb', rotation = [Math.PI / 2, 0, 0], scale = [1.5, 1.5, 1.5] }) {
   const { scene } = useGLTF(src)
   return (
     <group rotation={rotation} scale={scale}>
@@ -66,7 +66,7 @@ function HeroPills({ category, onContact }) {
         </a>
       </div>
       <p className="mt-4 text-xs text-slate-400 leading-relaxed">
-        Design Guide coming soon -{' '}
+        Design Guide coming soon —{' '}
         <button onClick={onContact} className="underline hover:text-slate-600 transition-colors">contact us</button>
         {' '}for design support.
       </p>
@@ -227,7 +227,7 @@ function VideoCard({ title, vimeo, translate }) {
       ref={cardRef}
       className="rounded-3xl border border-slate-100 shadow-sm overflow-hidden relative h-[220px] lg:h-[280px]"
       onMouseEnter={() => setActive(true)}
-      // No onMouseLeave - video card stays active once hovered
+      // No onMouseLeave — video card stays active once hovered
       onClick={() => window.innerWidth < 1024 && setActive(a => !a)}
     >
       {playing && vimeoId ? (
@@ -584,7 +584,7 @@ function App() {
       onPointerEnter={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1.06)')}
       onPointerLeave={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1)')}>
       <Canvas shadows camera={{ position: [2, 2, 6], fov: 45 }}>
-        <Suspense fallback={null}><Stage environment="city" intensity={0.6} contactShadow={{ opacity: 0.5, blur: 2 }} center={{ disableY: false }}><Model src="./QDUntitled37.glb" scale={[1.4, 1.4, 1.4]} rotation={[Math.PI / 2, -0.2, 0]} /></Stage></Suspense>
+        <Suspense fallback={null}><Stage environment="city" intensity={0.6} contactShadow={{ opacity: 0.5, blur: 2 }} center={{ disableY: false }}><Model src="./QDUntitled37_compressed.glb" scale={[1.4, 1.4, 1.4]} rotation={[Math.PI / 2, -0.2, 0]} /></Stage></Suspense>
         <OrbitControls enableZoom={false} autoRotate />
       </Canvas>
     </div>
@@ -596,7 +596,7 @@ function App() {
       onPointerEnter={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1.06)')}
       onPointerLeave={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1)')}>
       <Canvas shadows camera={{ position: [2, 2, 6], fov: 45 }}>
-        <Suspense fallback={null}><Stage environment="sunset" intensity={0.3} contactShadow={{ opacity: 0.3, blur: 2.5 }} center={{ disableY: false }}><Model src="./bestFF.glb" scale={[0.8, 0.8, 0.8]} rotation={[0.3, 0, 0]} /></Stage></Suspense>
+        <Suspense fallback={null}><Stage environment="sunset" intensity={0.3} contactShadow={{ opacity: 0.3, blur: 2.5 }} center={{ disableY: false }}><Model src="./bestFF_compressed.glb" scale={[0.8, 0.8, 0.8]} rotation={[0.3, 0, 0]} /></Stage></Suspense>
         <OrbitControls enableZoom={false} autoRotate />
       </Canvas>
     </div>
