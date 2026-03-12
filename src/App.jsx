@@ -143,35 +143,35 @@ function ImageCard({ title, img, body }) {
   const cardRef = useRef(null)
 
   useEffect(() => {
-    const isMobile = window.innerWidth < 1024
-    if (!isMobile || !cardRef.current) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const viewportHeight = window.innerHeight
-        const centerStart = viewportHeight * (1/3)
-        const centerEnd = viewportHeight * (2/3)
-        const rect = entry.boundingClientRect
-        const isInCenterZone = (rect.bottom >= centerStart && rect.top <= centerEnd) && entry.isIntersecting
-        setActive(isInCenterZone)
-      },
-      { threshold: Array.from({length: 101}, (_, i) => i / 100) }
-    )
-    observer.observe(cardRef.current)
-    return () => observer.disconnect()
+    if (window.innerWidth >= 1024) return
+    const check = () => {
+      if (!cardRef.current) return
+      const vh = window.innerHeight
+      const rect = cardRef.current.getBoundingClientRect()
+      const cardCenter = (rect.top + rect.bottom) / 2
+      setActive(cardCenter > vh / 3 && cardCenter < (vh * 2) / 3)
+    }
+    const raf = requestAnimationFrame(check)
+    window.addEventListener('scroll', check, { passive: true })
+    document.addEventListener('scroll', check, { passive: true })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', check)
+      document.removeEventListener('scroll', check)
+    }
   }, [])
 
   return (
     <div ref={cardRef}
       className="rounded-3xl border border-slate-100 shadow-sm overflow-hidden relative h-[220px] lg:h-[280px]"
       onMouseEnter={() => setActive(true)}
-      onMouseLeave={() => setActive(false)}
-      onClick={() => window.innerWidth < 1024 && setActive(a => !a)}>
+      onMouseLeave={() => setActive(false)}>
       <img src={img} alt={title}
         className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
         style={{ filter: active ? 'blur(4px) brightness(0.25)' : 'brightness(0.55)' }} />
-      <div className="absolute inset-0 flex flex-col justify-start p-8">
-        <h3 className="text-white font-black text-lg tracking-tight leading-snug">{title}</h3>
-        <p className="text-slate-200 text-sm leading-relaxed mt-4 transition-all duration-500"
+      <div className="absolute inset-0 flex flex-col justify-start p-6">
+        <h3 className="text-white font-black text-sm tracking-tight leading-snug">{title}</h3>
+        <p className="text-slate-200 text-[13px] leading-relaxed mt-2 transition-all duration-500"
           style={{ opacity: active ? 1 : 0, transform: active ? 'translateY(0)' : 'translateY(-6px)' }}>
           {body}
         </p>
@@ -200,29 +200,30 @@ function VideoCard({ title, vimeo, translate }) {
   }, [])
 
   useEffect(() => {
-    const isMobile = window.innerWidth < 1024
-    if (!isMobile || !cardRef.current) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const viewportHeight = window.innerHeight
-        const centerStart = viewportHeight * (1/3)
-        const centerEnd = viewportHeight * (2/3)
-        const rect = entry.boundingClientRect
-        const isInCenterZone = (rect.bottom >= centerStart && rect.top <= centerEnd) && entry.isIntersecting
-        setActive(isInCenterZone)
-        if (!isInCenterZone) setPlaying(false)
-      },
-      { threshold: Array.from({length: 101}, (_, i) => i / 100) }
-    )
-    observer.observe(cardRef.current)
-    return () => observer.disconnect()
+    if (window.innerWidth >= 1024) return
+    const check = () => {
+      if (!cardRef.current) return
+      const vh = window.innerHeight
+      const rect = cardRef.current.getBoundingClientRect()
+      const cardCenter = (rect.top + rect.bottom) / 2
+      const visible = cardCenter > vh / 3 && cardCenter < (vh * 2) / 3
+      setActive(visible)
+      if (!visible) setPlaying(false)
+    }
+    const raf = requestAnimationFrame(check)
+    window.addEventListener('scroll', check, { passive: true })
+    document.addEventListener('scroll', check, { passive: true })
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', check)
+      document.removeEventListener('scroll', check)
+    }
   }, [])
 
   return (
     <div ref={cardRef}
       className="rounded-3xl border border-slate-100 shadow-sm overflow-hidden relative h-[220px] lg:h-[280px]"
-      onMouseEnter={() => setActive(true)}
-      onClick={() => window.innerWidth < 1024 && setActive(a => !a)}>
+      onMouseEnter={() => setActive(true)}>
       {playing && vimeoId ? (
         <div className="absolute inset-0 w-full h-full overflow-hidden">
           <iframe ref={iframeRef}
@@ -236,9 +237,9 @@ function VideoCard({ title, vimeo, translate }) {
           <img src={`https://vumbnail.com/${vimeoId}.jpg`} alt={title}
             className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
             style={{ filter: active ? 'brightness(0.15)' : 'brightness(0.55)' }} />
-          <div className="absolute inset-0 flex flex-col justify-start p-8 transition-all duration-500"
+          <div className="absolute inset-0 flex flex-col justify-start p-6 transition-all duration-500"
             style={{ opacity: active ? 0 : 1 }}>
-            <h3 className="text-white font-black text-lg tracking-tight leading-snug">{title}</h3>
+            <h3 className="text-white font-black text-sm tracking-tight leading-snug">{title}</h3>
           </div>
           <div className="absolute inset-0 flex items-center justify-center transition-all duration-500"
             style={{ opacity: active ? 1 : 0 }}>
@@ -486,7 +487,7 @@ function HeroSection({ category, modelNode, bodyText, onContact }) {
   return (
     <>
       <div className="hidden md:grid md:grid-cols-2 md:gap-8 md:items-start mb-12">
-        <div className="pt-12">
+        <div className="pt-8">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-black leading-tight tracking-tighter text-slate-900 mb-6">
             {category === "infrastructure" && <>A shock-absorber for your <RollingWord category="infrastructure" /></>}
             {category === "residential"    && <>A shock-absorber for your <RollingWord category="residential" /></>}
@@ -497,14 +498,16 @@ function HeroSection({ category, modelNode, bodyText, onContact }) {
         </div>
         {modelNode}
       </div>
-      <div className="md:hidden mb-10 pt-8">
-        <h1 className="text-2xl font-black leading-tight tracking-tighter text-slate-900 mb-4">
-          {category === "infrastructure" && <>An airbag for your <RollingWord category="infrastructure" /></>}
+      <div className="md:hidden mb-6 pt-2">
+        <h1 className="text-2xl font-black leading-tight tracking-tighter text-slate-900 mb-2">
+          {category === "infrastructure" && <>A shock-absorber for your <RollingWord category="infrastructure" /></>}
           {category === "residential"    && <>A shock-absorber for your <RollingWord category="residential" /></>}
           {category === "assets"         && <>Peace of mind for your <RollingWord category="assets" /></>}
         </h1>
-        <div style={{ height: '220px' }}>{modelNode}</div>
-        <p className="text-sm text-slate-500 leading-relaxed mt-4">{bodyText}</p>
+        <div style={{ height: '220px', marginBottom: '20px' }}>
+          <div style={{ marginTop: '-60px', height: '280px' }}>{modelNode}</div>
+        </div>
+        <p className="text-sm text-slate-500 leading-relaxed mt-2">{bodyText}</p>
         <HeroPills category={category} onContact={onContact} />
       </div>
     </>
@@ -556,7 +559,7 @@ function App() {
       onPointerEnter={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1.06)')}
       onPointerLeave={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1)')}
       {...trackMouse(qdMouse)}>
-      <Canvas shadows camera={{ position: [2, 2, 6], fov: 45 }}>
+      <Canvas shadows camera={{ position: [2, 0.5, 6], fov: 38 }}>
         <Suspense fallback={null}>
           <Stage environment="city" intensity={0.6} contactShadow={{ opacity: 0.5, blur: 2 }} center={{ disableY: false }}>
             <Model src="./QDUntitled37_compressed_v2.glb" scale={[1.4, 1.4, 1.4]} rotation={[Math.PI / 2, -0.2, 0]} mouse={qdMouse} />
@@ -573,7 +576,7 @@ function App() {
       onPointerEnter={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1.06)')}
       onPointerLeave={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1)')}
       {...trackMouse(ffMouse)}>
-      <Canvas shadows camera={{ position: [2, 2, 6], fov: 45 }}>
+      <Canvas shadows camera={{ position: [0, 1, 6], fov: 38 }}>
         <Suspense fallback={null}>
           <Stage environment="sunset" intensity={0.3} contactShadow={{ opacity: 0.3, blur: 2.5 }} center={{ disableY: false }}>
             <Model src="./bestFF_compressed.glb" scale={[0.8, 0.8, 0.8]} rotation={[0.3, 0, 0]} mouse={ffMouse} />
@@ -628,13 +631,12 @@ function App() {
                 Contact Us
               </button>
             </div>
-            <button className="lg:hidden ml-auto p-2 text-slate-700" onClick={() => setMobileMenuOpen(o => !o)} aria-label="Menu" aria-expanded={mobileMenuOpen}>
-              <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                {mobileMenuOpen
-                  ? <><line x1="4" y1="4" x2="18" y2="18"/><line x1="18" y1="4" x2="4" y2="18"/></>
-                  : <><line x1="3" y1="6" x2="19" y2="6"/><line x1="3" y1="12" x2="19" y2="12"/><line x1="3" y1="18" x2="19" y2="18"/></>
-                }
-              </svg>
+            <button className="lg:hidden ml-auto px-4 py-1.5 rounded-full border-2 font-bold text-[11px] tracking-wide transition-all duration-200"
+              onClick={() => setMobileMenuOpen(o => !o)} aria-label="Menu" aria-expanded={mobileMenuOpen}
+              style={mobileMenuOpen
+                ? { borderColor: BRAND, backgroundColor: BRAND_TINT, color: BRAND }
+                : { borderColor: '#cbd5e1', backgroundColor: 'white', color: '#475569' }}>
+              {mobileMenuOpen ? '✕ Close' : 'Choose your solution'}
             </button>
           </div>
           {mobileMenuOpen && (
