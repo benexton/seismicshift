@@ -170,8 +170,8 @@ function ImageCard({ title, img, body }) {
         className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
         style={{ filter: active ? 'blur(4px) brightness(0.25)' : 'brightness(0.55)' }} />
       <div className="absolute inset-0 flex flex-col justify-start p-6">
-        <h3 className="text-white font-black text-sm tracking-tight leading-snug">{title}</h3>
-        <p className="text-slate-200 text-[13px] leading-relaxed mt-2 transition-all duration-500"
+        <h3 className="text-white font-black text-sm lg:text-lg tracking-tight leading-snug">{title}</h3>
+        <p className="text-slate-200 text-[13px] lg:text-base leading-relaxed mt-2 transition-all duration-500"
           style={{ opacity: active ? 1 : 0, transform: active ? 'translateY(0)' : 'translateY(-6px)' }}>
           {body}
         </p>
@@ -239,7 +239,7 @@ function VideoCard({ title, vimeo, translate }) {
             style={{ filter: active ? 'brightness(0.15)' : 'brightness(0.55)' }} />
           <div className="absolute inset-0 flex flex-col justify-start p-6 transition-all duration-500"
             style={{ opacity: active ? 0 : 1 }}>
-            <h3 className="text-white font-black text-sm tracking-tight leading-snug">{title}</h3>
+            <h3 className="text-white font-black text-sm lg:text-lg tracking-tight leading-snug">{title}</h3>
           </div>
           <div className="absolute inset-0 flex items-center justify-center transition-all duration-500"
             style={{ opacity: active ? 1 : 0 }}>
@@ -500,7 +500,7 @@ function HeroSection({ category, modelNode, bodyText, onContact }) {
       </div>
       <div className="md:hidden mb-6 pt-2">
         <h1 className="text-2xl font-black leading-tight tracking-tighter text-slate-900 mb-2">
-          {category === "infrastructure" && <>A shock-absorber for your <RollingWord category="infrastructure" /></>}
+          {category === "infrastructure" && <>An airbag for your <RollingWord category="infrastructure" /></>}
           {category === "residential"    && <>A shock-absorber for your <RollingWord category="residential" /></>}
           {category === "assets"         && <>Peace of mind for your <RollingWord category="assets" /></>}
         </h1>
