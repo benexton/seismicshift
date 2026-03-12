@@ -1,5 +1,5 @@
 import React, { Suspense, useRef, useEffect, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF, Stage } from '@react-three/drei'
 import logo from './assets/Transparent Logo.png'
 
@@ -7,10 +7,20 @@ const BRAND = '#17638f'
 const BRAND_DARK = '#17638f'
 const BRAND_TINT = '#eef1f3'
 
- function Model({ src = './QDUntitled37_compressed_v2.glb', rotation = [Math.PI / 2, 0, 0], scale = [1.5, 1.5, 1.5] }) {
+function Model({ src = './QDUntitled37_compressed_v2.glb', rotation = [Math.PI / 2, 0, 0], scale = [1.5, 1.5, 1.5], mouse }) {
   const { scene } = useGLTF(src)
+  const groupRef = useRef()
+
+  useFrame(() => {
+    if (!groupRef.current) return
+    const targetX = mouse?.current ? mouse.current.y * 0.25 : 0
+    const targetZ = mouse?.current ? mouse.current.x * 0.25 : 0
+    groupRef.current.rotation.x += (rotation[0] + targetX - groupRef.current.rotation.x) * 0.06
+    groupRef.current.rotation.z += (rotation[2] + targetZ - groupRef.current.rotation.z) * 0.06
+  })
+
   return (
-    <group rotation={rotation} scale={scale}>
+    <group ref={groupRef} rotation={rotation} scale={scale}>
       <primitive object={scene} />
     </group>
   )
@@ -58,7 +68,7 @@ function HeroPills({ category, onContact }) {
   return (
     <div>
       <div className="flex gap-3 mt-10 mb-2 flex-wrap">
-<a href={installFile} download={installFile.split('/').pop()}
+        <a href={installFile} download={installFile.split('/').pop()}
           onMouseEnter={() => setHover2(true)} onMouseLeave={() => setHover2(false)}
           className="px-5 py-2 rounded-full border-2 font-bold text-xs tracking-wide transition-all duration-200"
           style={{ borderColor: BRAND, color: BRAND, backgroundColor: hover2 ? BRAND_TINT : 'white' }}>
@@ -74,29 +84,28 @@ function HeroPills({ category, onContact }) {
   )
 }
 
-// ── Stats ──
 const infrastructureStats = {
   label:  "Design study: Canterbury Solar Panel Installation on Existing Building",
   stat1:  "4",      label1: "Quake Defender® devices",
-  stat2:  "10t",     label2: "Additional weight added to structure",
-  stat3:  ">50%",     label3: "Seismic force reduction target",
-  stat4:  "±50mm",   label4: "System movement",
+  stat2:  "10t",    label2: "Additional weight added to structure",
+  stat3:  ">50%",   label3: "Seismic force reduction target",
+  stat4:  "±50mm",  label4: "System movement",
 }
 
 const residentialStats = {
   label:  "Case study: Central Otago Home",
-  stat1:  "23",          label1: "FrontFoot® devices",
+  stat1:  "23",         label1: "FrontFoot® devices",
   stat2:  "1.5-2.0%",  label2: "Addition to build cost",
-  stat3:  "238m²",     label3: "Floor area",
-  stat4:  "±20mm",     label4: "System movement",
+  stat3:  "238m²",      label3: "Floor area",
+  stat4:  "±20mm",      label4: "System movement",
 }
 
 const assetsStats = {
   label:  "Design study: Canterbury IT Equipment Plinth",
-  stat1:  "4",        label1: "FrontFoot® devices",
-  stat2:  "8m²",       label2: "Plinth footprint",
-  stat3:  "140mm",       label3: "Plinth thickness",
-  stat4:  "±20mm",     label4: "System movement",
+  stat1:  "4",      label1: "FrontFoot® devices",
+  stat2:  "8m²",    label2: "Plinth footprint",
+  stat3:  "140mm",  label3: "Plinth thickness",
+  stat4:  "±20mm",  label4: "System movement",
 }
 
 const categoryImages = {
@@ -123,14 +132,12 @@ const howItWorksCards = {
   ],
 }
 
-// ── "How can Quake Defender help you?" cards (infrastructure only) ──
 const qdHelperCards = [
-  { title: "Better new builds at lower cost",        img: "./qdhelp1.png", body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost." },
-  { title: "Adding weight to existing buildings",  img: "./qdhelp2.png", body: "Solar panels and other additions impact on the seismic performance of a structure. Quake Defender® enables these impacts to be dealt with in an affordable manner." },
-  { title: "Strengthening existing buildings",     img: "./qdhelp3.png", body: "Quake Defender® can be used to strengthen certain aspects of existing buildings in an affordable manner, when compared to traditional methods." },
+  { title: "Better new builds at lower cost",       img: "./qdhelp1.png", body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost." },
+  { title: "Adding weight to existing buildings",   img: "./qdhelp2.png", body: "Solar panels and other additions impact on the seismic performance of a structure. Quake Defender® enables these impacts to be dealt with in an affordable manner." },
+  { title: "Strengthening existing buildings",      img: "./qdhelp3.png", body: "Quake Defender® can be used to strengthen certain aspects of existing buildings in an affordable manner, when compared to traditional methods." },
 ]
 
-// ── Image-only card (mouse-off resets) ──
 function ImageCard({ title, img, body }) {
   const [active, setActive] = useState(false)
   const cardRef = useRef(null)
@@ -154,19 +161,14 @@ function ImageCard({ title, img, body }) {
   }, [])
 
   return (
-    <div
-      ref={cardRef}
+    <div ref={cardRef}
       className="rounded-3xl border border-slate-100 shadow-sm overflow-hidden relative h-[220px] lg:h-[280px]"
       onMouseEnter={() => setActive(true)}
       onMouseLeave={() => setActive(false)}
-      onClick={() => window.innerWidth < 1024 && setActive(a => !a)}
-    >
-      <img
-        src={img}
-        alt={title}
+      onClick={() => window.innerWidth < 1024 && setActive(a => !a)}>
+      <img src={img} alt={title}
         className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
-        style={{ filter: active ? 'blur(4px) brightness(0.25)' : 'brightness(0.55)' }}
-      />
+        style={{ filter: active ? 'blur(4px) brightness(0.25)' : 'brightness(0.55)' }} />
       <div className="absolute inset-0 flex flex-col justify-start p-8">
         <h3 className="text-white font-black text-lg tracking-tight leading-snug">{title}</h3>
         <p className="text-slate-200 text-sm leading-relaxed mt-4 transition-all duration-500"
@@ -178,25 +180,19 @@ function ImageCard({ title, img, body }) {
   )
 }
 
-// ── Video card (mouse-off does NOT reset; resets when video ends) ──
 function VideoCard({ title, vimeo, translate }) {
   const [active, setActive] = useState(false)
   const [playing, setPlaying] = useState(false)
   const cardRef = useRef(null)
   const iframeRef = useRef(null)
-
   const vimeoId = vimeo ? vimeo.split('/').pop() : null
   const videoTransform = translate || 'translate(-50%, -50%)'
 
-  // Reset when video ends via postMessage
   useEffect(() => {
     const handleMessage = (e) => {
       try {
         const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
-        if (data.event === 'finish') {
-          setPlaying(false)
-          setActive(false)
-        }
+        if (data.event === 'finish') { setPlaying(false); setActive(false) }
       } catch {}
     }
     window.addEventListener('message', handleMessage)
@@ -223,44 +219,32 @@ function VideoCard({ title, vimeo, translate }) {
   }, [])
 
   return (
-    <div
-      ref={cardRef}
+    <div ref={cardRef}
       className="rounded-3xl border border-slate-100 shadow-sm overflow-hidden relative h-[220px] lg:h-[280px]"
       onMouseEnter={() => setActive(true)}
-      // No onMouseLeave — video card stays active once hovered
-      onClick={() => window.innerWidth < 1024 && setActive(a => !a)}
-    >
+      onClick={() => window.innerWidth < 1024 && setActive(a => !a)}>
       {playing && vimeoId ? (
         <div className="absolute inset-0 w-full h-full overflow-hidden">
-          <iframe
-            ref={iframeRef}
+          <iframe ref={iframeRef}
             src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0&api=1`}
             className="absolute top-1/2 left-1/2"
             style={{ border: 0, width: '158%', height: '158%', transform: videoTransform }}
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-            title={title}
-          />
+            allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title={title} />
         </div>
       ) : (
         <>
-          <img
-            src={`https://vumbnail.com/${vimeoId}.jpg`}
-            alt={title}
+          <img src={`https://vumbnail.com/${vimeoId}.jpg`} alt={title}
             className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
-            style={{ filter: active ? 'brightness(0.15)' : 'brightness(0.55)' }}
-          />
+            style={{ filter: active ? 'brightness(0.15)' : 'brightness(0.55)' }} />
           <div className="absolute inset-0 flex flex-col justify-start p-8 transition-all duration-500"
             style={{ opacity: active ? 0 : 1 }}>
             <h3 className="text-white font-black text-lg tracking-tight leading-snug">{title}</h3>
           </div>
           <div className="absolute inset-0 flex items-center justify-center transition-all duration-500"
             style={{ opacity: active ? 1 : 0 }}>
-            <button
-              onClick={e => { e.stopPropagation(); setPlaying(true) }}
+            <button onClick={e => { e.stopPropagation(); setPlaying(true) }}
               className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-white font-bold text-sm tracking-wide shadow-xl transition-all"
-              style={{ color: BRAND }}
-            >
+              style={{ color: BRAND }}>
               <svg className="w-4 h-4 ml-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
               </svg>
@@ -273,7 +257,6 @@ function VideoCard({ title, vimeo, translate }) {
   )
 }
 
-// ── Route each card to the right component ──
 function HowItWorksCard(props) {
   if (props.vimeo) return <VideoCard {...props} />
   return <ImageCard {...props} />
@@ -285,14 +268,10 @@ function OurMissionVideo({ vimeoId }) {
     <div className="absolute top-0 left-0 w-[90%] h-72 bg-slate-900 rounded-3xl border border-slate-200 overflow-hidden shadow-md z-10 group">
       {playing ? (
         <div className="absolute inset-0 w-full h-full overflow-hidden">
-          <iframe
-            src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0`}
+          <iframe src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0`}
             className="absolute top-1/2 left-1/2"
             style={{ border: 0, width: '158%', height: '158%', transform: 'translate(-45%, -50%)' }}
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-            title="Seismic Shift Story"
-          />
+            allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title="Seismic Shift Story" />
         </div>
       ) : (
         <>
@@ -319,14 +298,10 @@ function OurMissionVideoMobile({ vimeoId }) {
     <div className="w-full mb-4 rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-slate-900 relative" style={{ aspectRatio: '16/9' }}>
       {playing ? (
         <div className="absolute inset-0 w-full h-full overflow-hidden">
-          <iframe
-            src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0`}
+          <iframe src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0`}
             className="absolute top-1/2 left-1/2"
             style={{ border: 0, width: '158%', height: '158%', transform: 'translate(-45%, -50%)' }}
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-            title="Seismic Shift Story"
-          />
+            allow="autoplay; fullscreen; picture-in-picture" allowFullScreen title="Seismic Shift Story" />
         </div>
       ) : (
         <>
@@ -347,18 +322,15 @@ function OurMissionVideoMobile({ vimeoId }) {
   )
 }
 
-// ── Legal Modal ──
 function LegalModal({ title, onClose, children }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [])
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6"
-      onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6" onClick={onClose}>
       <div className="absolute inset-0 bg-slate-900 bg-opacity-50 backdrop-blur-sm" />
-      <div
-        className="relative bg-white w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]"
+      <div className="relative bg-white w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-8 pt-7 pb-5 border-b border-slate-100 flex-shrink-0">
           <h2 className="text-lg font-black tracking-tight text-slate-900">{title}</h2>
@@ -370,9 +342,7 @@ function LegalModal({ title, onClose, children }) {
             </svg>
           </button>
         </div>
-        <div className="overflow-y-auto px-8 py-6 text-sm text-slate-600 leading-relaxed space-y-5">
-          {children}
-        </div>
+        <div className="overflow-y-auto px-8 py-6 text-sm text-slate-600 leading-relaxed space-y-5">{children}</div>
       </div>
     </div>
   )
@@ -430,21 +400,11 @@ function ContactPage({ onBack }) {
     const data = new FormData(form)
     try {
       const response = await fetch('https://formspree.io/f/mjgepzqa', {
-        method: 'POST',
-        body: data,
-        headers: { 'Accept': 'application/json' }
+        method: 'POST', body: data, headers: { 'Accept': 'application/json' }
       })
-      if (response.ok) {
-        setStatus('success')
-        form.reset()
-      } else {
-        setStatus('error')
-        setTimeout(() => setStatus('idle'), 5000)
-      }
-    } catch (error) {
-      setStatus('error')
-      setTimeout(() => setStatus('idle'), 5000)
-    }
+      if (response.ok) { setStatus('success'); form.reset() }
+      else { setStatus('error'); setTimeout(() => setStatus('idle'), 5000) }
+    } catch { setStatus('error'); setTimeout(() => setStatus('idle'), 5000) }
   }
 
   return (
@@ -452,7 +412,8 @@ function ContactPage({ onBack }) {
       <nav className="sticky top-0 z-50 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-8 md:px-16 w-full flex items-center justify-between py-3">
           <button onClick={onBack}><img src={logo} alt="Seismic Shift Logo" className="h-9 w-auto object-contain" /></button>
-          <button onClick={onBack} className="text-sm font-bold tracking-widest text-slate-500 transition" onMouseEnter={e => e.target.style.color = BRAND} onMouseLeave={e => e.target.style.color = ''}>← Back</button>
+          <button onClick={onBack} className="text-sm font-bold tracking-widest text-slate-500 transition"
+            onMouseEnter={e => e.target.style.color = BRAND} onMouseLeave={e => e.target.style.color = ''}>← Back</button>
         </div>
       </nav>
       <div className="max-w-7xl mx-auto px-8 md:px-16 py-8 md:py-12">
@@ -463,32 +424,28 @@ function ContactPage({ onBack }) {
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Name</label>
               <input type="text" name="name" required
                 className="w-full px-5 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 text-base transition"
-                onFocus={e => e.target.style.borderColor = BRAND}
-                onBlur={e => e.target.style.borderColor = ''}
+                onFocus={e => e.target.style.borderColor = BRAND} onBlur={e => e.target.style.borderColor = ''}
                 placeholder="Your full name" />
             </div>
             <div>
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Phone</label>
               <input type="tel" name="phone"
                 className="w-full px-5 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 text-base transition"
-                onFocus={e => e.target.style.borderColor = BRAND}
-                onBlur={e => e.target.style.borderColor = ''}
+                onFocus={e => e.target.style.borderColor = BRAND} onBlur={e => e.target.style.borderColor = ''}
                 placeholder="+64 21 000 0000" />
             </div>
             <div>
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Email</label>
               <input type="email" name="email" required
                 className="w-full px-5 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 text-base transition"
-                onFocus={e => e.target.style.borderColor = BRAND}
-                onBlur={e => e.target.style.borderColor = ''}
+                onFocus={e => e.target.style.borderColor = BRAND} onBlur={e => e.target.style.borderColor = ''}
                 placeholder="you@example.com" />
             </div>
             <div className="flex-1">
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">Message</label>
               <textarea rows={6} name="message" required
                 className="w-full px-5 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 text-base transition resize-none"
-                onFocus={e => e.target.style.borderColor = BRAND}
-                onBlur={e => e.target.style.borderColor = ''}
+                onFocus={e => e.target.style.borderColor = BRAND} onBlur={e => e.target.style.borderColor = ''}
                 placeholder="Tell us about your project..." />
             </div>
             {status === 'success' && (
@@ -525,11 +482,9 @@ function ContactPage({ onBack }) {
   )
 }
 
-
 function HeroSection({ category, modelNode, bodyText, onContact }) {
   return (
     <>
-      {/* ── DESKTOP layout (md+) ── */}
       <div className="hidden md:grid md:grid-cols-2 md:gap-8 md:items-start mb-12">
         <div className="pt-12">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-black leading-tight tracking-tighter text-slate-900 mb-6">
@@ -542,17 +497,13 @@ function HeroSection({ category, modelNode, bodyText, onContact }) {
         </div>
         {modelNode}
       </div>
-
-      {/* ── MOBILE layout (<md) ── */}
       <div className="md:hidden mb-10 pt-8">
         <h1 className="text-2xl font-black leading-tight tracking-tighter text-slate-900 mb-4">
           {category === "infrastructure" && <>An airbag for your <RollingWord category="infrastructure" /></>}
           {category === "residential"    && <>A shock-absorber for your <RollingWord category="residential" /></>}
           {category === "assets"         && <>Peace of mind for your <RollingWord category="assets" /></>}
         </h1>
-        <div style={{ height: '220px' }}>
-          {modelNode}
-        </div>
+        <div style={{ height: '220px' }}>{modelNode}</div>
         <p className="text-sm text-slate-500 leading-relaxed mt-4">{bodyText}</p>
         <HeroPills category={category} onContact={onContact} />
       </div>
@@ -566,6 +517,10 @@ function App() {
   const [showFinePrint, setShowFinePrint] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const qdContainerRef = useRef()
+  const ffContainerRef = useRef()
+  const qdMouse = useRef(null)
+  const ffMouse = useRef(null)
 
   useEffect(() => {
     if (window.location.hash === '#our-mission') {
@@ -574,8 +529,6 @@ function App() {
       }, 500)
     }
   }, [])
-  const qdContainerRef = useRef()
-  const ffContainerRef = useRef()
 
   const image = categoryImages[activeCategory]
   const howCards = howItWorksCards[activeCategory]
@@ -586,25 +539,46 @@ function App() {
 
   if (showContact) return <ContactPage onBack={() => { setShowContact(false); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
 
+  const trackMouse = (mouseRef) => ({
+    onMouseMove: (e) => {
+      const rect = e.currentTarget.getBoundingClientRect()
+      mouseRef.current = {
+        x: ((e.clientX - rect.left) / rect.width - 0.5) * 2,
+        y: ((e.clientY - rect.top) / rect.height - 0.5) * 2,
+      }
+    },
+    onMouseLeave: () => { mouseRef.current = null },
+  })
+
   const qdModel = (
-    <div ref={qdContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full h-full"
+    <div ref={qdContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full"
       style={{ transition: 'transform .22s ease', transformOrigin: 'center bottom' }}
       onPointerEnter={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1.06)')}
-      onPointerLeave={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1)')}>
+      onPointerLeave={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1)')}
+      {...trackMouse(qdMouse)}>
       <Canvas shadows camera={{ position: [2, 2, 6], fov: 45 }}>
-        <Suspense fallback={null}><Stage environment="city" intensity={0.6} contactShadow={{ opacity: 0.5, blur: 2 }} center={{ disableY: false }}><Model src="./QDUntitled37_compressed_v2.glb" scale={[1.4, 1.4, 1.4]} rotation={[Math.PI / 2, -0.2, 0]} /></Stage></Suspense>
+        <Suspense fallback={null}>
+          <Stage environment="city" intensity={0.6} contactShadow={{ opacity: 0.5, blur: 2 }} center={{ disableY: false }}>
+            <Model src="./QDUntitled37_compressed_v2.glb" scale={[1.4, 1.4, 1.4]} rotation={[Math.PI / 2, -0.2, 0]} mouse={qdMouse} />
+          </Stage>
+        </Suspense>
         <OrbitControls enableZoom={false} autoRotate />
       </Canvas>
     </div>
   )
 
   const ffModel = (
-    <div ref={ffContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full h-full"
+    <div ref={ffContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full"
       style={{ transition: 'transform .22s ease', transformOrigin: 'center bottom' }}
       onPointerEnter={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1.06)')}
-      onPointerLeave={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1)')}>
+      onPointerLeave={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1)')}
+      {...trackMouse(ffMouse)}>
       <Canvas shadows camera={{ position: [2, 2, 6], fov: 45 }}>
-        <Suspense fallback={null}><Stage environment="sunset" intensity={0.3} contactShadow={{ opacity: 0.3, blur: 2.5 }} center={{ disableY: false }}><Model src="./bestFF_compressed.glb" scale={[0.8, 0.8, 0.8]} rotation={[0.3, 0, 0]} /></Stage></Suspense>
+        <Suspense fallback={null}>
+          <Stage environment="sunset" intensity={0.3} contactShadow={{ opacity: 0.3, blur: 2.5 }} center={{ disableY: false }}>
+            <Model src="./bestFF_compressed.glb" scale={[0.8, 0.8, 0.8]} rotation={[0.3, 0, 0]} mouse={ffMouse} />
+          </Stage>
+        </Suspense>
         <OrbitControls enableZoom={false} autoRotate />
       </Canvas>
     </div>
@@ -613,19 +587,15 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
 
-      {/* ── Legal Modals ── */}
       {showFinePrint && <FinePrintModal onClose={() => setShowFinePrint(false)} />}
       {showPrivacy   && <PrivacyModal  onClose={() => setShowPrivacy(false)} />}
 
-      {/* ── Navigation ── */}
       <nav className="sticky top-0 z-40 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-6 md:px-16 w-full py-3">
           <div className="flex items-center justify-between lg:grid lg:grid-cols-3">
-
             <div className="flex items-center">
               <img src={logo} alt="Seismic Shift Logo" className="h-9 w-auto object-contain" />
             </div>
-
             <div className="hidden lg:flex justify-center space-x-1.5 xl:space-x-2 items-center">
               {[
                 { label: "Commercial & Industrial", key: "infrastructure" },
@@ -643,7 +613,6 @@ function App() {
                 </button>
               ))}
             </div>
-
             <div className="hidden lg:flex items-center justify-end">
               <a href="#our-mission"
                 className="text-xs xl:text-sm font-bold tracking-widest text-slate-900 transition mr-3 xl:mr-5"
@@ -659,7 +628,6 @@ function App() {
                 Contact Us
               </button>
             </div>
-
             <button className="lg:hidden ml-auto p-2 text-slate-700" onClick={() => setMobileMenuOpen(o => !o)} aria-label="Menu" aria-expanded={mobileMenuOpen}>
               <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
                 {mobileMenuOpen
@@ -669,7 +637,6 @@ function App() {
               </svg>
             </button>
           </div>
-
           {mobileMenuOpen && (
             <div className="lg:hidden pt-4 pb-3 border-t border-slate-100 mt-3 flex flex-col gap-3">
               {[
@@ -701,7 +668,6 @@ function App() {
         </div>
       </nav>
 
-      {/* ── Hero ── */}
       <main className="w-full pb-0">
         <div style={{
           background: [
@@ -726,21 +692,17 @@ function App() {
         </div>
       </main>
 
-      {/* ── How can Quake Defender® help you? (infrastructure only) ── */}
       {activeCategory === "infrastructure" && (
         <section className="w-full bg-slate-50 py-12 border-t border-slate-100">
           <div className="max-w-7xl mx-auto px-6 md:px-16">
             <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">How can Quake Defender help you?</h2>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
-              {qdHelperCards.map(card => (
-                <ImageCard key={card.title} title={card.title} img={card.img} body={card.body} />
-              ))}
+              {qdHelperCards.map(card => <ImageCard key={card.title} title={card.title} img={card.img} body={card.body} />)}
             </div>
           </div>
         </section>
       )}
 
-      {/* ── How It Works ── */}
       <section className="w-full bg-white py-12 border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 md:px-16">
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">How it works.</h2>
@@ -750,12 +712,10 @@ function App() {
         </div>
       </section>
 
-      {/* ── Seismic Shift ── */}
       <section className="w-full bg-slate-50 py-8 md:py-12 border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 md:px-16">
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">The Seismic Shift.</h2>
           <div className="md:grid md:grid-cols-2 md:gap-8 lg:gap-10 space-y-4 md:space-y-0">
-
             <div className="bg-white px-6 py-4 md:px-8 md:py-5 lg:px-10 lg:py-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col h-[220px] md:h-[240px] lg:h-[280px]">
               <div className="flex-1 flex items-center pb-3 md:pb-4">
                 <span className="font-black text-xs md:text-xs lg:text-sm tracking-[0.12em] md:tracking-[0.15em] uppercase" style={{ color: BRAND }}>
@@ -781,20 +741,16 @@ function App() {
                 </div>
               </div>
             </div>
-
             <div className="rounded-2xl md:rounded-3xl border border-slate-200 overflow-hidden shadow-sm h-[220px] md:h-[240px] lg:h-[280px]">
               <img src={image} className="w-full h-full object-cover object-center" style={{ display: 'block' }} alt="Case study" loading="lazy" />
             </div>
-
           </div>
         </div>
       </section>
 
-      {/* ── Our Mission ── */}
       <section id="our-mission" className="w-full bg-white py-12 scroll-mt-20 border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 md:px-16">
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">Our Mission.</h2>
-
           <div className="hidden lg:grid lg:grid-cols-2 lg:gap-16 lg:items-start">
             <div className="relative h-[640px] w-full">
               <OurMissionVideo vimeoId="1121378324" />
@@ -811,7 +767,6 @@ function App() {
               <p>Ben, Geoff & team are supported by a group of expert advisors, researchers and specialists.</p>
             </div>
           </div>
-
           <div className="lg:hidden text-slate-600 leading-relaxed text-sm md:text-base space-y-4">
             <OurMissionVideoMobile vimeoId="1121378324" />
             <p>When a devastating series of earthquakes struck Christchurch, New Zealand in 2011, Ben Exton was a student and Geoff Banks was a practicing structural engineer. Ben was one of thousands of students who volunteered to help shovel liquefaction and support the affected residents - an experience which inspired him into structural engineering. Geoff found himself inspecting homes and supporting families through protracted insurance claims.</p>
@@ -826,8 +781,6 @@ function App() {
             <p>Ben, Geoff & team are supported by a group of expert advisors, researchers and specialists.</p>
             <div style={{ clear: 'both' }} />
           </div>
-
-          {/* ── Intellectual Property ── */}
           <div className="mt-12 pt-8 border-t border-slate-200">
             <h3 className="text-xs font-black uppercase tracking-widest mb-4" style={{ color: BRAND }}>Intellectual Property</h3>
             <div className="text-xs text-slate-500 leading-relaxed space-y-4">
@@ -838,24 +791,16 @@ function App() {
               </div>
             </div>
           </div>
-
         </div>
       </section>
 
-      {/* ── Footer ── */}
       <footer className="bg-white border-t py-12">
         <div className="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center opacity-50 grayscale">
           <img src={logo} alt="Seismic Shift Logo" className="h-12 w-auto" />
           <div className="flex flex-col md:flex-row items-center gap-3 md:gap-6 mt-4 md:mt-0">
-            <button onClick={() => setShowFinePrint(true)}
-              className="font-bold text-xs md:text-sm hover:opacity-70 transition-opacity">
-              Fine Print
-            </button>
+            <button onClick={() => setShowFinePrint(true)} className="font-bold text-xs md:text-sm hover:opacity-70 transition-opacity">Fine Print</button>
             <span className="hidden md:inline text-slate-300">|</span>
-            <button onClick={() => setShowPrivacy(true)}
-              className="font-bold text-xs md:text-sm hover:opacity-70 transition-opacity">
-              Privacy Policy
-            </button>
+            <button onClick={() => setShowPrivacy(true)} className="font-bold text-xs md:text-sm hover:opacity-70 transition-opacity">Privacy Policy</button>
             <span className="hidden md:inline text-slate-300">|</span>
             <p className="font-bold text-xs md:text-sm">© 2026 Seismic Shift Ltd. All rights reserved.</p>
           </div>
