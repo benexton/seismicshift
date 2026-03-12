@@ -7,7 +7,7 @@ const BRAND = '#17638f'
 const BRAND_DARK = '#17638f'
 const BRAND_TINT = '#eef1f3'
 
- rotation = [Math.PI / 2, 0, 0], scale = [1.5, 1.5, 1.5] }) {
+ function Model({ src = './QDUntitled37_compressed_v2.glb', rotation = [Math.PI / 2, 0, 0], scale = [1.5, 1.5, 1.5] }) {
   const { scene } = useGLTF(src)
   return (
     <group rotation={rotation} scale={scale}>
