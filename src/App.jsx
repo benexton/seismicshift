@@ -636,7 +636,7 @@ function App() {
               style={mobileMenuOpen
                 ? { borderColor: BRAND, backgroundColor: BRAND_TINT, color: BRAND }
                 : { borderColor: '#cbd5e1', backgroundColor: 'white', color: '#475569' }}>
-              {mobileMenuOpen ? '✕ Close' : 'Choose your solution'}
+              {mobileMenuOpen ? '✕ Close' : '☰ Choose your solution'}
             </button>
           </div>
           {mobileMenuOpen && (
