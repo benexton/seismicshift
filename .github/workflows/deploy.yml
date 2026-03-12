@@ -14,6 +14,7 @@ jobs:
           node-version: 18
       - run: npm install
       - run: npm run build
+      - run: echo "www.seismicshift.nz" > ./dist/CNAME
       - uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
