@@ -7,7 +7,7 @@ const BRAND = '#17638f'
 const BRAND_DARK = '#17638f'
 const BRAND_TINT = '#eef1f3'
 
-function Model({ src = '/QD155_compressed.glb', rotation = [Math.PI / 2, 0, 0], scale = [1.5, 1.5, 1.5] }) {
+function Model({ src = './QDUntitled37_compressed_v2.glb', rotation = [Math.PI / 2, 0, 0], scale = [1.5, 1.5, 1.5] }) {
   const { scene } = useGLTF(src)
   return (
     <group rotation={rotation} scale={scale}>
@@ -584,7 +584,7 @@ function App() {
       onPointerEnter={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1.06)')}
       onPointerLeave={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1)')}>
       <Canvas shadows camera={{ position: [2, 2, 6], fov: 45 }}>
-        <Suspense fallback={null}><Stage environment="city" intensity={0.6} contactShadow={{ opacity: 0.5, blur: 2 }} center={{ disableY: false }}><Model src="./QDUntitled37_compressed.glb" scale={[1.4, 1.4, 1.4]} rotation={[Math.PI / 2, -0.2, 0]} /></Stage></Suspense>
+        <Suspense fallback={null}><Stage environment="city" intensity={0.6} contactShadow={{ opacity: 0.5, blur: 2 }} center={{ disableY: false }}><Model src="./QDUntitled37_compressed_v2.glb" scale={[1.4, 1.4, 1.4]} rotation={[Math.PI / 2, -0.2, 0]} /></Stage></Suspense>
         <OrbitControls enableZoom={false} autoRotate />
       </Canvas>
     </div>
