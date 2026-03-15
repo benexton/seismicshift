@@ -605,7 +605,7 @@ function App() {
                 { label: "Homes", key: "residential" },
                 { label: "Critical Equipment", key: "assets" },
               ].map(({ label, key }) => (
-                <button key={key} onClick={() => setActiveCategory(key)}
+                <button key={key} onClick={() => { setActiveCategory(key); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
                   className="px-2.5 xl:px-3 py-1.5 rounded-full border-2 font-bold text-[11px] xl:text-xs tracking-wide transition-all duration-200 whitespace-nowrap"
                   style={activeCategory === key
                     ? { borderColor: BRAND, backgroundColor: BRAND_TINT, color: BRAND }
@@ -709,7 +709,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-6 md:px-16">
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">How it works.</h2>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
-            {howCards.map(card => <HowItWorksCard key={card.step} {...card} />)}
+            {howCards.map(card => <HowItWorksCard key={`${activeCategory}-${card.step}`} {...card} />)}
           </div>
         </div>
       </section>
