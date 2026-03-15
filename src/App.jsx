@@ -168,7 +168,7 @@ function ImageCard({ title, img, body }) {
       onMouseLeave={() => setActive(false)}>
       <img src={img} alt={title}
         className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
-        style={{ filter: active ? 'blur(4px) brightness(0.25)' : 'brightness(0.35)' }} />
+        style={{ filter: active ? 'blur(4px) brightness(0.25)' : 'brightness(0.75)' }} />
       <div className="absolute inset-0 flex flex-col justify-start p-6">
         <h3 className="text-white font-black text-sm lg:text-lg tracking-tight leading-snug">{title}</h3>
         <p className="text-slate-200 text-[13px] lg:text-base leading-relaxed mt-2 transition-all duration-500"
@@ -236,7 +236,7 @@ function VideoCard({ title, vimeo, translate }) {
         <>
           <img src={`https://vumbnail.com/${vimeoId}.jpg`} alt={title}
             className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
-            style={{ filter: active ? 'brightness(0.15)' : 'brightness(0.35)' }} />
+            style={{ filter: active ? 'brightness(0.15)' : 'brightness(0.75)' }} />
           <div className="absolute inset-0 flex flex-col justify-start p-6 transition-all duration-500"
             style={{ opacity: active ? 0 : 1 }}>
             <h3 className="text-white font-black text-sm lg:text-lg tracking-tight leading-snug">{title}</h3>
