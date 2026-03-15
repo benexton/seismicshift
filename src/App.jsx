@@ -133,9 +133,9 @@ const howItWorksCards = {
 }
 
 const qdHelperCards = [
-  { title: "Better new builds at lower cost",       img: "./qdhelp1.png", body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost." },
-  { title: "Adding weight to existing buildings",   img: "./qdhelp2.png", body: "Solar panels and other additions impact on the seismic performance of a structure. Quake Defender® enables these impacts to be dealt with in an affordable manner." },
-  { title: "Strengthening existing buildings",      img: "./qdhelp3.png", body: "Quake Defender® can be used to strengthen certain aspects of existing buildings in an affordable manner, when compared to traditional methods." },
+  { title: "Better new builds at lower cost",       img: "./qdhelp1.png", body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost. Contact us and see how we can save you money." },
+  { title: "Do more with existing buildings",   img: "./qdhelp2.png", body: "The extra weight of solar panels and other additions can have an impact on the seismic performance of existing buildings. Quake Defender® enables this impact to be dealt with in an affordable manner, enabling you to do more with your existing buildings." },
+  { title: "Strengthen existing buildings",      img: "./qdhelp3.png", body: "Quake Defender® can be used to strengthen certain aspects of existing buildings in an affordable manner, when compared to traditional methods. Better for you, and all who live, work, and play in and around the buildings too." },
 ]
 
 function ImageCard({ title, img, body }) {
