@@ -127,8 +127,8 @@ const howItWorksCards = {
   ],
   assets: [
     { step: "01", title: "Standardisation & affordability", img: "./testingflag.png",  body: "Seismic Shift technologies focus on performance, affordability, and buildability through the use of standardised sizes of all products. This speeds up the design process, reduces cost, and improves reliability. They are straighforward to design and install." },
-    { step: "02", title: "Installed in a resilient plinth", img: "./Plinth.png",       body: "Devices are installed within a shock-absorbing plinth that isolates critical equipment from ground motion during a seismic event. When the ground shakes, the devices absorb and dissipate seismic energy before it reaches the facility, keeping critical operations running." },
-    { step: "03", title: "See it in action",                img: null, vimeo: "https://vimeo.com/1165542787", body: "When the ground shakes, the devices absorb and dissipate seismic energy before it reaches the facility, keeping critical operations running." },
+    { step: "02", title: "Installed in a resilient plinth", img: "./Plinth.png",       body: "Devices are installed within a shock-absorbing plinth that isolates critical equipment from ground motion during a seismic event. When the ground shakes, the devices absorb and dissipate some of the seismic energy before it reaches the equipment, keeping critical operations running." },
+    { step: "03", title: "See it in action",                img: null, vimeo: "https://vimeo.com/1165542787", body: "When the ground shakes, the devices absorb and dissipate some of the seismic energy before it reaches the equipment, keeping critical operations running." },
   ],
 }
 
