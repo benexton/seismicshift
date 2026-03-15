@@ -409,7 +409,7 @@ function ContactPage({ onBack }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900" style={{ minHeight: "100dvh" }}>
       <nav className="sticky top-0 z-50 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-8 md:px-16 w-full flex items-center justify-between py-3">
           <button onClick={onBack}><img src={logo} alt="Seismic Shift Logo" className="h-9 w-auto object-contain" /></button>
@@ -491,29 +491,36 @@ function ModelHint() {
     const fadeTimer = setTimeout(() => {
       el.style.transition = 'opacity 1s ease'
       el.style.opacity = '0'
-    }, 1800)
+    }, 5000)
     const hideTimer = setTimeout(() => {
       el.style.visibility = 'hidden'
-    }, 2900)
+    }, 6100)
     return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer) }
   }, [])
   return (
     <div className="hidden md:block">
+      <style>{`
+        @keyframes hintPulse {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 1; }
+        }
+      `}</style>
       <div ref={ref} style={{
         display: 'flex', justifyContent: 'center', alignItems: 'center',
-        marginTop: '6px', height: '24px', pointerEvents: 'none', willChange: 'opacity',
+        marginTop: '8px', height: '28px', pointerEvents: 'none', willChange: 'opacity',
       }}>
-      <div style={{
-        borderRadius: '999px', padding: '4px 14px',
-        display: 'flex', alignItems: 'center', gap: '7px',
-        color: '#94a3b8', fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em',
-      }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M7 16l-4-4 4-4M17 8l4 4-4 4M3 12h18"/>
-        </svg>
-        drag to rotate
+        <div style={{
+          borderRadius: '999px', padding: '5px 16px',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          color: '#64748b', fontSize: '13px', fontWeight: 600, letterSpacing: '0.08em',
+          animation: 'hintPulse 1.6s ease-in-out infinite', transformOrigin: 'center',
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 16l-4-4 4-4M17 8l4 4-4 4M3 12h18"/>
+          </svg>
+          drag to rotate
+        </div>
       </div>
-    </div>
     </div>
   )
 }
@@ -629,7 +636,7 @@ function App() {
   )
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900" style={{ minHeight: "100dvh" }}>
 
       {showFinePrint && <FinePrintModal onClose={() => setShowFinePrint(false)} />}
       {showPrivacy   && <PrivacyModal  onClose={() => setShowPrivacy(false)} />}
