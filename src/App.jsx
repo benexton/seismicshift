@@ -168,7 +168,7 @@ function ImageCard({ title, img, body }) {
       onMouseLeave={() => setActive(false)}>
       <img src={img} alt={title}
         className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
-        style={{ filter: active ? 'blur(4px) brightness(0.25)' : 'brightness(0.75)' }} />
+        style={{ filter: active ? 'blur(4px) brightness(0.25)' : 'brightness(0.55)' }} />
       <div className="absolute inset-0 flex flex-col justify-start p-6">
         <h3 className="text-white font-black text-sm lg:text-lg tracking-tight leading-snug">{title}</h3>
         <p className="text-slate-200 text-[13px] lg:text-base leading-relaxed mt-2 transition-all duration-500"
@@ -236,7 +236,7 @@ function VideoCard({ title, vimeo, translate }) {
         <>
           <img src={`https://vumbnail.com/${vimeoId}.jpg`} alt={title}
             className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
-            style={{ filter: active ? 'brightness(0.15)' : 'brightness(0.75)' }} />
+            style={{ filter: active ? 'brightness(0.15)' : 'brightness(0.55)' }} />
           <div className="absolute inset-0 flex flex-col justify-start p-6 transition-all duration-500"
             style={{ opacity: active ? 0 : 1 }}>
             <h3 className="text-white font-black text-sm lg:text-lg tracking-tight leading-snug">{title}</h3>
@@ -483,6 +483,41 @@ function ContactPage({ onBack }) {
   )
 }
 
+function ModelHint() {
+  const ref = useRef(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const fadeTimer = setTimeout(() => {
+      el.style.transition = 'opacity 1s ease'
+      el.style.opacity = '0'
+    }, 1800)
+    const hideTimer = setTimeout(() => {
+      el.style.visibility = 'hidden'
+    }, 2900)
+    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer) }
+  }, [])
+  return (
+    <div className="hidden md:block">
+      <div ref={ref} style={{
+        display: 'flex', justifyContent: 'center', alignItems: 'center',
+        marginTop: '6px', height: '24px', pointerEvents: 'none', willChange: 'opacity',
+      }}>
+      <div style={{
+        borderRadius: '999px', padding: '4px 14px',
+        display: 'flex', alignItems: 'center', gap: '7px',
+        color: '#94a3b8', fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em',
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 16l-4-4 4-4M17 8l4 4-4 4M3 12h18"/>
+        </svg>
+        drag to rotate
+      </div>
+    </div>
+    </div>
+  )
+}
+
 function HeroSection({ category, modelNode, bodyText, onContact }) {
   return (
     <>
@@ -554,36 +589,42 @@ function App() {
   })
 
   const qdModel = (
-    <div ref={qdContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full"
-      style={{ transition: 'transform .22s ease', transformOrigin: 'center bottom' }}
-      onPointerEnter={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1.06)')}
-      onPointerLeave={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1)')}
-      {...trackMouse(qdMouse)}>
-      <Canvas shadows camera={{ position: [2, 0.5, 6], fov: 38 }}>
-        <Suspense fallback={null}>
-          <Stage environment="city" intensity={0.6} contactShadow={{ opacity: 0.5, blur: 2 }} center={{ disableY: false }}>
-            <Model src="./QDUntitled37_compressed_v2.glb" scale={[1.4, 1.4, 1.4]} rotation={[Math.PI / 2, -0.2, 0]} mouse={qdMouse} />
-          </Stage>
-        </Suspense>
-        <OrbitControls enableZoom={false} autoRotate />
-      </Canvas>
+    <div>
+      <div ref={qdContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full"
+        style={{ position: 'relative', transition: 'transform .22s ease', transformOrigin: 'center bottom' }}
+        onPointerEnter={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1.06)')}
+        onPointerLeave={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1)')}
+        {...trackMouse(qdMouse)}>
+        <Canvas shadows camera={{ position: [2, 0.5, 6], fov: 38 }}>
+          <Suspense fallback={null}>
+            <Stage environment="city" intensity={0.6} contactShadow={{ opacity: 0.5, blur: 2 }} center={{ disableY: false }}>
+              <Model src="./QDUntitled37_compressed_v2.glb" scale={[1.4, 1.4, 1.4]} rotation={[Math.PI / 2, -0.2, 0]} mouse={qdMouse} />
+            </Stage>
+          </Suspense>
+          <OrbitControls enableZoom={false} autoRotate />
+        </Canvas>
+      </div>
+      <ModelHint />
     </div>
   )
 
   const ffModel = (
-    <div ref={ffContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full"
-      style={{ transition: 'transform .22s ease', transformOrigin: 'center bottom' }}
-      onPointerEnter={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1.06)')}
-      onPointerLeave={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1)')}
-      {...trackMouse(ffMouse)}>
-      <Canvas shadows camera={{ position: [0, 1, 6], fov: 38 }}>
-        <Suspense fallback={null}>
-          <Stage environment="sunset" intensity={0.3} contactShadow={{ opacity: 0.3, blur: 2.5 }} center={{ disableY: false }}>
-            <Model src="./bestFF_compressed.glb" scale={[0.8, 0.8, 0.8]} rotation={[0.3, 0, 0]} mouse={ffMouse} />
-          </Stage>
-        </Suspense>
-        <OrbitControls enableZoom={false} autoRotate />
-      </Canvas>
+    <div>
+      <div ref={ffContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full"
+        style={{ position: 'relative', transition: 'transform .22s ease', transformOrigin: 'center bottom' }}
+        onPointerEnter={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1.06)')}
+        onPointerLeave={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1)')}
+        {...trackMouse(ffMouse)}>
+        <Canvas shadows camera={{ position: [0, 1, 6], fov: 38 }}>
+          <Suspense fallback={null}>
+            <Stage environment="sunset" intensity={0.3} contactShadow={{ opacity: 0.3, blur: 2.5 }} center={{ disableY: false }}>
+              <Model src="./bestFF_compressed.glb" scale={[0.8, 0.8, 0.8]} rotation={[0.3, 0, 0]} mouse={ffMouse} />
+            </Stage>
+          </Suspense>
+          <OrbitControls enableZoom={false} autoRotate />
+        </Canvas>
+      </div>
+      <ModelHint />
     </div>
   )
 
