@@ -127,15 +127,15 @@ const howItWorksCards = {
   ],
   assets: [
     { step: "01", title: "Standardisation & affordability", img: "./testingflag.png",  body: "Seismic Shift technologies focus on performance, affordability, and buildability through the use of standardised sizes of all products. This speeds up the design process, reduces cost, and improves reliability. They are straighforward to design and install." },
-    { step: "02", title: "Installed in a resilient plinth", img: "./Plinth.png",       body: "Devices are installed within a shock-absorbing plinth that isolates critical equipment from ground motion during a seismic event. When the ground shakes, the devices absorb and dissipate some of the seismic energy before it reaches the equipment, keeping critical operations running." },
-    { step: "03", title: "See it in action",                img: null, vimeo: "https://vimeo.com/1165542787", body: "When the ground shakes, the devices absorb and dissipate some of the seismic energy before it reaches the equipment, keeping critical operations running." },
+    { step: "02", title: "Installed in a resilient plinth", img: "./Plinth.png",       body: "Devices are installed within a shock-absorbing plinth that isolates critical equipment from ground motion during a seismic event. When the ground shakes, the devices absorb and dissipate seismic energy before it reaches the facility, keeping critical operations running." },
+    { step: "03", title: "See it in action",                img: null, vimeo: "https://vimeo.com/1165542787", body: "When the ground shakes, the devices absorb and dissipate seismic energy before it reaches the facility, keeping critical operations running." },
   ],
 }
 
 const qdHelperCards = [
-  { title: "Better new builds at lower cost",       img: "./qdhelp1.png", body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost. Contact us and see how we can save you money." },
-  { title: "Do more with existing buildings",   img: "./qdhelp2.png", body: "The extra weight of solar panels and other additions can have an impact on the seismic performance of existing buildings. Quake Defender® enables this impact to be dealt with in an affordable manner, enabling you to do more with your existing buildings." },
-  { title: "Strengthen existing buildings",      img: "./qdhelp3.png", body: "Quake Defender® can be used to strengthen certain aspects of existing buildings in an affordable manner, when compared to traditional methods. Better for you, and all who live, work, and play in and around the buildings too." },
+  { title: "Better new builds at lower cost",       img: "./qdhelp1.png", body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost." },
+  { title: "Adding weight to existing buildings",   img: "./qdhelp2.png", body: "Solar panels and other additions impact on the seismic performance of a structure. Quake Defender® enables these impacts to be dealt with in an affordable manner." },
+  { title: "Strengthening existing buildings",      img: "./qdhelp3.png", body: "Quake Defender® can be used to strengthen certain aspects of existing buildings in an affordable manner, when compared to traditional methods." },
 ]
 
 function ImageCard({ title, img, body }) {
@@ -400,7 +400,7 @@ function ContactPage({ onBack }) {
     const form = e.target
     const data = new FormData(form)
     try {
-      const response = await fetch('https://formspree.io/f/mjgepzqa', {
+      const response = await fetch('https://seismicshift-contact.benexton.workers.dev', {
         method: 'POST', body: data, headers: { 'Accept': 'application/json' }
       })
       if (response.ok) { setStatus('success'); form.reset() }
@@ -461,6 +461,12 @@ function ContactPage({ onBack }) {
             )}
             {status !== 'success' && (
               <div>
+                <div
+                  className="cf-turnstile"
+                  data-sitekey="0x4AAAAAACrdGjPLLCYwIrRD"
+                  data-theme="light"
+                  style={{ marginBottom: '16px' }}
+                />
                 <button type="submit" disabled={status === 'submitting'}
                   className="px-8 py-3 rounded-full border-2 bg-white font-bold text-xs tracking-wide transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   style={{ borderColor: BRAND, color: BRAND }}
