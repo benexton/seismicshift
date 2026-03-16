@@ -394,6 +394,12 @@ function PrivacyModal({ onClose }) {
 function ContactPage({ onBack }) {
   const [status, setStatus] = useState('idle')
 
+  useEffect(() => {
+    if (window.turnstile) {
+      window.turnstile.render('.cf-turnstile')
+    }
+  }, [])
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setStatus('submitting')
