@@ -117,7 +117,7 @@ const categoryImages = {
 const howItWorksCards = {
   infrastructure: [
     { step: "01", title: "Standardisation & affordability", img: "./testingflag.png",  body: "Seismic Shift technologies focus on performance, affordability, and buildability through the use of standardised sizes of all products. This speeds up the design process, reduces cost, and improves reliability. They are straighforward to design and install." },
-    { step: "02", title: "Connected to seismic bracing",   img: "./clean5.png",        body: "Quake Defender® connects directly into a building's bracing system, adding energy absorption and recentering ability at the points where it matters most. The devices act like the shock absorbers in a car, reducing the forces acting on a building during an earthquake and encouraging it back to its original position." },
+    { step: "02", title: "Connected to seismic bracing",   img: "./clean5.png",        body: "Quake Defender® connects directly into a building's bracing system, adding energy absorption and encouraging a building back to its original position after shaking (recentering). The devices act like the shock absorbers in a car, reducing the forces acting on a building during an earthquake." },
     { step: "03", title: "Retrofit example",               img: null, vimeo: "https://vimeo.com/1167209639", body: "When the ground shakes, the devices absorb and dissipate seismic energy before it reaches the structure, dramatically reducing damage.", translate: "translate(-45%, -50%)" },
   ],
   residential: [
