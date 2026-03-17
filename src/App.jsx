@@ -139,13 +139,13 @@ const qdHelperCards = [
 ]
 
 const residentialHelperCards = [
-  { title: "Damage reduction during earthquakes", img: "./help1.png", body: "Frontfoot® acts like a shock-absorber to dissipate some of the energy from an earthquake at foundation level before it reaches your home and contents. Where most homes are designed primarily to protect lives, FrontFoot® takes this further by also focusing on damage minimisation." },
+  { title: "Damage reduction during earthquakes", img: "./help1.png", body: "Frontfoot® acts like a shock-absorber to take some of the energy from an earthquake at foundation level before it reaches your home and contents. Where most homes are designed primarily to protect lives, FrontFoot® takes this further by also focusing on damage minimisation." },
   { title: "Minimise stress and disruption", img: "./help2.png", body: "With its focus on minimising damage, FrontFoot® reduces the likelihood of disruption to your daily life such as moving away from home or lengthy insurance disputes." },
   { title: "Live more lightly on the planet", img: "./help3.png", body: "Damage reduction means less waste heading for landfill after an earthquake, and less new material required for repairs." },
 ]
 
 const assetsHelperCards = [
-  { title: "Damage reduction during earthquakes", img: "./help1.png", body: "Frontfoot® acts like a shock-absorber to dissipate some of the energy from an earthquake at plinth level before it reaches your key equipment. Where most facilities are designed primarily to protect lives, FrontFoot® takes this further by also focusing on damage minimisation." },
+  { title: "Damage reduction during earthquakes", img: "./help1.png", body: "Frontfoot® acts like a shock-absorber to take some of the energy from an earthquake at plinth level before it reaches your key equipment. Where most facilities are designed primarily to protect lives, FrontFoot® takes this further by also focusing on damage minimisation." },
   { title: "Minimise downtime", img: "./help2.png", body: "With its focus on minimising damage, FrontFoot® reduces the likelihood of downtime for your critical equipment." },
   { title: "Lower the environmental impact of your facility", img: "./help3.png", body: "Damage reduction means less waste heading for landfill after an earthquake, and less new material required for repairs." },
 ]
