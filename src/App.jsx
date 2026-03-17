@@ -117,7 +117,7 @@ const categoryImages = {
 const howItWorksCards = {
   infrastructure: [
     { step: "01", title: "Standardisation & affordability", img: "./testingflag.png",  body: "Seismic Shift technologies focus on performance, affordability, and buildability through the use of standardised sizes of all products. This speeds up the design process, reduces cost, and improves reliability. They are straighforward to design and install." },
-    { step: "02", title: "Connected to seismic bracing",   img: "./clean5.png",        body: "Quake Defender® connects directly into a building's bracing system, adding energy absorption ability at the points where it matters most. The devices act like the shock absorbers in a car, reducing the forces acting on a building during an earthquake." },
+    { step: "02", title: "Connected to seismic bracing",   img: "./clean5.png",        body: "Quake Defender® connects directly into a building's bracing system, adding energy absorption and recentering ability at the points where it matters most. The devices act like the shock absorbers in a car, reducing the forces acting on a building during an earthquake and encouraging it back to its original position." },
     { step: "03", title: "Retrofit example",               img: null, vimeo: "https://vimeo.com/1167209639", body: "When the ground shakes, the devices absorb and dissipate seismic energy before it reaches the structure, dramatically reducing damage.", translate: "translate(-45%, -50%)" },
   ],
   residential: [
@@ -133,7 +133,7 @@ const howItWorksCards = {
 }
 
 const qdHelperCards = [
-  { title: "Better new builds at lower cost",       img: "./qdhelp1.png", body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost." },
+{ title: "Better new builds at lower cost", img: "./qdhelp1.png", body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost. Our technology absorbs energy and also encourages a structure to recenter back to its original position following an earthquake. Contact us and see how we can save you money." },
   { title: "Adding weight to existing buildings",   img: "./qdhelp2.png", body: "Solar panels and other additions impact on the seismic performance of a structure. Quake Defender® enables these impacts to be dealt with in an affordable manner." },
   { title: "Strengthening existing buildings",      img: "./qdhelp3.png", body: "Quake Defender® can be used to strengthen certain aspects of existing buildings in an affordable manner, when compared to traditional methods." },
 ]
@@ -168,7 +168,7 @@ function ImageCard({ title, img, body }) {
       onMouseLeave={() => setActive(false)}>
       <img src={img} alt={title}
         className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
-        style={{ filter: active ? 'blur(4px) brightness(0.25)' : 'brightness(0.55)' }} />
+        style={{ filter: active ? 'blur(4px) brightness(0.25)' : 'brightness(0.75)' }} />
       <div className="absolute inset-0 flex flex-col justify-start p-6">
         <h3 className="text-white font-black text-sm lg:text-lg tracking-tight leading-snug">{title}</h3>
         <p className="text-slate-200 text-[13px] lg:text-base leading-relaxed mt-2 transition-all duration-500"
@@ -236,7 +236,7 @@ function VideoCard({ title, vimeo, translate }) {
         <>
           <img src={`https://vumbnail.com/${vimeoId}.jpg`} alt={title}
             className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
-            style={{ filter: active ? 'brightness(0.15)' : 'brightness(0.55)' }} />
+            style={{ filter: active ? 'brightness(0.15)' : 'brightness(0.75)' }} />
           <div className="absolute inset-0 flex flex-col justify-start p-6 transition-all duration-500"
             style={{ opacity: active ? 0 : 1 }}>
             <h3 className="text-white font-black text-sm lg:text-lg tracking-tight leading-snug">{title}</h3>
