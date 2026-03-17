@@ -2,15 +2,15 @@ import React, { Suspense, useRef, useEffect, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF, Stage } from '@react-three/drei'
 import logo from './assets/Transparent Logo.png'
-
+ 
 const BRAND = '#17638f'
 const BRAND_DARK = '#17638f'
 const BRAND_TINT = '#eef1f3'
-
+ 
 function Model({ src = './QDUntitled37_compressed_v2.glb', rotation = [Math.PI / 2, 0, 0], scale = [1.5, 1.5, 1.5], mouse }) {
   const { scene } = useGLTF(src)
   const groupRef = useRef()
-
+ 
   useFrame(() => {
     if (!groupRef.current) return
     const targetX = mouse?.current ? mouse.current.y * 0.25 : 0
@@ -18,25 +18,25 @@ function Model({ src = './QDUntitled37_compressed_v2.glb', rotation = [Math.PI /
     groupRef.current.rotation.x += (rotation[0] + targetX - groupRef.current.rotation.x) * 0.06
     groupRef.current.rotation.z += (rotation[2] + targetZ - groupRef.current.rotation.z) * 0.06
   })
-
+ 
   return (
     <group ref={groupRef} rotation={rotation} scale={scale}>
       <primitive object={scene} />
     </group>
   )
 }
-
+ 
 const rollingWords = {
   infrastructure: ["warehouse.", "factory.", "power plant."],
   residential:    ["home.", "nest egg.", "sanctuary."],
   assets:         ["data centre.", "medical equipment.", "emergency systems."],
 }
-
+ 
 function RollingWord({ category }) {
   const words = rollingWords[category]
   const [index, setIndex] = useState(0)
   const [visible, setVisible] = useState(true)
-
+ 
   useEffect(() => { setIndex(0); setVisible(true) }, [category])
   useEffect(() => {
     const interval = setInterval(() => {
@@ -45,7 +45,7 @@ function RollingWord({ category }) {
     }, 3300)
     return () => clearInterval(interval)
   }, [category, words.length])
-
+ 
   return (
     <span className="inline-block" style={{
       color: BRAND,
@@ -57,14 +57,14 @@ function RollingWord({ category }) {
     </span>
   )
 }
-
+ 
 function HeroPills({ category, onContact }) {
   const installFile =
     category === "infrastructure" ? "./Quake Defender Retrofit Guide.pdf" :
     category === "residential"    ? "./FrontFoot House Installation Guide.pdf" :
     "./FrontFoot Plinth Installation Guide.pdf"
   const [hover2, setHover2] = useState(false)
-
+ 
   return (
     <div>
       <div className="flex gap-3 mt-10 mb-2 flex-wrap">
@@ -83,7 +83,7 @@ function HeroPills({ category, onContact }) {
     </div>
   )
 }
-
+ 
 const infrastructureStats = {
   label:  "Design study: Canterbury Solar Panel Installation on Existing Building",
   stat1:  "4",      label1: "Quake Defender® devices",
@@ -91,7 +91,7 @@ const infrastructureStats = {
   stat3:  ">50%",   label3: "Seismic force reduction target",
   stat4:  "±50mm",  label4: "System movement",
 }
-
+ 
 const residentialStats = {
   label:  "Case study: Central Otago Home",
   stat1:  "23",         label1: "FrontFoot® devices",
@@ -99,7 +99,7 @@ const residentialStats = {
   stat3:  "238m²",      label3: "Floor area",
   stat4:  "±20mm",      label4: "System movement",
 }
-
+ 
 const assetsStats = {
   label:  "Design study: Canterbury IT Equipment Plinth",
   stat1:  "4",      label1: "FrontFoot® devices",
@@ -107,13 +107,13 @@ const assetsStats = {
   stat3:  "140mm",  label3: "Plinth thickness",
   stat4:  "±20mm",  label4: "System movement",
 }
-
+ 
 const categoryImages = {
   infrastructure: "./rolleston.jpg",
   residential:    "./pisa1website.jpg",
   assets:         "./ffinstall.jpg",
 }
-
+ 
 const howItWorksCards = {
   infrastructure: [
     { step: "01", title: "Standardisation & affordability", img: "./testingflag.png",  body: "Seismic Shift technologies focus on performance, affordability, and buildability through the use of standardised sizes of all products. This speeds up the design process, reduces cost, and improves reliability. They are straighforward to design and install." },
@@ -131,17 +131,17 @@ const howItWorksCards = {
     { step: "03", title: "See it in action",                img: null, vimeo: "https://vimeo.com/1165542787", body: "When the ground shakes, the devices absorb and dissipate seismic energy before it reaches the facility, keeping critical operations running." },
   ],
 }
-
+ 
 const qdHelperCards = [
 { title: "Better new builds at lower cost", img: "./qdhelp1.png", body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost. Our technology absorbs energy and also encourages a structure to recenter back to its original position following an earthquake. Contact us and see how we can save you money." },
   { title: "Adding weight to existing buildings",   img: "./qdhelp2.png", body: "Solar panels and other additions impact on the seismic performance of a structure. Quake Defender® enables these impacts to be dealt with in an affordable manner." },
   { title: "Strengthening existing buildings",      img: "./qdhelp3.png", body: "Quake Defender® can be used to strengthen certain aspects of existing buildings in an affordable manner, when compared to traditional methods." },
 ]
-
+ 
 function ImageCard({ title, img, body }) {
   const [active, setActive] = useState(false)
   const cardRef = useRef(null)
-
+ 
   useEffect(() => {
     if (window.innerWidth >= 1024) return
     const check = () => {
@@ -160,7 +160,7 @@ function ImageCard({ title, img, body }) {
       document.removeEventListener('scroll', check)
     }
   }, [])
-
+ 
   return (
     <div ref={cardRef}
       className="rounded-3xl border border-slate-100 shadow-sm overflow-hidden relative h-[220px] lg:h-[280px]"
@@ -179,7 +179,7 @@ function ImageCard({ title, img, body }) {
     </div>
   )
 }
-
+ 
 function VideoCard({ title, vimeo, translate }) {
   const [active, setActive] = useState(false)
   const [playing, setPlaying] = useState(false)
@@ -187,7 +187,7 @@ function VideoCard({ title, vimeo, translate }) {
   const iframeRef = useRef(null)
   const vimeoId = vimeo ? vimeo.split('/').pop() : null
   const videoTransform = translate || 'translate(-50%, -50%)'
-
+ 
   useEffect(() => {
     const handleMessage = (e) => {
       try {
@@ -198,7 +198,7 @@ function VideoCard({ title, vimeo, translate }) {
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
   }, [])
-
+ 
   useEffect(() => {
     if (window.innerWidth >= 1024) return
     const check = () => {
@@ -219,7 +219,7 @@ function VideoCard({ title, vimeo, translate }) {
       document.removeEventListener('scroll', check)
     }
   }, [])
-
+ 
   return (
     <div ref={cardRef}
       className="rounded-3xl border border-slate-100 shadow-sm overflow-hidden relative h-[220px] lg:h-[280px]"
@@ -257,12 +257,12 @@ function VideoCard({ title, vimeo, translate }) {
     </div>
   )
 }
-
+ 
 function HowItWorksCard(props) {
   if (props.vimeo) return <VideoCard {...props} />
   return <ImageCard {...props} />
 }
-
+ 
 function OurMissionVideo({ vimeoId }) {
   const [playing, setPlaying] = useState(false)
   return (
@@ -292,7 +292,7 @@ function OurMissionVideo({ vimeoId }) {
     </div>
   )
 }
-
+ 
 function OurMissionVideoMobile({ vimeoId }) {
   const [playing, setPlaying] = useState(false)
   return (
@@ -322,7 +322,7 @@ function OurMissionVideoMobile({ vimeoId }) {
     </div>
   )
 }
-
+ 
 function LegalModal({ title, onClose, children }) {
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -348,7 +348,7 @@ function LegalModal({ title, onClose, children }) {
     </div>
   )
 }
-
+ 
 function FinePrintModal({ onClose }) {
   return (
     <LegalModal title="The Fine Print" onClose={onClose}>
@@ -376,7 +376,7 @@ function FinePrintModal({ onClose }) {
     </LegalModal>
   )
 }
-
+ 
 function PrivacyModal({ onClose }) {
   return (
     <LegalModal title="Privacy Policy" onClose={onClose}>
@@ -390,16 +390,16 @@ function PrivacyModal({ onClose }) {
     </LegalModal>
   )
 }
-
+ 
 function ContactPage({ onBack }) {
   const [status, setStatus] = useState('idle')
-
+ 
   useEffect(() => {
     if (window.turnstile) {
       window.turnstile.render('.cf-turnstile')
     }
   }, [])
-
+ 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setStatus('submitting')
@@ -413,7 +413,7 @@ function ContactPage({ onBack }) {
       else { setStatus('error'); setTimeout(() => setStatus('idle'), 5000) }
     } catch { setStatus('error'); setTimeout(() => setStatus('idle'), 5000) }
   }
-
+ 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900" style={{ minHeight: "100dvh" }}>
       <nav className="sticky top-0 z-50 bg-white shadow-sm">
@@ -494,11 +494,11 @@ function ContactPage({ onBack }) {
     </div>
   )
 }
-
+ 
 function ModelHint({ visible }) {
   const [opacity, setOpacity] = useState(1)
   const [hidden, setHidden] = useState(false)
-
+ 
   useEffect(() => {
     const timer = setTimeout(() => {
       setOpacity(0)
@@ -506,16 +506,16 @@ function ModelHint({ visible }) {
     }, 10000)
     return () => clearTimeout(timer)
   }, [])
-
+ 
   useEffect(() => {
     if (!visible) {
       setOpacity(0)
       setTimeout(() => setHidden(true), 400)
     }
   }, [visible])
-
+ 
   if (hidden) return null
-
+ 
   return (
     <>
       <style>{`
@@ -549,7 +549,7 @@ function ModelHint({ visible }) {
     </>
   )
 }
-
+ 
 function HeroSection({ category, modelNode, bodyText, onContact }) {
   return (
     <>
@@ -580,7 +580,7 @@ function HeroSection({ category, modelNode, bodyText, onContact }) {
     </>
   )
 }
-
+ 
 function App() {
   const [activeCategory, setActiveCategory] = useState("infrastructure")
   const [showContact, setShowContact] = useState(false)
@@ -591,11 +591,9 @@ function App() {
   const ffContainerRef = useRef()
   const qdMouse = useRef(null)
   const ffMouse = useRef(null)
-  const qdDismiss = useRef(null)
-  const ffDismiss = useRef(null)
   const [qdHint, setQdHint] = useState(true)
   const [ffHint, setFfHint] = useState(true)
-
+ 
   useEffect(() => {
     if (window.location.hash === '#our-mission') {
       setTimeout(() => {
@@ -603,16 +601,16 @@ function App() {
       }, 500)
     }
   }, [])
-
+ 
   const image = categoryImages[activeCategory]
   const howCards = howItWorksCards[activeCategory]
   const activeStats =
     activeCategory === "infrastructure" ? infrastructureStats :
     activeCategory === "residential"    ? residentialStats :
     assetsStats
-
+ 
   if (showContact) return <ContactPage onBack={() => { setShowContact(false); window.scrollTo({ top: 0, behavior: 'instant' }) }} />
-
+ 
   const trackMouse = (mouseRef) => ({
     onMouseMove: (e) => {
       const rect = e.currentTarget.getBoundingClientRect()
@@ -623,7 +621,7 @@ function App() {
     },
     onMouseLeave: () => { mouseRef.current = null },
   })
-
+ 
   const qdModel = (
     <div style={{ position: 'relative' }}>
       <div ref={qdContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full"
@@ -644,7 +642,7 @@ function App() {
       </div>
     </div>
   )
-
+ 
   const ffModel = (
     <div style={{ position: 'relative' }}>
       <div ref={ffContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full"
@@ -665,13 +663,13 @@ function App() {
       </div>
     </div>
   )
-
+ 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900" style={{ minHeight: "100dvh" }}>
-
+ 
       {showFinePrint && <FinePrintModal onClose={() => setShowFinePrint(false)} />}
       {showPrivacy   && <PrivacyModal  onClose={() => setShowPrivacy(false)} />}
-
+ 
       <nav className="sticky top-0 z-40 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-6 md:px-16 w-full py-3">
           <div className="flex items-center justify-between lg:grid lg:grid-cols-3">
@@ -748,7 +746,7 @@ function App() {
           )}
         </div>
       </nav>
-
+ 
       <main className="w-full pb-0">
         <div style={{
           background: [
@@ -772,7 +770,7 @@ function App() {
           </div>
         </div>
       </main>
-
+ 
       {activeCategory === "infrastructure" && (
         <section className="w-full bg-slate-50 py-12 border-t border-slate-100">
           <div className="max-w-7xl mx-auto px-6 md:px-16">
@@ -783,7 +781,7 @@ function App() {
           </div>
         </section>
       )}
-
+ 
       <section className="w-full bg-white py-12 border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 md:px-16">
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">How it works.</h2>
@@ -792,7 +790,7 @@ function App() {
           </div>
         </div>
       </section>
-
+ 
       <section className="w-full bg-slate-50 py-8 md:py-12 border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 md:px-16">
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">The Seismic Shift.</h2>
@@ -828,7 +826,7 @@ function App() {
           </div>
         </div>
       </section>
-
+ 
       <section id="our-mission" className="w-full bg-white py-12 scroll-mt-20 border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 md:px-16">
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">Our Mission.</h2>
@@ -874,7 +872,7 @@ function App() {
           </div>
         </div>
       </section>
-
+ 
       <footer className="bg-white border-t py-12">
         <div className="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center opacity-50 grayscale">
           <img src={logo} alt="Seismic Shift Logo" className="h-12 w-auto" />
@@ -890,5 +888,5 @@ function App() {
     </div>
   )
 }
-
+ 
 export default App
