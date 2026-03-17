@@ -133,9 +133,9 @@ const howItWorksCards = {
 }
 
 const qdHelperCards = [
-{ title: "Better new builds at lower cost", img: "./qdhelp1.png", body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost. Contact us and see how we can save you money." },
-{ title: "Do more with existing buildings", img: "./qdhelp2.png", body: "The extra weight of solar panels and other additions can have an impact on the seismic performance of existing buildings. Quake Defender® enables this impact to be dealt with in an affordable manner, enabling you to do more with your existing buildings." },
-{ title: "Strengthen existing buildings", img: "./qdhelp3.png", body: "Quake Defender® can be used to strengthen certain aspects of existing buildings in an affordable manner, when compared to traditional methods. Better for you, and all who live, work, and play in and around the buildings too." },
+  { title: "Better new builds at lower cost",       img: "./qdhelp1.png", body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost." },
+  { title: "Adding weight to existing buildings",   img: "./qdhelp2.png", body: "Solar panels and other additions impact on the seismic performance of a structure. Quake Defender® enables these impacts to be dealt with in an affordable manner." },
+  { title: "Strengthening existing buildings",      img: "./qdhelp3.png", body: "Quake Defender® can be used to strengthen certain aspects of existing buildings in an affordable manner, when compared to traditional methods." },
 ]
 
 function ImageCard({ title, img, body }) {
@@ -495,45 +495,58 @@ function ContactPage({ onBack }) {
   )
 }
 
-function ModelHint() {
-  const ref = useRef(null)
+function ModelHint({ visible }) {
+  const [opacity, setOpacity] = useState(1)
+  const [hidden, setHidden] = useState(false)
+
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const fadeTimer = setTimeout(() => {
-      el.style.transition = 'opacity 1s ease'
-      el.style.opacity = '0'
-    }, 5000)
-    const hideTimer = setTimeout(() => {
-      el.style.visibility = 'hidden'
-    }, 6100)
-    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer) }
+    const timer = setTimeout(() => {
+      setOpacity(0)
+      setTimeout(() => setHidden(true), 400)
+    }, 10000)
+    return () => clearTimeout(timer)
   }, [])
+
+  useEffect(() => {
+    if (!visible) {
+      setOpacity(0)
+      setTimeout(() => setHidden(true), 400)
+    }
+  }, [visible])
+
+  if (hidden) return null
+
   return (
-    <div className="hidden md:block">
+    <>
       <style>{`
         @keyframes hintPulse {
-          0%, 100% { opacity: 0.4; }
+          0%, 100% { opacity: 0.7; }
           50% { opacity: 1; }
         }
       `}</style>
-      <div ref={ref} style={{
-        display: 'flex', justifyContent: 'center', alignItems: 'center',
-        marginTop: '8px', height: '28px', pointerEvents: 'none', willChange: 'opacity',
+      <div style={{
+        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        pointerEvents: 'none', zIndex: 10,
+        opacity, transition: 'opacity 0.4s ease',
       }}>
         <div style={{
-          borderRadius: '999px', padding: '5px 16px',
-          display: 'flex', alignItems: 'center', gap: '8px',
-          color: '#64748b', fontSize: '13px', fontWeight: 600, letterSpacing: '0.08em',
-          animation: 'hintPulse 1.6s ease-in-out infinite', transformOrigin: 'center',
+          borderRadius: '999px',
+          padding: '8px 20px',
+          display: 'flex', alignItems: 'center', gap: '10px',
+          background: 'rgba(255,255,255,0.85)',
+          backdropFilter: 'blur(6px)',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+          color: '#334155', fontSize: '14px', fontWeight: 700, letterSpacing: '0.06em',
+          animation: `hintPulse 1.8s ease-in-out infinite`,
+          whiteSpace: 'nowrap',
         }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M7 16l-4-4 4-4M17 8l4 4-4 4M3 12h18"/>
           </svg>
           drag to rotate
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -554,7 +567,7 @@ function HeroSection({ category, modelNode, bodyText, onContact }) {
       </div>
       <div className="md:hidden mb-6 pt-2">
         <h1 className="text-2xl font-black leading-tight tracking-tighter text-slate-900 mb-2">
-          {category === "infrastructure" && <>A shock-absorber for your <RollingWord category="infrastructure" /></>}
+          {category === "infrastructure" && <>An airbag for your <RollingWord category="infrastructure" /></>}
           {category === "residential"    && <>A shock-absorber for your <RollingWord category="residential" /></>}
           {category === "assets"         && <>Peace of mind for your <RollingWord category="assets" /></>}
         </h1>
@@ -578,6 +591,10 @@ function App() {
   const ffContainerRef = useRef()
   const qdMouse = useRef(null)
   const ffMouse = useRef(null)
+  const qdDismiss = useRef(null)
+  const ffDismiss = useRef(null)
+  const [qdHint, setQdHint] = useState(true)
+  const [ffHint, setFfHint] = useState(true)
 
   useEffect(() => {
     if (window.location.hash === '#our-mission') {
@@ -608,11 +625,12 @@ function App() {
   })
 
   const qdModel = (
-    <div>
+    <div style={{ position: 'relative' }}>
       <div ref={qdContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full"
         style={{ position: 'relative', transition: 'transform .22s ease', transformOrigin: 'center bottom' }}
         onPointerEnter={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1.06)')}
         onPointerLeave={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1)')}
+        onPointerMove={() => setQdHint(false)}
         {...trackMouse(qdMouse)}>
         <Canvas shadows camera={{ position: [2, 0.5, 6], fov: 38 }}>
           <Suspense fallback={null}>
@@ -622,17 +640,18 @@ function App() {
           </Suspense>
           <OrbitControls enableZoom={false} autoRotate />
         </Canvas>
+        <ModelHint visible={qdHint} />
       </div>
-      <ModelHint />
     </div>
   )
 
   const ffModel = (
-    <div>
+    <div style={{ position: 'relative' }}>
       <div ref={ffContainerRef} className="h-72 md:h-80 lg:h-[480px] w-full"
         style={{ position: 'relative', transition: 'transform .22s ease', transformOrigin: 'center bottom' }}
         onPointerEnter={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1.06)')}
         onPointerLeave={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1)')}
+        onPointerMove={() => setFfHint(false)}
         {...trackMouse(ffMouse)}>
         <Canvas shadows camera={{ position: [0, 1, 6], fov: 38 }}>
           <Suspense fallback={null}>
@@ -642,8 +661,8 @@ function App() {
           </Suspense>
           <OrbitControls enableZoom={false} autoRotate />
         </Canvas>
+        <ModelHint visible={ffHint} />
       </div>
-      <ModelHint />
     </div>
   )
 
