@@ -77,7 +77,7 @@ export default function OurMissionSection() {
         <div className="relative h-[640px] w-full">
           <VideoPlayer />
           <div className="absolute bottom-0 right-0 w-[72%] rounded-3xl border border-slate-200 overflow-hidden shadow-lg z-20" style={{ height: '295px' }}>
-            <img src="/founderswebsite.jpeg" className="w-full h-full object-cover" alt="Founders" loading="lazy" />
+            <img src="/founderswebsite.webp" className="w-full h-full object-cover" alt="Founders" loading="lazy" />
           </div>
         </div>
         <div className="text-slate-600 leading-relaxed text-base space-y-5">
@@ -107,7 +107,7 @@ function MissionText({ mobile = false }) {
       {mobile && (
         <div style={{ float: 'right', width: '42%', marginLeft: '12px', marginBottom: '4px' }}
           className="rounded-2xl overflow-hidden shadow-md border border-slate-200">
-          <img src="/founderswebsite.jpeg" className="w-full object-cover" style={{ display: 'block', aspectRatio: '1/1' }} alt="Founders" loading="lazy" />
+          <img src="/founderswebsite.webp" className="w-full object-cover" style={{ display: 'block', aspectRatio: '1/1' }} alt="Founders" loading="lazy" />
         </div>
       )}
       <p>Ben, Geoff &amp; team are supported by a group of expert advisors, researchers and specialists.</p>

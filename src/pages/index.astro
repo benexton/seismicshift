@@ -30,7 +30,7 @@ const products = [
     tag: 'Commercial & Industrial',
     tagline: 'A shock-absorber for your warehouse, factory, or power plant.',
     body: 'Affordable seismic enhancement for commercial and industrial structures. Engineered in New Zealand to improve building performance during shaking anywhere in the world.',
-    img: '/rolleston.jpg',
+    img: '/rolleston.webp',
     pill: { bg: '#17638f', text: 'white', label: 'Learn more →' },
   },
   {
@@ -39,7 +39,7 @@ const products = [
     tag: 'Residential Homes',
     tagline: 'A shock-absorber for your home, nest egg, or sanctuary.',
     body: 'The FrontFoot® foundation system decouples your home from ground motion, dramatically reducing seismic loads and safeguarding your family.',
-    img: '/pisa1website.jpg',
+    img: '/pisa1website.webp',
     pill: { bg: '#17638f', text: 'white', label: 'Learn more →' },
   },
   {
@@ -48,7 +48,7 @@ const products = [
     tag: 'Data Centres & Critical Assets',
     tagline: 'Peace of mind for your data centre, medical equipment, or emergency systems.',
     body: 'The FrontFoot® plinth system provides improved performance for key facilities such as hospitals, data centres, and infrastructure that cannot afford interruption.',
-    img: '/ffinstall.jpg',
+    img: '/ffinstall.webp',
     pill: { bg: '#17638f', text: 'white', label: 'Learn more →' },
   },
 ]
@@ -95,10 +95,10 @@ const products = [
     <div class="max-w-7xl mx-auto px-6 md:px-16">
       <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-12">Our Solutions.</h2>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {products.map(({ href, label, tag, body, img }) => (
+        {products.map(({ href, label, tag, body, img }, i) => (
           <a href={href} class="group flex flex-col rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
             <div class="h-52 overflow-hidden">
-              <img src={img} alt={label} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+              <img src={img} alt={label} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading={i === 0 ? 'eager' : 'lazy'} fetchpriority={i === 0 ? 'high' : 'auto'} />
             </div>
             <div class="p-6 flex flex-col flex-1">
               <h3 class="text-xl font-black tracking-tight text-slate-900 mb-1">{label}</h3>
