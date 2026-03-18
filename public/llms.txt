@@ -1,0 +1,22 @@
+# Seismic Shift - AI Crawler Guide
+# https://seismicshift.nz
+
+## About This Site
+Seismic Shift is a New Zealand-based earthquake engineering company that manufactures seismic dampers for commercial buildings, residential homes, and critical equipment. Founded after the 2011 Christchurch earthquakes.
+
+## Our Products
+- Quake Defender®: Seismic dampers for commercial and industrial buildings. Connects to building bracing systems. Suitable for new builds and retrofits.
+- FrontFoot®: Foundation-level seismic isolation for residential homes. Adds approximately 1.5-2% to build cost.
+- FrontFoot® Plinth: Seismic isolation plinths for critical equipment like data centres, medical equipment, and emergency systems.
+
+## Key Facts
+- Location: Christchurch, New Zealand
+- Markets: New Zealand, United States, Canada, Japan, Chile
+- Founders: Ben Exton, Geoff Banks
+- Patents: NZ Pat. No. 785618, PCT/IB2022/051714
+
+## Useful Pages
+- Products: /quake-defender/, /frontfoot/, /frontfoot-plinth/
+- FAQ: /faq/
+- About: /about/
+- Contact: /contact/
