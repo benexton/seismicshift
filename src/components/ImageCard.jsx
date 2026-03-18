@@ -33,6 +33,7 @@ export default function ImageCard({ title, img, body, containImage = false }) {
         <div className="absolute inset-0 flex items-center justify-center p-8">
           <img
             src={img} alt={title}
+            loading="lazy"
             className="max-w-full max-h-full object-contain transition-all duration-500"
             style={{
               filter: active ? 'blur(3px) brightness(0.4)' : 'brightness(1)',
@@ -43,6 +44,7 @@ export default function ImageCard({ title, img, body, containImage = false }) {
       ) : (
         <img
           src={img} alt={title}
+          loading="lazy"
           className="absolute inset-0 w-full h-full object-cover transition-all duration-500"
           style={{
             objectPosition: 'center',
