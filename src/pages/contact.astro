@@ -1,0 +1,60 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import ContactForm from '../components/ContactForm.jsx'
+
+const BRAND = '#17638f'
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "Seismic Shift Ltd",
+  "url": "https://www.seismicshift.nz",
+  "email": "info@seismicshift.nz",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "120 Madras St",
+    "addressLocality": "Christchurch",
+    "addressRegion": "Canterbury",
+    "postalCode": "8011",
+    "addressCountry": "NZ"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": -43.5271,
+    "longitude": 172.6419
+  },
+  "areaServed": ["New Zealand", "United States", "Canada", "Japan", "Chile"],
+  "description": "Earthquake protection technology for commercial buildings, homes, and critical equipment."
+}
+---
+
+<BaseLayout
+  title="Contact Seismic Shift | Get in Touch"
+  description="Talk to Seismic Shift's engineering team about earthquake protection for your building, home, or critical equipment. Based in Christchurch, NZ. Global projects welcome."
+  canonicalPath="/contact/"
+  schema={schema}
+  includeTurnstile={true}
+>
+  <div class="min-h-screen bg-slate-50">
+    <div class="max-w-7xl mx-auto px-8 md:px-16 py-8 md:py-12">
+      <h1 class="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">
+        We'd love to speak with you.
+      </h1>
+      <div class="grid lg:grid-cols-2 gap-16 items-stretch">
+        <ContactForm client:load />
+        <div class="rounded-3xl overflow-hidden border border-slate-200 shadow-sm min-h-[480px]">
+          <iframe
+            title="Seismic Shift Location"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2887.4!2d172.6419!3d-43.5271!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6d318b52c0a5414d%3A0x4e3e6a8e1f2b3c4d!2s120%20Madras%20St%2C%20Christchurch%20Central%20City%2C%20Christchurch%208011!5e0!3m2!1sen!2snz!4v1708000000000"
+            width="100%"
+            height="100%"
+            style="border:0;min-height:480px"
+            allowfullscreen=""
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

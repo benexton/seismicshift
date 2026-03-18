@@ -1,0 +1,131 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+
+const BRAND = '#17638f'
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "Case Studies | Seismic Shift Projects",
+  "url": "https://www.seismicshift.nz/case-studies/",
+  "description": "Real-world seismic protection projects by Seismic Shift across commercial buildings, residential homes, and critical equipment installations."
+}
+
+const caseStudies = [
+  {
+    label: "Design Study",
+    title: "Canterbury Solar Panel Installation on Existing Building",
+    product: "Quake Defender®",
+    category: "Commercial & Industrial",
+    img: "/rolleston.jpg",
+    href: "/quake-defender/",
+    stats: [
+      { stat: "4",     label: "Quake Defender® devices" },
+      { stat: "10t",   label: "Additional weight added to structure" },
+      { stat: ">50%",  label: "Seismic force reduction target" },
+      { stat: "±50mm", label: "System movement" },
+    ],
+    summary: "An existing industrial building in Canterbury needed to accommodate a significant solar panel installation. The additional weight had implications for the building's seismic performance. Quake Defender® provided an affordable solution that addressed the seismic impact while enabling the solar installation to proceed.",
+  },
+  {
+    label: "Case Study",
+    title: "Central Otago Home",
+    product: "FrontFoot®",
+    category: "Residential",
+    img: "/pisa1website.jpg",
+    href: "/frontfoot/",
+    stats: [
+      { stat: "23",        label: "FrontFoot® devices" },
+      { stat: "1.5-2.0%", label: "Addition to build cost" },
+      { stat: "238m²",    label: "Floor area" },
+      { stat: "±20mm",    label: "System movement" },
+    ],
+    summary: "A new residential home in Central Otago incorporated FrontFoot® at foundation level to dramatically improve its seismic performance. The system added just 1.5-2.0% to the total build cost while providing significantly enhanced protection for the home, its contents, and its occupants.",
+  },
+  {
+    label: "Design Study",
+    title: "Canterbury IT Equipment Plinth",
+    product: "FrontFoot® Plinth",
+    category: "Data Centres & Critical Assets",
+    img: "/ffinstall.jpg",
+    href: "/frontfoot-plinth/",
+    stats: [
+      { stat: "4",     label: "FrontFoot® devices" },
+      { stat: "8m²",   label: "Plinth footprint" },
+      { stat: "140mm", label: "Plinth thickness" },
+      { stat: "±20mm", label: "System movement" },
+    ],
+    summary: "Critical IT equipment in a Canterbury facility was protected using a FrontFoot® Plinth system. The compact plinth design isolated the equipment from ground motion, ensuring continued operation of key systems through a seismic event with minimal additional floor space requirement.",
+  },
+]
+---
+
+<BaseLayout
+  title="Case Studies | Seismic Shift Projects"
+  description="Real-world earthquake protection projects: Canterbury commercial retrofit, Central Otago home, and IT equipment plinth. See Seismic Shift solutions in action."
+  canonicalPath="/case-studies/"
+  schema={schema}
+>
+  <!-- Hero -->
+  <section class="w-full bg-white border-b border-slate-100">
+    <div class="max-w-7xl mx-auto px-6 md:px-16 py-16 md:py-24">
+      <h1 class="text-4xl md:text-5xl font-black leading-tight tracking-tighter text-slate-900 mb-4">
+        Seismic protection in the real world.
+      </h1>
+      <p class="text-lg text-slate-500">
+        From industrial retrofits to new residential builds and critical equipment, here are examples of Seismic Shift technology being deployed across different applications.
+      </p>
+    </div>
+  </section>
+
+  <!-- Case Studies -->
+  <section class="w-full bg-slate-50 py-16">
+    <div class="max-w-7xl mx-auto px-6 md:px-16 space-y-16">
+      {caseStudies.map(({ label, title, product, category, img, href, stats, summary }) => (
+        <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+          <div class="grid lg:grid-cols-2 items-stretch">
+            <!-- Image -->
+            <div class="h-64 lg:h-auto min-h-[280px]">
+              <img src={img} alt={title} class="w-full h-full object-cover" loading="lazy" />
+            </div>
+            <!-- Content -->
+            <div class="p-8 md:p-10 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center gap-3 mb-4">
+                  <span class="px-3 py-1 rounded-full text-xs font-bold border-2" style={`border-color:${BRAND};color:${BRAND}`}>{label}</span>
+                  <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">{category}</span>
+                </div>
+                <h2 class="text-xl md:text-2xl font-black tracking-tight text-slate-900 mb-2">{title}</h2>
+                <a href={href} class="text-sm font-bold hover:underline" style={`color:${BRAND}`}>{product}</a>
+                <p class="mt-4 text-slate-500 text-sm leading-relaxed">{summary}</p>
+              </div>
+
+              <!-- Stats -->
+              <div class="mt-6 pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
+                {stats.map(({ stat, label: statLabel }) => (
+                  <div>
+                    <div class="text-2xl md:text-3xl font-black text-slate-900">{stat}</div>
+                    <div class="text-[10px] font-bold uppercase tracking-widest mt-0.5" style={`color:${BRAND}`}>{statLabel}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="w-full py-16 border-t border-slate-100" style={`background-color:${BRAND}`}>
+    <div class="max-w-7xl mx-auto px-6 md:px-16 text-center">
+      <h2 class="text-3xl md:text-4xl font-black tracking-tighter text-white mb-4">Want to discuss your project?</h2>
+      <p class="text-white/80 text-lg mb-8">Our engineering team is ready to help you find the right solution.</p>
+      <a href="/contact/"
+        class="inline-block bg-white font-bold text-sm tracking-wide px-8 py-3 rounded-full hover:bg-slate-100 transition"
+        style={`color:${BRAND}`}>
+        Contact Us
+      </a>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,900;1,9..40,400&display=swap');
+@import "tailwindcss";
+
+:root {
+  --brand: #17638f;
+  --brand-tint: #eef1f3;
+}
+
+html {
+  font-family: 'DM Sans', sans-serif;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}

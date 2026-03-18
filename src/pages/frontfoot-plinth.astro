@@ -1,0 +1,194 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import ModelViewer from '../components/ModelViewer.jsx'
+import RollingWord from '../components/RollingWord.jsx'
+import ImageCard from '../components/ImageCard.jsx'
+import VideoCard from '../components/VideoCard.jsx'
+
+const BRAND = '#17638f'
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "FrontFoot® Plinth",
+  "brand": { "@type": "Brand", "name": "Seismic Shift" },
+  "description": "FrontFoot® Plinth provides seismic isolation for critical equipment in data centres, hospitals, and industrial facilities. Keep operations running through an earthquake.",
+  "url": "https://www.seismicshift.nz/frontfoot-plinth/",
+  "manufacturer": {
+    "@type": "Organization",
+    "name": "Seismic Shift",
+    "url": "https://www.seismicshift.nz"
+  },
+  "category": "Seismic Isolation System",
+  "offers": {
+    "@type": "Offer",
+    "seller": { "@type": "Organization", "name": "Seismic Shift" }
+  }
+}
+
+const helperCards = [
+  {
+    title: "Damage reduction during earthquakes",
+    img: "/help1.png",
+    body: "FrontFoot® acts like a shock-absorber to take some of the energy from an earthquake at plinth level before it reaches your key equipment. Where most facilities are designed primarily to protect lives, FrontFoot® takes this further by also focusing on damage minimisation.",
+    containImage: true,
+  },
+  {
+    title: "Minimise downtime",
+    img: "/help2.png",
+    body: "With its focus on minimising damage, FrontFoot® reduces the likelihood of downtime for your critical equipment. Keep your facility operational when it matters most.",
+    containImage: true,
+  },
+  {
+    title: "Lower the environmental impact of your facility",
+    img: "/help3.png",
+    body: "Damage reduction means less waste heading for landfill after an earthquake, and less new material required for repairs. A more resilient facility is also a more sustainable one.",
+    containImage: true,
+  },
+]
+
+const howCards = [
+  {
+    type: 'image',
+    step: "01",
+    title: "Standardisation & affordability",
+    img: "/testingflag.png",
+    body: "Seismic Shift technologies focus on performance, affordability, and buildability through the use of standardised sizes of all products. This speeds up the design process, reduces cost, and improves reliability. They are straightforward to design and install.",
+  },
+  {
+    type: 'image',
+    step: "02",
+    title: "Installed in a resilient plinth",
+    img: "/Plinth.png",
+    body: "Devices are installed within a shock-absorbing plinth that isolates critical equipment from ground motion during a seismic event. When the ground shakes, the devices absorb and dissipate seismic energy before it reaches the facility, keeping critical operations running.",
+    containImage: true,
+  },
+  {
+    type: 'video',
+    step: "03",
+    title: "See it in action",
+    vimeo: "https://vimeo.com/1165542787",
+    body: "When the ground shakes, the devices absorb and dissipate seismic energy before it reaches the facility, keeping critical operations running.",
+    translate: "translate(-50%, -50%)",
+  },
+]
+
+const stats = {
+  label: "Design study: Canterbury IT Equipment Plinth",
+  items: [
+    { stat: "4",     label: "FrontFoot® devices" },
+    { stat: "8m²",   label: "Plinth footprint" },
+    { stat: "140mm", label: "Plinth thickness" },
+    { stat: "±20mm", label: "System movement" },
+  ],
+}
+---
+
+<BaseLayout
+  title="FrontFoot® Equipment Protection | Data Centres & Critical Assets"
+  description="FrontFoot® Plinth protects data centres, hospitals, and critical equipment from earthquake damage. Seismic isolation designed to keep your operations running."
+  canonicalPath="/frontfoot-plinth/"
+  schema={schema}
+>
+  <!-- Hero -->
+  <section class="w-full" style="background:radial-gradient(ellipse 180% 40% at 50% 42%, rgba(230,234,236,0.20) 0%, rgba(200,204,207,0.14) 16%, rgba(120,122,124,0.07) 32%, rgba(0,0,0,0) 60%), radial-gradient(circle at 50% 70%, rgba(43,43,43,0.12) 0%, rgba(23,23,23,0.08) 40%, rgba(15,15,15,0.04) 75%, transparent 100%)">
+    <div class="max-w-7xl mx-auto px-6 md:px-16 py-6">
+      <div class="flex flex-col-reverse md:grid md:grid-cols-2 md:gap-8 md:items-start mb-6 md:mb-12">
+        <!-- Text -->
+        <div class="md:pt-8">
+          <h1 class="text-2xl md:text-4xl lg:text-5xl font-black leading-tight tracking-tighter text-slate-900 mb-4 md:mb-6">
+            Peace of mind for your <RollingWord category="assets" client:load />
+          </h1>
+          <p class="text-sm md:text-base lg:text-lg text-slate-500 leading-relaxed">
+            The FrontFoot® plinth system provides improved performance for key facilities such as hospitals, data centres, and infrastructure that cannot afford interruption. Our solutions put you in control - the proactive choice ahead of future earthquakes.
+          </p>
+          <div class="flex gap-3 mt-8 md:mt-10 mb-2 flex-wrap">
+            <a href="/FrontFoot Plinth Installation Guide.pdf" download="FrontFoot Plinth Installation Guide.pdf"
+              class="px-5 py-2 rounded-full border-2 font-bold text-xs tracking-wide hover:bg-[#eef1f3] transition-all"
+              style={`border-color:${BRAND};color:${BRAND}`}>
+              Installation Instructions
+            </a>
+          </div>
+          <p class="mt-4 text-xs text-slate-400">
+            Design Guide coming soon - <a href="/contact/" class="underline hover:text-slate-600 transition-colors">contact us</a> for design support.
+          </p>
+        </div>
+        <!-- 3D Model - single instance, responsive height -->
+        <div class="h-[240px] md:h-80 lg:h-[480px] -mt-4 md:mt-0">
+          <ModelViewer
+            client:only="react"
+            src="/bestFF_compressed.glb"
+            scale={[0.8, 0.8, 0.8]}
+            rotation={[0.3, 0, 0]}
+            camera={{ position: [0, 1, 6], fov: 38 }}
+            environment="sunset"
+            intensity={0.3}
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Helper cards -->
+  <section class="w-full bg-slate-50 py-12 border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">How can FrontFoot Plinth help you?</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
+        {helperCards.map(card => (
+          <ImageCard client:visible title={card.title} img={card.img} body={card.body} containImage={card.containImage} />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="w-full bg-white py-12 border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">How it works.</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
+        {howCards.map(card => card.type === 'video'
+          ? <VideoCard client:visible title={card.title} vimeo={card.vimeo} translate={card.translate} />
+          : <ImageCard client:visible title={card.title} img={card.img} body={card.body} containImage={card.containImage} />
+        )}
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="w-full bg-slate-50 py-8 md:py-12 border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">The Seismic Shift.</h2>
+      <div class="md:grid md:grid-cols-2 md:gap-8 lg:gap-10 space-y-4 md:space-y-0">
+        <div class="bg-white px-6 py-4 md:px-8 md:py-5 lg:px-10 lg:py-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col h-[220px] md:h-[240px] lg:h-[280px]">
+          <div class="flex-1 flex items-center pb-3 md:pb-4">
+            <span class="font-black text-xs md:text-xs lg:text-sm tracking-[0.12em] uppercase" style={`color:${BRAND}`}>{stats.label}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-3 md:gap-x-8 md:gap-y-4 lg:gap-y-6 lg:gap-x-12 pt-3 md:pt-4 lg:pt-5 border-t border-slate-100">
+            {stats.items.map(({ stat, label }) => (
+              <div>
+                <div class="text-xl md:text-3xl lg:text-4xl font-black text-slate-900">{stat}</div>
+                <div class="font-bold text-[8px] md:text-[9px] lg:text-[10px] uppercase mt-1 tracking-widest" style={`color:${BRAND}`}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div class="rounded-2xl md:rounded-3xl border border-slate-200 overflow-hidden shadow-sm h-[220px] md:h-[240px] lg:h-[280px]">
+          <img src="/ffinstall.jpg" class="w-full h-full object-cover object-center" alt="FrontFoot Plinth installation" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="w-full py-16 border-t border-slate-100" style={`background-color:${BRAND}`}>
+    <div class="max-w-7xl mx-auto px-6 md:px-16 text-center">
+      <h2 class="text-3xl md:text-4xl font-black tracking-tighter text-white mb-4">Keep your critical operations running.</h2>
+      <p class="text-white/80 text-lg mb-8">Talk to our engineers about protecting your facility's most important assets.</p>
+      <a href="/contact/"
+        class="inline-block bg-white font-bold text-sm tracking-wide px-8 py-3 rounded-full hover:bg-slate-100 transition"
+        style={`color:${BRAND}`}>
+        Contact Us
+      </a>
+    </div>
+  </section>
+</BaseLayout>

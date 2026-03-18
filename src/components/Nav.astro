@@ -1,0 +1,128 @@
+---
+const BRAND = '#17638f'
+const currentPath = Astro.url.pathname
+
+const isActive = (path: string) =>
+  currentPath === path || currentPath.startsWith(path + '/')
+
+const productLinks = [
+  { href: '/quake-defender/', label: 'Quake Defender®', sub: 'Commercial & Industrial' },
+  { href: '/frontfoot/',      label: 'FrontFoot®',      sub: 'Residential Homes' },
+  { href: '/frontfoot-plinth/', label: 'FrontFoot® Plinth', sub: 'Data Centres & Critical Assets' },
+]
+---
+
+<nav class="sticky top-0 z-40 bg-white shadow-sm">
+  <div class="max-w-7xl mx-auto px-6 md:px-16 w-full py-3">
+    <div class="flex items-center justify-between">
+
+      <!-- Logo -->
+      <a href="/" class="flex-shrink-0">
+        <img src="/logo.png" alt="Seismic Shift Logo" class="h-9 w-auto object-contain" />
+      </a>
+
+      <!-- Desktop nav -->
+      <div class="hidden lg:flex items-center gap-1 xl:gap-2">
+
+        <!-- Products dropdown -->
+        <div class="relative group">
+          <button
+            class="flex items-center gap-1 px-3 py-1.5 rounded-full border-2 font-bold text-xs tracking-wide transition-all duration-200"
+            style={isActive('/quake-defender') || isActive('/frontfoot') || isActive('/frontfoot-plinth')
+              ? `border-color:${BRAND};background-color:#eef1f3;color:${BRAND}`
+              : 'border-color:#cbd5e1;background-color:white;color:#475569'}
+            aria-haspopup="true">
+            Solutions
+            <svg class="w-3.5 h-3.5 transition-transform group-hover:rotate-180" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+          <!-- Dropdown panel -->
+          <div class="absolute left-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+            {productLinks.map(({ href, label, sub }) => (
+              <a href={href}
+                class="flex flex-col px-5 py-3.5 first:rounded-t-2xl last:rounded-b-2xl hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+                <span class="font-black text-sm text-slate-900">{label}</span>
+                <span class="text-xs text-slate-500 mt-0.5">{sub}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <a href="/case-studies/"
+          class="px-3 py-1.5 rounded-full border-2 font-bold text-xs tracking-wide transition-all duration-200"
+          style={isActive('/case-studies')
+            ? `border-color:${BRAND};background-color:#eef1f3;color:${BRAND}`
+            : 'border-color:#cbd5e1;background-color:white;color:#475569'}>
+          Case Studies
+        </a>
+
+        <a href="/about/"
+          class="px-3 py-1.5 rounded-full border-2 font-bold text-xs tracking-wide transition-all duration-200"
+          style={isActive('/about')
+            ? `border-color:${BRAND};background-color:#eef1f3;color:${BRAND}`
+            : 'border-color:#cbd5e1;background-color:white;color:#475569'}>
+          About
+        </a>
+
+        <a href="/faq/"
+          class="px-3 py-1.5 rounded-full border-2 font-bold text-xs tracking-wide transition-all duration-200"
+          style={isActive('/faq')
+            ? `border-color:${BRAND};background-color:#eef1f3;color:${BRAND}`
+            : 'border-color:#cbd5e1;background-color:white;color:#475569'}>
+          FAQ
+        </a>
+      </div>
+
+      <!-- Desktop CTA -->
+      <div class="hidden lg:flex items-center">
+        <a href="/contact/"
+          class="text-white px-5 py-2 text-xs font-bold tracking-widest rounded-full transition shadow-md hover:opacity-90 whitespace-nowrap"
+          style={`background-color:${BRAND}`}>
+          Contact Us
+        </a>
+      </div>
+
+      <!-- Mobile hamburger -->
+      <button id="mobile-menu-btn"
+        class="lg:hidden px-4 py-1.5 rounded-full border-2 border-slate-300 font-bold text-xs tracking-wide text-slate-600 transition-all"
+        aria-label="Toggle menu" aria-expanded="false">
+        <span id="menu-label">☰ Menu</span>
+      </button>
+    </div>
+
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="lg:hidden hidden pt-4 pb-3 border-t border-slate-100 mt-3 flex flex-col gap-2">
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 px-2 pb-1">Solutions</p>
+      {productLinks.map(({ href, label, sub }) => (
+        <a href={href}
+          class="flex flex-col px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors">
+          <span class="font-black text-sm text-slate-900">{label}</span>
+          <span class="text-xs text-slate-500">{sub}</span>
+        </a>
+      ))}
+      <div class="h-px bg-slate-100 my-1" />
+      <a href="/case-studies/" class="px-4 py-2 rounded-full border-2 border-slate-200 font-bold text-sm text-slate-600 text-center">Case Studies</a>
+      <a href="/about/" class="px-4 py-2 rounded-full border-2 border-slate-200 font-bold text-sm text-slate-600 text-center">About</a>
+      <a href="/faq/" class="px-4 py-2 rounded-full border-2 border-slate-200 font-bold text-sm text-slate-600 text-center">FAQ</a>
+      <a href="/contact/"
+        class="text-white px-5 py-2.5 text-sm font-bold tracking-widest rounded-full text-center transition"
+        style={`background-color:${BRAND}`}>
+        Contact Us
+      </a>
+    </div>
+  </div>
+</nav>
+
+<script>
+  const btn = document.getElementById('mobile-menu-btn')
+  const menu = document.getElementById('mobile-menu')
+  const label = document.getElementById('menu-label')
+
+  btn?.addEventListener('click', () => {
+    const isOpen = !menu?.classList.contains('hidden')
+    menu?.classList.toggle('hidden', isOpen)
+    if (label) label.textContent = isOpen ? '☰ Menu' : '✕ Close'
+    btn?.setAttribute('aria-expanded', String(!isOpen))
+  })
+</script>

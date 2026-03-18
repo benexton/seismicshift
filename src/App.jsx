@@ -76,7 +76,7 @@ function HeroPills({ category, onContact }) {
         </a>
       </div>
       <p className="mt-4 text-xs text-slate-400 leading-relaxed">
-        Design Guide coming soon —{' '}
+        Design Guide coming soon -{' '}
         <button onClick={onContact} className="underline hover:text-slate-600 transition-colors">contact us</button>
         {' '}for design support.
       </p>
