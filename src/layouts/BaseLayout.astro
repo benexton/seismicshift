@@ -10,6 +10,7 @@ interface Props {
   canonicalPath?: string
   schema?: object
   includeTurnstile?: boolean
+  preloadImage?: string
 }
 
 const {
@@ -19,6 +20,7 @@ const {
   canonicalPath = Astro.url.pathname,
   schema,
   includeTurnstile = false,
+  preloadImage,
 } = Astro.props
 
 const siteURL = 'https://www.seismicshift.nz'
@@ -56,13 +58,39 @@ const ogImageURL = ogImage.startsWith('http') ? ogImage : `${siteURL}${ogImage}`
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
 
+    <!-- Preconnect for external origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://www.googletagmanager.com" />
+
+    <!-- Google Fonts (non-blocking via preload trick) -->
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,900;1,9..40,400&display=swap"
+    />
+    <link
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,900;1,9..40,400&display=swap"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,900;1,9..40,400&display=swap" />
+    </noscript>
+
+    <!-- Preload LCP image (page-specific) -->
+    {preloadImage && (
+      <link rel="preload" as="image" href={preloadImage} fetchpriority="high" />
+    )}
+
     <!-- Schema.org JSON-LD -->
     {schema && (
       <script type="application/ld+json" set:html={JSON.stringify(schema)} />
     )}
 
-    <!-- Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME4SZWK0H4"></script>
+    <!-- Google Analytics (deferred) -->
+    <script defer src="https://www.googletagmanager.com/gtag/js?id=G-ME4SZWK0H4"></script>
     <script>
       window.dataLayer = window.dataLayer || []
       function gtag() { dataLayer.push(arguments) }
