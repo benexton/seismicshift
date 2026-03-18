@@ -1,0 +1,82 @@
+---
+import Nav from '../components/Nav.astro'
+import Footer from '../components/Footer.astro'
+import '../styles/global.css'
+
+interface Props {
+  title: string
+  description: string
+  ogImage?: string
+  canonicalPath?: string
+  schema?: object
+  includeTurnstile?: boolean
+}
+
+const {
+  title,
+  description,
+  ogImage = '/og-default.jpg',
+  canonicalPath = Astro.url.pathname,
+  schema,
+  includeTurnstile = false,
+} = Astro.props
+
+const siteURL = 'https://www.seismicshift.nz'
+const canonicalURL = `${siteURL}${canonicalPath}`
+const ogImageURL = ogImage.startsWith('http') ? ogImage : `${siteURL}${ogImage}`
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Primary SEO -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:image" content={ogImageURL} />
+    <meta property="og:site_name" content="Seismic Shift" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImageURL} />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+
+    <!-- Schema.org JSON-LD -->
+    {schema && (
+      <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+    )}
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME4SZWK0H4"></script>
+    <script>
+      window.dataLayer = window.dataLayer || []
+      function gtag() { dataLayer.push(arguments) }
+      gtag('js', new Date())
+      gtag('config', 'G-ME4SZWK0H4')
+    </script>
+
+    <!-- Cloudflare Turnstile (loaded on contact page only) -->
+    {includeTurnstile && (
+      <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    )}
+  </head>
+  <body class="min-h-screen bg-slate-50 font-sans text-slate-900">
+    <Nav />
+    <slot />
+    <Footer />
+  </body>
+</html>

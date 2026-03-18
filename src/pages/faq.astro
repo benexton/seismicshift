@@ -1,0 +1,107 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+
+const BRAND = '#17638f'
+
+const faqs = [
+  {
+    q: "What is a seismic damper?",
+    a: "A seismic damper is a device that absorbs and dissipates earthquake energy, reducing the forces that act on a building during shaking. Similar to the shock absorbers in a car, seismic dampers are installed within a structure's bracing system or foundation to protect the building and its occupants. Seismic Shift's dampers are designed to also encourage the structure to return to its original position after an earthquake (recentering).",
+  },
+  {
+    q: "How do Quake Defender® devices work?",
+    a: "Quake Defender® devices connect directly into a building's bracing system. When the ground shakes, the devices act like shock absorbers - absorbing and dissipating seismic energy, and reducing the forces acting on the building. They also encourage the structure to recenter back to its original position after shaking. The devices are standardised in size, making them straightforward for structural engineers to design into a building.",
+  },
+  {
+    q: "How do FrontFoot® devices work?",
+    a: "FrontFoot® devices are installed between the foundation and the structure of a building. During an earthquake, the building is able to move differentially from the ground, and the FrontFoot® devices absorb and dissipate the seismic energy before it reaches the structure above. The devices also encourage the structure return to its original position after the shaking stops.",
+  },
+  {
+    q: "What is the difference between Quake Defender® and FrontFoot®?",
+    a: "Quake Defender® is designed for commercial and industrial buildings - it connects into a building's bracing system and is suitable for warehouses, factories, office buildings, and power plants. FrontFoot® is designed for residential homes and critical equipment, and is installed at foundation level between the ground and the structure. Both technologies use similar energy-absorbing principles but are engineered for different building types, scales, and applications.",
+  },
+  {
+    q: "How much does earthquake protection add to build cost?",
+    a: "FrontFoot® residential systems add approximately 1.5-2.0% to the total build cost of a new home. This is a relatively small premium for significantly improved protection - comparable to the cost of standard insurance excess, but providing ongoing protection rather than post-event recovery. For commercial buildings, costs vary depending on the structure, but Quake Defender® is specifically designed to be far more cost-effective than traditional construction methods. In new builds, Quake Defender® often saves more than it costs through enabling smaller foundations and other building elements - a real win for your project!",
+  },
+  {
+    q: "Can existing buildings be retrofitted?",
+    a: "Yes. Quake Defender® has been designed for both new builds and retrofit applications. It can be incorporated into an existing building's bracing system, making it possible to upgrade the seismic performance of older structures. This is particularly relevant for buildings that need to accommodate additional loads - such as solar panel installations - or for buildings that need to meet updated seismic code requirements. The FrontFoot® system is primarily designed for new builds at foundation level.",
+  },
+  {
+    q: "What countries do you work in?",
+    a: "Seismic Shift is based in Christchurch, New Zealand, and our technology is engineered for use in any seismically active region. We are actively working on projects in New Zealand, the United States, Canada, Japan, and Chile. Our standardised product sizes and clear installation documentation are designed to make deployment straightforward for structural engineers anywhere in the world.",
+  },
+  {
+    q: "How do I get a quote?",
+    a: "Contact us through our contact page - any detail that you can provide such as the building type, location, approximate size, and what you are trying to achieve. Our engineering team will get back to you to discuss your requirements and provide guidance on the most suitable solution. We offer design support and can work alongside your existing structural engineer.",
+  },
+]
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map(({ q, a }) => ({
+    "@type": "Question",
+    "name": q,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": a,
+    },
+  })),
+}
+---
+
+<BaseLayout
+  title="FAQ | Seismic Damper Questions Answered"
+  description="Answers to common questions about seismic dampers, FrontFoot®, Quake Defender®, retrofit options, costs, and how to get earthquake protection for your building."
+  canonicalPath="/faq/"
+  schema={schema}
+>
+  <!-- Hero -->
+  <section class="w-full bg-white border-b border-slate-100">
+    <div class="max-w-7xl mx-auto px-6 md:px-16 py-16 md:py-24">
+      <h1 class="text-4xl md:text-5xl font-black leading-tight tracking-tighter text-slate-900 mb-4">
+        Common questions answered.
+      </h1>
+      <p class="text-lg text-slate-500">
+        Everything you need to know about our seismic protection technologies, and how to get started.
+      </p>
+    </div>
+  </section>
+
+  <!-- FAQ items -->
+  <section class="w-full bg-slate-50 py-16">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <div class="space-y-4">
+        {faqs.map(({ q, a }, i) => (
+          <details class="group bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <summary class="flex items-center justify-between px-6 py-5 cursor-pointer list-none select-none">
+              <h2 class="font-black text-slate-900 text-base md:text-lg pr-4">{q}</h2>
+              <svg
+                class="w-5 h-5 flex-shrink-0 text-slate-400 transition-transform group-open:rotate-180"
+                fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+              </svg>
+            </summary>
+            <div class="px-6 pb-6">
+              <div class="h-px bg-slate-100 mb-4"></div>
+              <p class="text-slate-600 leading-relaxed">{a}</p>
+            </div>
+          </details>
+        ))}
+      </div>
+
+      <!-- Still have questions -->
+      <div class="mt-12 bg-white rounded-3xl border border-slate-100 shadow-sm p-8 text-center">
+        <h3 class="font-black text-xl text-slate-900 mb-2">Still have questions?</h3>
+        <p class="text-slate-500 mb-6">Our engineering team is happy to discuss your specific project requirements.</p>
+        <a href="/contact/"
+          class="inline-block text-white font-bold text-sm tracking-wide px-8 py-3 rounded-full hover:opacity-90 transition"
+          style={`background-color:${BRAND}`}>
+          Contact Us
+        </a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

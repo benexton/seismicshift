@@ -1,0 +1,89 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import OurMissionSection from '../components/OurMissionSection.jsx'
+
+const BRAND = '#17638f'
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "name": "About Seismic Shift",
+  "url": "https://www.seismicshift.nz/about/",
+  "mainEntity": {
+    "@type": "Organization",
+    "name": "Seismic Shift",
+    "foundingDate": "2021",
+    "foundingLocation": "Christchurch, New Zealand",
+    "description": "Seismic Shift was founded by structural engineers Ben Exton and Geoff Banks following the 2011 Christchurch earthquakes, with a mission to deliver affordable earthquake resilience worldwide."
+  }
+}
+---
+
+<BaseLayout
+  title="About Seismic Shift | Our Mission & Team"
+  description="Founded by structural engineers after the 2011 Christchurch earthquakes. Seismic Shift's mission: deliver affordable earthquake resilience to communities worldwide."
+  canonicalPath="/about/"
+  schema={schema}
+>
+  <!-- Mission section -->
+  <section class="w-full bg-white py-16">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-12">Our Mission.</h2>
+      <OurMissionSection client:load />
+    </div>
+  </section>
+
+  <!-- Values -->
+  <section class="w-full bg-slate-50 border-t border-slate-100 py-16">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <h2 class="text-2xl md:text-4xl font-black tracking-tighter text-slate-900 mb-12">What drives us.</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {[
+          {
+            title: "Affordability",
+            body: "Seismic protection has historically been expensive. We've engineered standardised, buildable solutions that bring cost down without compromising performance.",
+          },
+          {
+            title: "Resilience beyond life-safety",
+            body: "Building codes protect lives. But lives are also affected by damage, displacement, financial loss, and mental stress. We design for a better outcome.",
+          },
+          {
+            title: "Global reach",
+            body: "Earthquakes don't respect borders. Our technology is designed to work in any seismic context - from New Zealand to Japan, Chile to California.",
+          },
+        ].map(({ title, body }) => (
+          <div class="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+            <div class="w-8 h-1 rounded-full mb-5" style={`background-color:${BRAND}`}></div>
+            <h3 class="text-lg font-black tracking-tight text-slate-900 mb-3">{title}</h3>
+            <p class="text-slate-500 text-sm leading-relaxed">{body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- IP section -->
+  <section id="intellectual-property" class="w-full bg-white border-t border-slate-100 py-16">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <h3 class="text-sm font-black text-slate-700 mb-4">Intellectual Property</h3>
+      <div class="text-xs text-slate-500 leading-relaxed space-y-4">
+        <p>Certain Seismic Shift products are protected by one or more claims of patents in the U.S. and elsewhere. This website page is provided to satisfy the virtual patent marking provisions of various jurisdictions, including the virtual patent marking provisions of the America Invents Act (35 U.S.C § 287) in the U.S. for the listed patents that are practiced by one or more of the identified products. The following listing of Seismic Shift products may not be all inclusive and Seismic Shift products not listed here may be protected by one or more patents. In addition, Seismic Shift may be the owner or licensee of additional patents and patent applications that are not listed here.</p>
+        <p><span class="font-bold text-slate-700">FrontFoot™</span> May be covered by or may be for use under one or more of the following: N.Z. Pat. No. 785618, Patent Pending Application No. PCT/IB2022/051714, WO2022/185174A1.</p>
+        <p><span class="font-bold text-slate-700">Quake Defender</span> May be covered by or may be for use under one or more of the following: Australian Patent Pending Application No. 2024904237.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="w-full py-16 border-t border-slate-100" style={`background-color:${BRAND}`}>
+    <div class="max-w-7xl mx-auto px-6 md:px-16 text-center">
+      <h2 class="text-3xl md:text-4xl font-black tracking-tighter text-white mb-4">Want to learn more about how we can help?</h2>
+      <p class="text-white/80 text-lg mb-8">We'd love to hear about your project.</p>
+      <a href="/contact/"
+        class="inline-block bg-white font-bold text-sm tracking-wide px-8 py-3 rounded-full hover:bg-slate-100 transition"
+        style={`color:${BRAND}`}>
+        Get in Touch
+      </a>
+    </div>
+  </section>
+</BaseLayout>

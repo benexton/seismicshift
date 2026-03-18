@@ -1,0 +1,191 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import ModelViewer from '../components/ModelViewer.jsx'
+import RollingWord from '../components/RollingWord.jsx'
+import ImageCard from '../components/ImageCard.jsx'
+import VideoCard from '../components/VideoCard.jsx'
+
+const BRAND = '#17638f'
+const BRAND_TINT = '#eef1f3'
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Quake Defender®",
+  "brand": { "@type": "Brand", "name": "Seismic Shift" },
+  "description": "Quake Defender® is an affordable seismic damper for commercial and industrial structures. Engineered in New Zealand to reduce earthquake forces on buildings worldwide.",
+  "url": "https://www.seismicshift.nz/quake-defender/",
+  "manufacturer": {
+    "@type": "Organization",
+    "name": "Seismic Shift",
+    "url": "https://www.seismicshift.nz"
+  },
+  "category": "Seismic Damper",
+  "offers": {
+    "@type": "Offer",
+    "seller": { "@type": "Organization", "name": "Seismic Shift" }
+  }
+}
+
+const helperCards = [
+  {
+    title: "Better new builds at lower cost",
+    img: "/qdhelp1.png",
+    body: "Quake Defender® enables the construction of higher-performance structures at lower construction cost. Our technology absorbs energy and also encourages a structure to recenter back to its original position following an earthquake. Contact us and see how we can save you money.",
+  },
+  {
+    title: "Do more with existing buildings",
+    img: "/qdhelp2.png",
+    body: "The extra weight of solar panels and other additions can have an impact on the seismic performance of existing buildings. Quake Defender® enables this impact to be dealt with in an affordable manner, enabling you to do more with your existing buildings.",
+  },
+  {
+    title: "Strengthen existing buildings",
+    img: "/qdhelp3.png",
+    body: "Quake Defender® can be used to strengthen certain aspects of existing buildings in an affordable manner, when compared to traditional methods. Better for you, and all who live, work, and play in and around the buildings too.",
+  },
+]
+
+const howCards = [
+  {
+    type: 'image',
+    step: "01",
+    title: "Standardisation & affordability",
+    img: "/testingflag.png",
+    body: "Seismic Shift technologies focus on performance, affordability, and buildability through the use of standardised sizes of all products. This speeds up the design process, reduces cost, and improves reliability. They are straightforward to design and install.",
+  },
+  {
+    type: 'image',
+    step: "02",
+    title: "Connected to seismic bracing",
+    img: "/clean5.png",
+    body: "Quake Defender® connects directly into a building's bracing system, adding energy absorption and encouraging a building back to its original position after shaking (recentering). The devices act like the shock absorbers in a car, reducing the forces acting on a building during an earthquake.",
+  },
+  {
+    type: 'video',
+    step: "03",
+    title: "Retrofit example",
+    vimeo: "https://vimeo.com/1167209639",
+    body: "When the ground shakes, the devices absorb and dissipate seismic energy before it reaches the structure, dramatically reducing damage.",
+    translate: "translate(-45%, -50%)",
+  },
+]
+
+const stats = {
+  label: "Design study: Canterbury Solar Panel Installation on Existing Building",
+  items: [
+    { stat: "4",     label: "Quake Defender® devices" },
+    { stat: "10t",   label: "Additional weight added to structure" },
+    { stat: ">50%",  label: "Seismic force reduction target" },
+    { stat: "±50mm", label: "System movement" },
+  ],
+}
+---
+
+<BaseLayout
+  title="Quake Defender® Seismic Dampers | Commercial & Industrial"
+  description="Quake Defender® delivers affordable seismic protection for warehouses, factories, and industrial buildings. Reduce earthquake forces by over 50%. Engineered in NZ."
+  canonicalPath="/quake-defender/"
+  schema={schema}
+>
+  <!-- Hero -->
+  <section class="w-full" style="background:radial-gradient(ellipse 180% 40% at 50% 42%, rgba(230,234,236,0.20) 0%, rgba(200,204,207,0.14) 16%, rgba(120,122,124,0.07) 32%, rgba(0,0,0,0) 60%), radial-gradient(circle at 50% 70%, rgba(43,43,43,0.12) 0%, rgba(23,23,23,0.08) 40%, rgba(15,15,15,0.04) 75%, transparent 100%)">
+    <div class="max-w-7xl mx-auto px-6 md:px-16 py-6">
+      <div class="flex flex-col-reverse md:grid md:grid-cols-2 md:gap-8 md:items-start mb-6 md:mb-12">
+        <!-- Text -->
+        <div class="md:pt-8">
+          <h1 class="text-2xl md:text-4xl lg:text-5xl font-black leading-tight tracking-tighter text-slate-900 mb-4 md:mb-6">
+            A shock-absorber for your <RollingWord category="infrastructure" client:load />
+          </h1>
+          <p class="text-sm md:text-base lg:text-lg text-slate-500 leading-relaxed">
+            Quake Defender® delivers affordable seismic enhancement for commercial and industrial structures. Engineered in New Zealand to improve the performance of buildings during shaking anywhere in the world. Our solutions put you in control - the proactive choice ahead of future earthquakes.
+          </p>
+          <div class="flex gap-3 mt-8 md:mt-10 mb-2 flex-wrap">
+            <a href="/Quake Defender Retrofit Guide.pdf" download="Quake Defender Retrofit Guide.pdf"
+              class="px-5 py-2 rounded-full border-2 font-bold text-xs tracking-wide transition-all duration-200 hover:bg-[#eef1f3]"
+              style={`border-color:${BRAND};color:${BRAND}`}>
+              Installation Instructions
+            </a>
+          </div>
+          <p class="mt-4 text-xs text-slate-400 leading-relaxed">
+            Design Guide coming soon - <a href="/contact/" class="underline hover:text-slate-600 transition-colors">contact us</a> for design support.
+          </p>
+        </div>
+        <!-- 3D Model - single instance, responsive height -->
+        <div class="h-[240px] md:h-80 lg:h-[480px] -mt-4 md:mt-0">
+          <ModelViewer
+            client:only="react"
+            src="/QDUntitled37_compressed_v2.glb"
+            scale={[1.4, 1.4, 1.4]}
+            rotation={[Math.PI / 2, -0.2, 0]}
+            camera={{ position: [2, 0.5, 6], fov: 38 }}
+            environment="city"
+            intensity={0.6}
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Helper cards -->
+  <section class="w-full bg-slate-50 py-12 border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">How can Quake Defender help you?</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
+        {helperCards.map(card => (
+          <ImageCard client:visible title={card.title} img={card.img} body={card.body} />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="w-full bg-white py-12 border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">How it works.</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
+        {howCards.map(card => card.type === 'video'
+          ? <VideoCard client:visible title={card.title} vimeo={card.vimeo} translate={card.translate} />
+          : <ImageCard client:visible title={card.title} img={card.img} body={card.body} />
+        )}
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats / Case study -->
+  <section class="w-full bg-slate-50 py-8 md:py-12 border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">The Seismic Shift.</h2>
+      <div class="md:grid md:grid-cols-2 md:gap-8 lg:gap-10 space-y-4 md:space-y-0">
+        <div class="bg-white px-6 py-4 md:px-8 md:py-5 lg:px-10 lg:py-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col h-[220px] md:h-[240px] lg:h-[280px]">
+          <div class="flex-1 flex items-center pb-3 md:pb-4">
+            <span class="font-black text-xs md:text-xs lg:text-sm tracking-[0.12em] uppercase" style={`color:${BRAND}`}>{stats.label}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-x-4 gap-y-3 md:gap-x-8 md:gap-y-4 lg:gap-y-6 lg:gap-x-12 pt-3 md:pt-4 lg:pt-5 border-t border-slate-100">
+            {stats.items.map(({ stat, label }) => (
+              <div>
+                <div class="text-xl md:text-3xl lg:text-4xl font-black text-slate-900">{stat}</div>
+                <div class="font-bold text-[8px] md:text-[9px] lg:text-[10px] uppercase mt-1 tracking-widest" style={`color:${BRAND}`}>{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div class="rounded-2xl md:rounded-3xl border border-slate-200 overflow-hidden shadow-sm h-[220px] md:h-[240px] lg:h-[280px]">
+          <img src="/rolleston.jpg" class="w-full h-full object-cover object-center" alt="Quake Defender installation" loading="lazy" />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="w-full py-16 border-t border-slate-100" style={`background-color:${BRAND}`}>
+    <div class="max-w-7xl mx-auto px-6 md:px-16 text-center">
+      <h2 class="text-3xl md:text-4xl font-black tracking-tighter text-white mb-4">Ready to protect your building?</h2>
+      <p class="text-white/80 text-lg mb-8">Get in touch with our engineering team for a design consultation.</p>
+      <a href="/contact/"
+        class="inline-block bg-white font-bold text-sm tracking-wide px-8 py-3 rounded-full hover:bg-slate-100 transition"
+        style={`color:${BRAND}`}>
+        Contact Us
+      </a>
+    </div>
+  </section>
+</BaseLayout>

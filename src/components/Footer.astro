@@ -1,0 +1,88 @@
+---
+// Footer with legal modals handled via inline script
+---
+
+<footer class="bg-white border-t py-12">
+  <div class="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center opacity-50 grayscale">
+    <a href="/">
+      <img src="/logo.png" alt="Seismic Shift Logo" class="h-12 w-auto" />
+    </a>
+    <div class="flex flex-col md:flex-row items-center gap-3 md:gap-6 mt-4 md:mt-0">
+      <button id="footer-fineprint-btn" class="font-bold text-xs md:text-sm hover:opacity-70 transition-opacity">Fine Print</button>
+      <span class="hidden md:inline text-slate-300">|</span>
+      <button id="footer-privacy-btn" class="font-bold text-xs md:text-sm hover:opacity-70 transition-opacity">Privacy Policy</button>
+      <span class="hidden md:inline text-slate-300">|</span>
+      <p class="font-bold text-xs md:text-sm">© 2026 Seismic Shift Ltd. All rights reserved.</p>
+    </div>
+  </div>
+</footer>
+
+<!-- Legal Modals -->
+<div id="fineprint-modal" class="fixed inset-0 z-50 hidden items-end md:items-center justify-center p-0 md:p-6">
+  <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" id="fineprint-overlay"></div>
+  <div class="relative bg-white w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]">
+    <div class="flex items-center justify-between px-8 pt-7 pb-5 border-b border-slate-100 flex-shrink-0">
+      <h2 class="text-lg font-black tracking-tight text-slate-900">The Fine Print</h2>
+      <button id="fineprint-close" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors" aria-label="Close">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="2" y1="2" x2="12" y2="12"/><line x1="12" y1="2" x2="2" y2="12"/></svg>
+      </button>
+    </div>
+    <div class="overflow-y-auto px-8 py-6 text-sm text-slate-600 leading-relaxed space-y-5">
+      <p>Thank you for your business and your support. Please take time to read these Terms and Conditions ("Terms") to understand our contractual relationship relating to your use of our website.</p>
+      <div>
+        <h3 class="font-black text-slate-900 mb-2">Acceptance of Terms</h3>
+        <p>These Terms govern your use of our website at www.seismicshift.nz. Our website is made available to you subject to these Terms and by using our website, you acknowledge that you have read, understood and accepted these Terms. We may amend these Terms from time to time at our complete discretion.</p>
+      </div>
+      <div>
+        <h3 class="font-black text-slate-900 mb-2">Website Content</h3>
+        <p>While we will endeavour to ensure the completeness and accuracy of the information we provide, you acknowledge that all such information is provided "as is" and without any warranties of any kind either express or implied. We accept no responsibility for inaccurate or incorrect information and reserve the right to change information at any time without notice.</p>
+      </div>
+      <div>
+        <h3 class="font-black text-slate-900 mb-2">Intellectual Property Rights</h3>
+        <p>All right, title and interest in all intellectual property rights relating to our website and its content is owned by, and shall at all times remain the exclusive property of, Seismic Shift Ltd. You may download and temporarily store pages for viewing purposes only. You must not copy, modify, or use any content for commercial purposes without our prior written consent. Please contact <a href="mailto:info@seismicshift.nz" class="underline" style="color:#17638f">info@seismicshift.nz</a> if you believe there has been an infringement of our rights.</p>
+      </div>
+      <div>
+        <h3 class="font-black text-slate-900 mb-2">Governing Law</h3>
+        <p>Use of our website and any matters arising from these Terms are governed by and interpreted in accordance with New Zealand law. The Courts of New Zealand shall have non-exclusive jurisdiction over all claims or disputes arising in connection with these Terms.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="privacy-modal" class="fixed inset-0 z-50 hidden items-end md:items-center justify-center p-0 md:p-6">
+  <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" id="privacy-overlay"></div>
+  <div class="relative bg-white w-full md:max-w-2xl md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]">
+    <div class="flex items-center justify-between px-8 pt-7 pb-5 border-b border-slate-100 flex-shrink-0">
+      <h2 class="text-lg font-black tracking-tight text-slate-900">Privacy Policy</h2>
+      <button id="privacy-close" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors" aria-label="Close">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="2" y1="2" x2="12" y2="12"/><line x1="12" y1="2" x2="2" y2="12"/></svg>
+      </button>
+    </div>
+    <div class="overflow-y-auto px-8 py-6 text-sm text-slate-600 leading-relaxed space-y-4">
+      <p>Your privacy is important to us. This Privacy Policy outlines the online information practices we employ in relation to the information you provide when using this site.</p>
+      <p>For us to be able to process and fulfil your requests, you acknowledge that we may share your contact information with our staff and professional advisors. No information relating to you will be sold or otherwise divulged to any other third parties without your prior consent, except when required by law.</p>
+      <p>You may request a copy of the personal information that we hold about you, and make any corrections, at any time by emailing us at <a href="mailto:info@seismicshift.nz" class="underline" style="color:#17638f">info@seismicshift.nz</a>.</p>
+      <p>Unless you opt to receive messages from us via email, we will only send you messages relating to your specific requests.</p>
+      <p>You are required to permit us to place data files ("cookies") on your computer to enable you to use some features of our website.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal(id: string) {
+    const el = document.getElementById(id)
+    if (el) { el.classList.remove('hidden'); el.classList.add('flex'); document.body.style.overflow = 'hidden' }
+  }
+  function closeModal(id: string) {
+    const el = document.getElementById(id)
+    if (el) { el.classList.add('hidden'); el.classList.remove('flex'); document.body.style.overflow = '' }
+  }
+
+  document.getElementById('footer-fineprint-btn')?.addEventListener('click', () => openModal('fineprint-modal'))
+  document.getElementById('fineprint-close')?.addEventListener('click', () => closeModal('fineprint-modal'))
+  document.getElementById('fineprint-overlay')?.addEventListener('click', () => closeModal('fineprint-modal'))
+
+  document.getElementById('footer-privacy-btn')?.addEventListener('click', () => openModal('privacy-modal'))
+  document.getElementById('privacy-close')?.addEventListener('click', () => closeModal('privacy-modal'))
+  document.getElementById('privacy-overlay')?.addEventListener('click', () => closeModal('privacy-modal'))
+</script>

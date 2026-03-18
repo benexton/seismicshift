@@ -1,0 +1,159 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import OurMissionSection from '../components/OurMissionSection.jsx'
+
+const BRAND = '#17638f'
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Seismic Shift",
+  "url": "https://www.seismicshift.nz",
+  "logo": "https://www.seismicshift.nz/logo.png",
+  "description": "Seismic Shift delivers affordable earthquake protection technology for commercial buildings, homes, and critical equipment worldwide.",
+  "foundingLocation": {
+    "@type": "Place",
+    "name": "Christchurch, New Zealand"
+  },
+  "areaServed": ["New Zealand", "United States", "Canada", "Japan", "Chile"],
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "email": "info@seismicshift.nz",
+    "contactType": "customer service"
+  }
+}
+
+const products = [
+  {
+    href: '/quake-defender/',
+    label: 'Quake Defender®',
+    tag: 'Commercial & Industrial',
+    tagline: 'A shock-absorber for your warehouse, factory, or power plant.',
+    body: 'Affordable seismic enhancement for commercial and industrial structures. Engineered in New Zealand to improve building performance during shaking anywhere in the world.',
+    img: '/rolleston.jpg',
+    pill: { bg: '#17638f', text: 'white', label: 'Learn more →' },
+  },
+  {
+    href: '/frontfoot/',
+    label: 'FrontFoot®',
+    tag: 'Residential Homes',
+    tagline: 'A shock-absorber for your home, nest egg, or sanctuary.',
+    body: 'The FrontFoot® foundation system decouples your home from ground motion, dramatically reducing seismic loads and safeguarding your family.',
+    img: '/pisa1website.jpg',
+    pill: { bg: '#17638f', text: 'white', label: 'Learn more →' },
+  },
+  {
+    href: '/frontfoot-plinth/',
+    label: 'FrontFoot® Plinth',
+    tag: 'Data Centres & Critical Assets',
+    tagline: 'Peace of mind for your data centre, medical equipment, or emergency systems.',
+    body: 'The FrontFoot® plinth system provides improved performance for key facilities such as hospitals, data centres, and infrastructure that cannot afford interruption.',
+    img: '/ffinstall.jpg',
+    pill: { bg: '#17638f', text: 'white', label: 'Learn more →' },
+  },
+]
+---
+
+<BaseLayout
+  title="Seismic Shift | Earthquake Protection Technology"
+  description="Seismic Shift delivers affordable earthquake protection for commercial buildings, homes, and critical equipment. Engineered in New Zealand, deployed worldwide."
+  canonicalPath="/"
+  schema={schema}
+>
+  <!-- Hero -->
+  <section class="w-full" style={{
+    background: [
+      "radial-gradient(ellipse 180% 40% at 50% 42%, rgba(230,234,236,0.20) 0%, rgba(200,204,207,0.14) 16%, rgba(120,122,124,0.07) 32%, rgba(0,0,0,0) 60%)",
+      "radial-gradient(circle at 50% 70%, rgba(43,43,43,0.12) 0%, rgba(23,23,23,0.08) 40%, rgba(15,15,15,0.04) 75%, rgba(15,15,15,0) 100%)"
+    ].join(', ')
+  }}>
+    <div class="max-w-7xl mx-auto px-6 md:px-16 py-16 md:py-24">
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tighter text-slate-900 mb-6">
+          Earthquakes happen.<br />
+          <span style={`color:${BRAND}`}>Protect what matters.</span>
+        </h1>
+        <p class="text-lg md:text-xl text-slate-500 leading-relaxed mb-8">
+          Seismic Shift delivers affordable protection technologies for commercial buildings, homes, and critical equipment in earthquake-prone communities around the world.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="/contact/"
+            class="text-white px-6 py-2.5 text-sm font-bold tracking-wide rounded-full shadow-md hover:opacity-90 transition"
+            style={`background-color:${BRAND}`}>
+            Get in Touch
+          </a>
+          <a href="/about/"
+            class="px-6 py-2.5 text-sm font-bold tracking-wide rounded-full border-2 border-slate-300 text-slate-600 hover:border-slate-400 transition">
+            Our Mission
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Products grid -->
+  <section class="w-full bg-white border-t border-slate-100 py-16">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-12">Our Solutions.</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {products.map(({ href, label, tag, body, img }) => (
+          <a href={href} class="group flex flex-col rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <div class="h-52 overflow-hidden">
+              <img src={img} alt={label} class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+            </div>
+            <div class="p-6 flex flex-col flex-1">
+              <h3 class="text-xl font-black tracking-tight text-slate-900 mb-1">{label}</h3>
+              <p class="text-xs text-slate-400 font-bold mb-3">{tag}</p>
+              <p class="text-slate-500 text-sm leading-relaxed flex-1">{body}</p>
+              <span class="mt-4 inline-flex items-center text-sm font-bold" style={`color:${BRAND}`}>
+                Learn more →
+              </span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Countries served -->
+  <section class="w-full bg-slate-50 border-t border-slate-100 py-12">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <p class="text-center text-sm font-bold text-slate-400 mb-6">Active in earthquake-prone regions worldwide</p>
+      <div class="flex flex-wrap justify-center gap-3">
+        {['New Zealand', 'United States', 'Canada', 'Japan', 'Chile'].map(country => (
+          <span class="px-5 py-2 rounded-full border-2 border-slate-200 bg-white text-slate-600 font-bold text-sm">{country}</span>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Our Mission preview -->
+  <section id="our-mission" class="w-full bg-white py-16 scroll-mt-20 border-t border-slate-100">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-12">Our Mission.</h2>
+      <OurMissionSection client:visible />
+
+      <!-- IP notice -->
+      <div class="mt-12 pt-8 border-t border-slate-200">
+        <h3 class="text-sm font-black text-slate-700 mb-4">Intellectual Property</h3>
+        <div class="text-xs text-slate-500 leading-relaxed space-y-3">
+          <p>Certain Seismic Shift products are protected by one or more claims of patents in the U.S. and elsewhere. This website page is provided to satisfy the virtual patent marking provisions of various jurisdictions, including the virtual patent marking provisions of the America Invents Act (35 U.S.C § 287) in the U.S. for the listed patents that are practiced by one or more of the identified products.</p>
+          <p><span class="font-bold text-slate-700">FrontFoot™</span> May be covered by or may be for use under one or more of the following: N.Z. Pat. No. 785618, Patent Pending Application No. PCT/IB2022/051714, WO2022/185174A1.</p>
+          <p><span class="font-bold text-slate-700">Quake Defender</span> May be covered by or may be for use under one or more of the following: Australian Patent Pending Application No. 2024904237.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA strip -->
+  <section class="w-full py-16 border-t border-slate-100" style={`background-color:${BRAND}`}>
+    <div class="max-w-7xl mx-auto px-6 md:px-16 text-center">
+      <h2 class="text-3xl md:text-4xl font-black tracking-tighter text-white mb-4">Ready to protect your building?</h2>
+      <p class="text-white/80 text-lg mb-8">Our team of engineers is ready to help you find the right solution.</p>
+      <a href="/contact/"
+        class="inline-block bg-white font-bold text-sm tracking-wide px-8 py-3 rounded-full hover:bg-slate-100 transition"
+        style={`color:${BRAND}`}>
+        Contact Us
+      </a>
+    </div>
+  </section>
+</BaseLayout>
