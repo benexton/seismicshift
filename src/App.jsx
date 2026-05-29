@@ -666,7 +666,7 @@ function App() {
         onPointerLeave={() => qdContainerRef.current && (qdContainerRef.current.style.transform = 'scale(1)')}
         onPointerMove={() => setQdHint(false)}
         {...trackMouse(qdMouse)}>
-        <Canvas shadows camera={{ position: [2, 0.5, 6], fov: 38 }}>
+        <Canvas shadows camera={{ position: [2, 0.5, 6], fov: 38 }} gl={{ toneMapping: 2, toneMappingExposure: 1.5, powerPreference: "high-performance" }}>
           <Suspense fallback={null}>
             <Stage environment="city" intensity={0.6} contactShadow={{ opacity: 0.5, blur: 2 }} center={{ disableY: false }}>
               <Model src="./QDUntitled37_compressed_v2.glb" scale={[1.4, 1.4, 1.4]} rotation={[Math.PI / 2, -0.2, 0]} mouse={qdMouse} />
@@ -687,7 +687,7 @@ function App() {
         onPointerLeave={() => ffContainerRef.current && (ffContainerRef.current.style.transform = 'scale(1)')}
         onPointerMove={() => setFfHint(false)}
         {...trackMouse(ffMouse)}>
-        <Canvas shadows camera={{ position: [0, 1, 6], fov: 38 }}>
+        <Canvas shadows camera={{ position: [0, 1, 6], fov: 38 }} gl={{ toneMapping: 2, toneMappingExposure: 1.5, powerPreference: "high-performance" }}>
           <Suspense fallback={null}>
             <Stage environment="sunset" intensity={0.3} contactShadow={{ opacity: 0.3, blur: 2.5 }} center={{ disableY: false }}>
               <Model src="./bestFF_compressed.glb" scale={[0.8, 0.8, 0.8]} rotation={[0.3, 0, 0]} mouse={ffMouse} />
