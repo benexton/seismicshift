@@ -61,31 +61,31 @@
   .topbar{
     display:flex;
     align-items:center;
-    justify-content:space-between;
-    padding:14px 18px 10px;
+    justify-content:flex-start;
+    padding:14px 94px 10px 16px;
     font-family:var(--mono);
-    font-size:10px;
-    letter-spacing:.08em;
+    font-size:8.5px;
+    letter-spacing:.03em;
     color:var(--line-dim);
     border-bottom:1px solid var(--line-faint);
   }
-  .topbar .steps{display:flex;gap:14px;}
+  .topbar .steps{display:flex;gap:6px;white-space:nowrap;}
   .topbar .step{opacity:.35;transition:opacity .25s;}
   .topbar .step.active{opacity:1;color:var(--amber);}
   .topbar .step.done{opacity:.7;color:var(--line);}
 
   .logo-slot{
     position:absolute;
-    top:12px;
-    right:16px;
+    top:11px;
+    right:14px;
     z-index:30;
     pointer-events:none;
   }
   .logo-img{
     display:block;
-    height:26px;
+    height:22px;
     width:auto;
-    max-width:140px;
+    max-width:80px;
     /* the logo is black on transparent; recolour it to white so it
        reads on the dark navy background. Change 'invert(1)' below if
        you'd prefer a different tint. */
@@ -263,7 +263,7 @@
     padding:10px 10px 0;
     margin:14px 0;
   }
-  #scene{width:100%;height:auto;max-height:280px;display:block;margin:0 auto;}
+  #scene{width:100%;height:auto;max-height:360px;display:block;margin:0 auto;}
   .seis-strip{
     border-top:1px solid var(--line-faint);
     padding:6px 4px 8px;
@@ -1155,7 +1155,16 @@
     var storeyH = renderH/segments;
     var bw = bt.bw, bx = 150-bw/2;
 
-    svg.setAttribute('viewBox', '0 0 300 400');
+    // Frame the scene to the building: crop the empty sky above the
+    // roof and the excess soil below, so short buildings (house) aren't
+    // lost in a big empty frame. Keep full width (300) so the ground can
+    // still slide and the building sway without revealing edges. 42px of
+    // headroom clears the roof peak, roof add-ons, camera shake and some
+    // collapse debris; the bottom sits just below the ground line.
+    var eaveY = buildingBaseY - renderH;
+    var vbTop = Math.max(Math.round(eaveY - 42), 8);
+    var vbBottom = 332;
+    svg.setAttribute('viewBox', '0 '+vbTop+' 300 '+(vbBottom-vbTop));
     var P = [];
 
     // ---- ground: receding surface plane + soil face + shadow + foundation box ----
