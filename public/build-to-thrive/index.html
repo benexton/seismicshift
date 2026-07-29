@@ -62,15 +62,16 @@
     display:flex;
     align-items:center;
     justify-content:flex-start;
-    padding:14px 94px 10px 16px;
+    padding:10px 84px 8px 16px;
     font-family:var(--mono);
-    font-size:8.5px;
-    letter-spacing:.03em;
+    letter-spacing:.02em;
     color:var(--line-dim);
     border-bottom:1px solid var(--line-faint);
   }
-  .topbar .steps{display:flex;gap:6px;white-space:nowrap;}
-  .topbar .step{opacity:.35;transition:opacity .25s;}
+  .topbar .steps{display:flex;gap:11px;white-space:nowrap;}
+  .topbar .step{display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1;opacity:.35;transition:opacity .25s;}
+  .topbar .step .num{font-size:8px;letter-spacing:.06em;}
+  .topbar .step .lbl{font-size:9.5px;font-weight:600;}
   .topbar .step.active{opacity:1;color:var(--amber);}
   .topbar .step.done{opacity:.7;color:var(--line);}
 
@@ -375,11 +376,11 @@
 
   <div class="topbar" id="topbar" style="display:none;">
     <div class="steps">
-      <span class="step" data-step="build">01 DESIGN</span>
-      <span class="step" data-step="additions">02 ADD-ONS</span>
-      <span class="step" data-step="protect">03 PROTECT</span>
-      <span class="step" data-step="shake">04 TEST</span>
-      <span class="step" data-step="results">05 RESULT</span>
+      <span class="step" data-step="build"><span class="num">01</span><span class="lbl">DESIGN</span></span>
+      <span class="step" data-step="additions"><span class="num">02</span><span class="lbl">ADD-ONS</span></span>
+      <span class="step" data-step="protect"><span class="num">03</span><span class="lbl">PROTECT</span></span>
+      <span class="step" data-step="shake"><span class="num">04</span><span class="lbl">TEST</span></span>
+      <span class="step" data-step="results"><span class="num">05</span><span class="lbl">RESULT</span></span>
     </div>
   </div>
 
@@ -649,10 +650,9 @@
      add-on never looks like it hands out score. */
   var COIN = '<svg class="coin" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7" r="2.2" fill="currentColor"/></svg>';
 
-  // TODO: replace with the real product pages before this goes live
   var LEARN_MORE_URLS = {
-    house: 'https://example.com/frontfoot',
-    standard: 'https://example.com/quake-defender'
+    house: 'https://www.seismicshift.nz/frontfoot/',
+    standard: 'https://www.seismicshift.nz/quake-defender/'
   };
 
   // TODO: point this at your own endpoint before this goes live.
