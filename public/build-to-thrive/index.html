@@ -1,0 +1,2223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#081c29">
+<title>Build to Thrive - Seismic Shift</title>
+<style>
+  :root{
+    --ink:#0a2130;
+    --bg-deep:#081c29;
+    --bg-panel:#0f3049;
+    --bg-panel-2:#123a52;
+    --brand:#17638f;
+    --brand-light:#3a9bd1;
+    --line:#bfe0ec;
+    --line-dim:rgba(191,224,236,.38);
+    --line-faint:rgba(191,224,236,.14);
+    --paper:#eef4f6;
+    --paper-dim:#c3d6db;
+    --amber:#e8a33d;
+    --amber-dim:#a3752d;
+    --danger:#e0574f;
+    --safe:#38b07d;
+    --warn:#d9c447;
+    --mass:#d98a5a;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,"Roboto Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:var(--font);
+    background:
+      repeating-linear-gradient(0deg, var(--line-faint) 0px, var(--line-faint) 1px, transparent 1px, transparent 28px),
+      repeating-linear-gradient(90deg, var(--line-faint) 0px, var(--line-faint) 1px, transparent 1px, transparent 28px),
+      var(--bg-deep);
+    color:var(--paper);
+    min-height:100dvh;
+    display:flex;
+    justify-content:center;
+    overflow-x:hidden;
+  }
+  #app{
+    width:100%;
+    max-width:480px;
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+    background:linear-gradient(180deg, rgba(15,48,73,.55), rgba(8,28,41,.2));
+    position:relative;
+    border-inline:1px solid var(--line-faint);
+  }
+  button{font-family:inherit;}
+  button:focus-visible, .card:focus-visible, .toggle:focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:2px;
+  }
+
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 18px 10px;
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.08em;
+    color:var(--line-dim);
+    border-bottom:1px solid var(--line-faint);
+  }
+  .topbar .steps{display:flex;gap:14px;}
+  .topbar .step{opacity:.35;transition:opacity .25s;}
+  .topbar .step.active{opacity:1;color:var(--amber);}
+  .topbar .step.done{opacity:.7;color:var(--line);}
+
+  .logo-slot{
+    position:absolute;
+    top:12px;
+    right:16px;
+    z-index:30;
+    pointer-events:none;
+  }
+  .logo-placeholder{
+    font-family:var(--mono);
+    font-size:9px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--line-dim);
+    border:1px dashed var(--line-dim);
+    border-radius:3px;
+    padding:6px 10px;
+  }
+
+  .screen{
+    display:none;
+    flex:1;
+    flex-direction:column;
+    padding:22px 20px 100px;
+    animation:fadeIn .35s ease;
+  }
+  .screen.active{display:flex;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    color:var(--amber);
+    text-transform:uppercase;
+    margin:0 0 6px;
+  }
+  h1{
+    font-size:clamp(30px,9vw,40px);
+    font-weight:850;
+    letter-spacing:.01em;
+    text-transform:uppercase;
+    line-height:.98;
+    margin:0 0 10px;
+    color:var(--paper);
+  }
+  h2{
+    font-size:22px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.01em;
+    margin:0 0 4px;
+    color:var(--paper);
+  }
+  p.lede{
+    color:var(--line);
+    font-size:15px;
+    line-height:1.5;
+    max-width:38ch;
+  }
+  .sub{color:var(--line-dim);font-size:13px;}
+
+  #screen-landing{justify-content:center;text-align:left;}
+  .waveform-hero{width:100%;height:96px;margin:18px 0 22px;}
+  .cta-primary{
+    display:block;width:100%;
+    background:var(--amber);
+    color:#231403;
+    border:none;
+    border-radius:3px;
+    font-weight:850;
+    font-size:16px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    padding:18px 20px;
+    cursor:pointer;
+    transition:transform .12s ease, background .2s ease;
+  }
+  .cta-primary:active{transform:scale(.98);}
+  .cta-primary:disabled{filter:grayscale(.5) brightness(.75);cursor:not-allowed;}
+  .cta-secondary{
+    display:block;width:100%;
+    background:transparent;
+    color:var(--line);
+    border:1px solid var(--line-dim);
+    border-radius:3px;
+    font-weight:700;
+    font-size:14px;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    padding:14px 18px;
+    cursor:pointer;
+    margin-top:10px;
+    transition:transform .12s ease, border-color .2s ease;
+  }
+  .cta-secondary:active{transform:scale(.98);}
+  .cta-secondary:disabled{filter:grayscale(.5) brightness(.75);cursor:not-allowed;}
+  .taps{font-family:var(--mono);font-size:11px;color:var(--line-dim);margin-top:14px;letter-spacing:.04em;}
+
+  .budget-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    background:var(--bg-panel);
+    border:1px solid var(--line-faint);
+    border-radius:3px;
+    padding:10px 14px;
+    margin-bottom:16px;
+    font-family:var(--mono);
+  }
+  .budget-bar .label{font-size:10px;letter-spacing:.1em;color:var(--line-dim);text-transform:uppercase;}
+  .budget-bar .value{font-size:18px;font-weight:700;color:var(--amber);}
+  .budget-bar .value .of{color:var(--line-dim);font-size:13px;font-weight:400;}
+  .budget-track{height:4px;background:var(--line-faint);border-radius:2px;overflow:hidden;margin-top:8px;}
+  .budget-fill{height:100%;background:var(--amber);border-radius:2px;transition:width .25s ease;}
+
+  .group-title{
+    font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--line-dim);margin:18px 0 8px;
+  }
+  .cards{display:flex;flex-direction:column;gap:8px;}
+  .card{
+    display:flex;align-items:center;gap:14px;
+    background:var(--bg-panel);
+    border:1px solid var(--line-faint);
+    border-radius:3px;
+    padding:15px 14px;
+    cursor:pointer;
+    text-align:left;
+    color:var(--paper);
+    transition:border-color .18s ease, background .18s ease, transform .1s ease;
+  }
+  .card:active{transform:scale(.99);}
+  .card.selected{border-color:var(--amber);background:var(--bg-panel-2);}
+  .card.featured{border-color:var(--amber);border-width:1.5px;background:linear-gradient(180deg, rgba(232,163,61,.10), var(--bg-panel));}
+  .card.featured.selected{background:linear-gradient(180deg, rgba(232,163,61,.16), var(--bg-panel-2));}
+  .card .icon{
+    flex:0 0 auto;width:44px;height:44px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .card .icon svg{overflow:visible;}
+  .card .body{flex:1;min-width:0;}
+  .card .name{font-weight:800;font-size:14.5px;letter-spacing:.01em;text-transform:uppercase;display:block;}
+  .card .desc{font-size:12px;color:var(--line-dim);margin-top:6px;line-height:1.45;display:block;}
+  .card .featured-tag{
+    display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--amber);border:1px solid var(--amber-dim);border-radius:20px;padding:2px 7px;margin-bottom:6px;
+  }
+  /* Unified card meta column - same points currency across all three
+     tabs. Amber = points you spend, green = points you gain. The mass
+     pill is deliberately smaller/muted so it doesn't read as a cost. */
+  .card .card-meta{flex:0 0 auto;display:flex;flex-direction:column;gap:5px;align-items:flex-end;}
+  .card .pts-pill{
+    font-family:var(--mono);font-size:12px;border-radius:20px;padding:4px 9px;white-space:nowrap;font-weight:600;
+  }
+  .card .pts-pill.spend{color:var(--amber);border:1px solid var(--amber-dim);}
+  .card .pts-pill.gain{color:var(--safe);border:1px solid var(--safe);}
+  .coin{width:11px;height:11px;vertical-align:-1px;margin-right:3px;display:inline-block;}
+  .card .mass-pill{
+    font-family:var(--mono);font-size:10px;color:var(--mass);border:1px dashed var(--mass);
+    border-radius:20px;padding:2px 7px;white-space:nowrap;opacity:.9;letter-spacing:.02em;
+  }
+  .card.disabled{opacity:.4;cursor:not-allowed;}
+  .card.disabled:active{transform:none;}
+  .flash-note{
+    font-size:12px;color:var(--amber);line-height:1.4;margin:10px 2px 0;min-height:0;
+    max-height:0;overflow:hidden;opacity:0;transition:max-height .25s ease, opacity .25s ease;
+  }
+  .flash-note.show{max-height:60px;opacity:1;margin-top:10px;}
+
+  .toggle{position:relative;}
+  .toggle .check{
+    flex:0 0 auto;width:20px;height:20px;border:1.5px solid var(--line-dim);border-radius:4px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .toggle.selected .check{background:var(--amber);border-color:var(--amber);}
+  .toggle.selected .check::after{content:"";width:9px;height:5px;border-left:2px solid #231403;border-bottom:2px solid #231403;transform:rotate(-45deg) translateY(-1px);}
+
+  .reveal-section{max-height:0;overflow:hidden;opacity:0;transition:max-height .4s ease, opacity .3s ease .05s;}
+  .reveal-section.open{max-height:2400px;opacity:1;}
+
+  .nav-buttons{margin-top:auto;padding-top:18px;display:flex;flex-direction:column;gap:8px;}
+
+  #screen-shake{padding-bottom:110px;}
+  .scene-wrap{
+    background:var(--bg-panel);
+    border:1px solid var(--line-faint);
+    border-radius:4px;
+    padding:10px 10px 0;
+    margin:14px 0;
+  }
+  #scene{width:100%;height:auto;max-height:280px;display:block;margin:0 auto;}
+  .seis-strip{
+    border-top:1px solid var(--line-faint);
+    padding:6px 4px 8px;
+  }
+  .seis-strip .cap{font-family:var(--mono);font-size:9px;color:var(--line-dim);letter-spacing:.1em;display:flex;justify-content:space-between;padding:0 2px 2px;}
+  .force-legend{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    border-top:1px solid var(--line-faint);padding:7px 4px 8px;
+    font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--line-dim);
+  }
+  .force-legend .fl-item{display:flex;align-items:center;gap:5px;color:var(--line);}
+  .force-legend .fl-swatch{width:14px;height:3px;border-radius:2px;display:inline-block;}
+  .force-legend .fl-hint{opacity:.7;font-style:italic;}
+  #seismograph{width:100%;height:56px;display:block;}
+
+  .level-select{display:flex;gap:8px;margin:4px 0 14px;}
+  .level-btn{
+    flex:1;background:var(--bg-panel);border:1px solid var(--line-faint);border-radius:3px;
+    padding:10px 6px;color:var(--line);font-family:var(--mono);font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;cursor:pointer;text-align:center;
+  }
+  .level-btn.selected{border-color:var(--amber);color:var(--amber);background:var(--bg-panel-2);}
+  .shake-btn{
+    display:block;width:100%;background:var(--danger);color:#2a0805;border:none;border-radius:3px;
+    font-weight:850;font-size:18px;letter-spacing:.05em;text-transform:uppercase;padding:20px;
+    cursor:pointer;transition:transform .12s ease, filter .2s ease;
+  }
+  .shake-btn:active{transform:scale(.98);}
+  .shake-btn:disabled{filter:grayscale(.6) brightness(.7);cursor:not-allowed;}
+  .spec-line{font-family:var(--mono);font-size:11px;color:var(--line-dim);display:flex;justify-content:space-between;padding:2px 2px;}
+
+  .result-banner{
+    font-size:clamp(30px,9vw,38px);font-weight:900;letter-spacing:.01em;text-transform:uppercase;
+    line-height:1;margin:4px 0 6px;
+  }
+  .result-banner.thrive{color:var(--safe);}
+  .result-banner.survive{color:var(--warn);}
+  .result-banner.fail{color:var(--danger);}
+  .result-subtag{font-size:14px;color:var(--line);margin:0 0 12px;line-height:1.4;}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0;}
+  .stat{background:var(--bg-panel);border:1px solid var(--line-faint);border-radius:3px;padding:10px 12px;}
+  .stat .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--line-dim);text-transform:uppercase;}
+  .stat .v{font-size:17px;font-weight:800;margin-top:2px;}
+  .narrative{
+    background:var(--bg-panel-2);border-left:3px solid var(--amber);border-radius:0 3px 3px 0;
+    padding:12px 14px;font-size:14px;line-height:1.5;color:var(--paper);margin:14px 0;
+  }
+  .concept-card{
+    border:1px solid var(--line-faint);border-radius:3px;padding:12px 14px;margin-top:10px;
+  }
+  .concept-card .tag{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--amber);text-transform:uppercase;}
+  .concept-card p{font-size:13px;color:var(--line);line-height:1.5;margin:6px 0 0;}
+  .how-panel{display:none;margin-top:10px;}
+  .how-panel.open{display:block;}
+  .how-panel .spec-line{color:var(--line);}
+  .learn-more-link{
+    display:block;text-align:center;margin-top:14px;font-family:var(--mono);font-size:12px;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--amber);text-decoration:none;
+    border:1px solid var(--amber-dim);border-radius:3px;padding:12px 14px;
+  }
+  .learn-more-link:hover, .learn-more-link:focus-visible{background:rgba(232,163,61,.08);}
+
+  .leaderboard-card{
+    border:1px solid var(--line-faint);border-radius:3px;padding:14px;margin-top:14px;
+    background:var(--bg-panel);
+  }
+  .leaderboard-card .lb-title{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin:0 0 4px;}
+  .leaderboard-card .lb-score{font-size:30px;font-weight:900;color:var(--paper);margin:2px 0 4px;}
+  .leaderboard-card .lb-sub{font-size:12px;color:var(--line-dim);line-height:1.4;margin:0 0 12px;}
+  .lb-field{margin-bottom:10px;}
+  .lb-field label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--line-dim);margin-bottom:5px;}
+  .lb-field input{
+    width:100%;background:var(--bg-panel-2);border:1px solid var(--line-dim);border-radius:3px;
+    color:var(--paper);font-size:14px;padding:10px 12px;font-family:inherit;
+  }
+  .lb-field input:focus-visible{outline:2px solid var(--amber);outline-offset:1px;}
+  .lb-status{font-size:12px;margin-top:8px;line-height:1.4;}
+  .lb-status.ok{color:var(--safe);}
+  .lb-status.err{color:var(--danger);}
+  .lb-privacy{font-size:10.5px;color:var(--line-dim);line-height:1.4;margin-top:8px;}
+
+  .qr-note{
+    margin-top:auto;padding-top:20px;text-align:center;font-family:var(--mono);
+    font-size:10px;color:var(--line-dim);letter-spacing:.06em;
+  }
+
+  .app-disclaimer{
+    flex:0 0 auto;
+    text-align:center;
+    font-size:10px;
+    line-height:1.4;
+    color:var(--line-dim);
+    padding:8px 20px 12px;
+    margin:0;
+    border-top:1px solid var(--line-faint);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .screen{animation:none;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="logo-slot" aria-hidden="true">
+    <div class="logo-placeholder">LOGO</div>
+  </div>
+
+  <div class="topbar" id="topbar" style="display:none;">
+    <div class="steps">
+      <span class="step" data-step="build">01 DESIGN</span>
+      <span class="step" data-step="additions">02 ADD-ONS</span>
+      <span class="step" data-step="protect">03 PROTECT</span>
+      <span class="step" data-step="shake">04 TEST</span>
+      <span class="step" data-step="results">05 RESULT</span>
+    </div>
+  </div>
+
+  <!-- SCREEN 1: LANDING -->
+  <section class="screen active" id="screen-landing">
+    <p class="eyebrow">A Seismic Shift Field Exercise</p>
+    <h1>Build to<br>Thrive</h1>
+    <p class="lede">Can you design a building that survives the shake, and enables the occupants to continue to thrive?</p>
+    <svg class="waveform-hero" viewBox="0 0 400 96" preserveAspectRatio="none" aria-hidden="true">
+      <polyline id="hero-wave" fill="none" stroke="#bfe0ec" stroke-opacity="0.55" stroke-width="1.5" points=""/>
+      <line x1="0" y1="48" x2="400" y2="48" stroke="#bfe0ec" stroke-opacity="0.15" stroke-width="1"/>
+    </svg>
+    <p class="sub">Choose your building. Choose your structure. Then put it to the test in an earthquake.</p>
+    <div style="margin-top:24px;">
+      <button class="cta-primary" id="btn-start">Build Your Building</button>
+      <p class="taps">Takes about 2 minutes.</p>
+    </div>
+  </section>
+
+  <!-- SCREEN 2: CHOOSE BUILDING -->
+  <section class="screen" id="screen-build">
+    <p class="eyebrow">Step 01</p>
+    <h2>Choose Your Building</h2>
+    <p class="sub">Pick what you're designing today, then choose the structural system that holds it up.</p>
+
+    <div class="budget-bar">
+      <div>
+        <div class="label">Budget Remaining</div>
+        <div class="value" id="budget-value-2">100<span class="of"> / 100</span></div>
+      </div>
+    </div>
+    <div class="budget-track"><div class="budget-fill" id="budget-fill-2"></div></div>
+
+    <div class="group-title">Building Type</div>
+    <div class="cards" id="type-cards"></div>
+
+    <div class="reveal-section" id="system-section">
+      <div class="group-title" id="system-group-title">Structural System</div>
+      <div class="cards" id="system-cards"></div>
+      <p class="flash-note" id="build-note"></p>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="cta-primary" id="btn-to-additions" disabled>Continue to Add-Ons</button>
+      <button class="cta-secondary" id="btn-back-landing">Back</button>
+    </div>
+  </section>
+
+  <!-- SCREEN 2b: ADDITIONS -->
+  <section class="screen" id="screen-additions">
+    <p class="eyebrow">Step 02</p>
+    <h2>Add-Ons &amp; Revenue</h2>
+    <p class="sub">Optional features that earn revenue - each one adds points back to your budget (in green), but adds weight up high, which the earthquake will find. Skip them, or gamble on the trade-off.</p>
+
+    <div class="budget-bar">
+      <div>
+        <div class="label">Budget Remaining</div>
+        <div class="value" id="budget-value-add">100<span class="of"> / 100</span></div>
+      </div>
+      <div style="text-align:right;">
+        <div class="label">Seismic Mass</div>
+        <div class="value" id="mass-value-add" style="color:var(--line);">Base</div>
+      </div>
+    </div>
+    <div class="budget-track"><div class="budget-fill" id="budget-fill-add"></div></div>
+
+    <div class="cards" id="addition-cards" style="margin-top:16px;"></div>
+    <p class="flash-note" id="addition-note"></p>
+
+    <div class="nav-buttons">
+      <button class="cta-primary" id="btn-additions-to-protect">Continue to Protection</button>
+      <button class="cta-secondary" id="btn-back-build-from-add">Back to Design</button>
+    </div>
+  </section>
+
+  <!-- SCREEN 3: SEISMIC PROTECTION -->
+  <section class="screen" id="screen-protect">
+    <p class="eyebrow">Step 03</p>
+    <h2>Add Seismic Protection</h2>
+    <p class="sub">Spend what's left of your budget on technology that helps your building ride out the shake.</p>
+
+    <div class="budget-bar">
+      <div>
+        <div class="label">Budget Remaining</div>
+        <div class="value" id="budget-value-3">100<span class="of"> / 100</span></div>
+      </div>
+    </div>
+    <div class="budget-track"><div class="budget-fill" id="budget-fill-3"></div></div>
+
+    <div class="cards" id="protection-cards" style="margin-top:16px;"></div>
+    <p class="flash-note" id="protect-note"></p>
+
+    <div class="nav-buttons">
+      <button class="cta-primary" id="btn-to-shake">Continue to Shake Test</button>
+      <button class="cta-secondary" id="btn-back-additions">Back to Add-Ons</button>
+    </div>
+  </section>
+
+  <!-- SCREEN 4: SHAKE TEST -->
+  <section class="screen" id="screen-shake">
+    <p class="eyebrow">Step 04</p>
+    <h2>Shake Test</h2>
+    <p class="sub" id="shake-sub">Choose your earthquake, then put your building to the test.</p>
+
+    <div class="scene-wrap">
+      <svg id="scene" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="seis-strip">
+        <div class="cap"><span>SEISMOGRAPH</span><span id="seis-status">STANDBY</span></div>
+        <canvas id="seismograph" width="600" height="112"></canvas>
+      </div>
+      <div class="force-legend" id="force-legend" style="display:none;">
+        <span class="fl-item"><span class="fl-swatch" style="background:#ff6b5a;"></span>Tension</span>
+        <span class="fl-item"><span class="fl-swatch" style="background:#5aa9ff;"></span>Compression</span>
+        <span class="fl-hint">watch the load path flip as it sways</span>
+      </div>
+    </div>
+
+    <div class="group-title">Earthquake Level</div>
+    <div class="level-select" id="level-select"></div>
+
+    <button class="shake-btn" id="btn-shake" disabled>Shake It</button>
+
+    <div style="margin-top:14px;">
+      <div class="spec-line"><span>Building</span><span id="spec-type">-</span></div>
+      <div class="spec-line"><span>Structural system</span><span id="spec-system">-</span></div>
+      <div class="spec-line"><span>Add-ons</span><span id="spec-additions">-</span></div>
+      <div class="spec-line"><span>Protection</span><span id="spec-protection">-</span></div>
+    </div>
+
+    <div class="nav-buttons">
+      <button class="cta-secondary" id="btn-back-protect">Back to Protection</button>
+    </div>
+  </section>
+
+  <!-- SCREEN 5: RESULTS -->
+  <section class="screen" id="screen-results">
+    <p class="eyebrow" id="result-eyebrow">Step 05</p>
+    <div class="result-banner" id="result-banner">-</div>
+    <p class="result-subtag" id="result-subtag"></p>
+    <div class="narrative" id="result-narrative"></div>
+
+    <div class="stat-grid" id="stat-grid"></div>
+
+    <div class="concept-card" id="concept-card">
+      <div class="tag">Why it matters</div>
+      <p id="concept-text"></p>
+    </div>
+
+    <div id="learn-more-slot"></div>
+
+    <button class="cta-secondary" id="btn-how" style="margin-top:10px;">See How It Works</button>
+    <div class="how-panel" id="how-panel"></div>
+
+    <div class="leaderboard-card" id="leaderboard-card"></div>
+
+    <div class="nav-buttons">
+      <button class="cta-primary" id="btn-build-again">Build Again</button>
+      <button class="cta-secondary" id="btn-retest">Test This Design Again</button>
+    </div>
+
+    <p class="qr-note">BUILD TO THRIVE - SEISMIC SHIFT</p>
+  </section>
+
+  <p class="app-disclaimer">For educational purposes only - a simplified illustration of seismic design concepts, not an engineering assessment.</p>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================
+     ANALYTICS (no PII - swap the body of track() for your tool)
+  ========================================================= */
+  function track(event, data){
+    try{
+      window.dispatchEvent(new CustomEvent('bts:analytics', { detail: { event, data: data||{}, t: Date.now() } }));
+      console.debug('[bts]', event, data||{});
+    }catch(e){}
+  }
+
+  /* =========================================================
+     DATA
+  ========================================================= */
+  var BUILDING_TYPES = {
+    house: {
+      key:'house', label:'Detached Home', category:'house',
+      storeys:2, storeyHeightM:2.7, periodK:0.065, massBase:10,
+      renderSegments:2, bw:70, renderH:70,
+      blurb:'2-storey timber-framed home'
+    },
+    industrial: {
+      key:'industrial', label:'Industrial Building', category:'standard',
+      storeys:1, storeyHeightM:7.5, periodK:0.033, massBase:26,
+      renderSegments:1, bw:150, renderH:96,
+      blurb:'1 tall storey, wide clear-span building'
+    },
+    commercial: {
+      key:'commercial', label:'Commercial Block', category:'standard',
+      storeys:4, storeyHeightM:3.8, periodK:0.033, massBase:48,
+      renderSegments:4, bw:96, renderH:195,
+      blurb:'4-storey office block'
+    }
+  };
+  var TYPE_ORDER = ['house','industrial','commercial'];
+
+  var HOUSE_SYSTEMS = {
+    plasterboard: { key:'plasterboard', label:'Plasterboard Linings', cost:15, stiffness:3,  strength:1.6,  zeta:0.030, desc:'Standard plasterboard bracing walls.' },
+    plywood:      { key:'plywood',      label:'Plywood Linings',      cost:30, stiffness:6,  strength:1.85, zeta:0.032, desc:'Structural plywood sheathing, stronger bracing.' },
+    concreteShear:{ key:'concreteShear',label:'Concrete Shear Walls', cost:45, stiffness:10, strength:3.2,  zeta:0.028, desc:'Maximum lateral strength and stiffness.' }
+  };
+  var HOUSE_SYSTEM_ORDER = ['plasterboard','plywood','concreteShear'];
+
+  var STANDARD_SYSTEMS = {
+    moment:     { key:'moment',     label:'Moment Frame',  cost:35, stiffness:5, strength:5,   zeta:0.050, desc:'Rigid joints share the load evenly.' },
+    braced:     { key:'braced',     label:'Braced Frame',  cost:35, stiffness:7, strength:6.5, zeta:0.045, desc:'Diagonal braces resist sideways sway.' },
+    shearwalls: { key:'shearwalls', label:'Shear Walls',   cost:55, stiffness:9, strength:8,   zeta:0.045, desc:'Solid walls give strong lateral resistance.' }
+  };
+  var STANDARD_SYSTEM_ORDER = ['moment','braced','shearwalls'];
+
+  var HOUSE_PROTECTIONS = {
+    frontfootDampers:{ key:'frontfootDampers',label:'FrontFoot Dampers',      cost:25, desc:'Dampers built into the floor slab - act like base isolation for the home.', featured:true },
+    lightweight:     { key:'lightweight',     label:'Lightweight Construction', cost:28, desc:'Lighter materials mean smaller seismic forces, but require more thought vs code minimum.' },
+    upspecBracing:   { key:'upspecBracing',   label:'Up-Spec Bracing (+50%)', cost:35, desc:'Increases wall bracing capacity by half.' }
+  };
+  var HOUSE_PROTECTION_ORDER = ['frontfootDampers','lightweight','upspecBracing'];
+
+  var STANDARD_PROTECTIONS = {
+    quakeDefender: { key:'quakeDefender', label:'Quake Defender Bracing', cost:30, desc:'Bracing and dampers combined - stiffer, and better damped.', featured:true },
+    shearwallsAdd: { key:'shearwallsAdd', label:'Extra Shear Walls',     cost:35, desc:'Boosts lateral strength and stiffness further.' },
+    isolation:     { key:'isolation',     label:'Base Isolation',        cost:55, desc:'Lets the base slide, keeping most shaking out of the structure above.' }
+  };
+  var STANDARD_PROTECTION_ORDER = ['quakeDefender','shearwallsAdd','isolation'];
+
+  /* Additions: revenue-generating / value-adding features. They
+     RAISE the budget ceiling (revenue) but ADD MASS - almost all
+     of it up high on the roof, which is the worst place for it.
+     They can never improve the leaderboard score (the score only
+     sees the extra mass, which hurts) - they're a real-building
+     trade-off, not a performance cheat. massPct is a fraction of
+     the building's base mass; budgetBonus is added to the 100pt
+     ceiling. */
+  var HOUSE_ADDITIONS = {
+    solar:    { key:'solar',    label:'Solar Panels', budgetBonus:8, massPct:0.15, desc:'Rooftop PV. Feed-in revenue lifts your budget - the panels add roof mass.' },
+    tileRoof: { key:'tileRoof', label:'Tile Roof',    budgetBonus:6, massPct:0.28, desc:'Premium kerb appeal - but tiles are far heavier than a metal roof, right at the top.' },
+    chimney:  { key:'chimney',  label:'Brick Chimney', budgetBonus:4, massPct:0.12, desc:'Adds character and value. Unreinforced masonry up high is a classic quake weak point and life-safety hazard.' }
+  };
+  var HOUSE_ADDITION_ORDER = ['solar','tileRoof','chimney'];
+
+  var STANDARD_ADDITIONS = {
+    solar:     { key:'solar',     label:'Solar Array',           budgetBonus:12, massPct:0.14, desc:'Rooftop PV. Energy revenue lifts your budget most; the panels add moderate roof mass.' },
+    greenroof: { key:'greenroof', label:'Green Roof',            budgetBonus:8,  massPct:0.30, desc:'Amenity and stormwater value - but saturated soil is heavy, and it is all up high.' },
+    signage:   { key:'signage',   label:'Rooftop Plant & Signage', budgetBonus:6, massPct:0.10, desc:'Advertising and services lease. Modest revenue, a lighter appendage up top.' }
+  };
+  var STANDARD_ADDITION_ORDER = ['solar','greenroof','signage'];
+
+  var LEVELS = {
+    moderate: { key:'moderate', label:'Moderate', intensity:[0.15,0.22], freq:[0.7,1.3],  duration:[8,14] },
+    strong:   { key:'strong',   label:'Strong',   intensity:[0.25,0.35], freq:[0.5,1.7],  duration:[12,20] },
+    major:    { key:'major',    label:'Major',    intensity:[0.35,0.50], freq:[0.35,2.2], duration:[15,28] }
+  };
+
+  var BASE_BUDGET = 100;
+
+  /* Budget is spent/earned in coins (tokens) - deliberately a different
+     currency from the final score (points), so selecting a revenue
+     add-on never looks like it hands out score. */
+  var COIN = '<svg class="coin" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7" r="2.2" fill="currentColor"/></svg>';
+
+  // TODO: replace with the real product pages before this goes live
+  var LEARN_MORE_URLS = {
+    house: 'https://example.com/frontfoot',
+    standard: 'https://example.com/quake-defender'
+  };
+
+  // TODO: point this at your own endpoint before this goes live.
+  // Leave blank and the leaderboard form will explain it isn't connected yet rather than fail silently.
+  // A JSON POST works out of the box against most serverless functions / Airtable / a small backend.
+  // Using a Google Form instead needs a small tweak - see the notes in the response this code shipped with.
+  var LEADERBOARD_ENDPOINT_URL = '';
+
+  /* =========================================================
+     STATE
+  ========================================================= */
+  var state = {
+    typeKey: null,
+    systemKey: null,
+    additions: { solar:false, tileRoof:false, chimney:false, greenroof:false, signage:false },
+    protections: { upspecBracing:false, frontfootDampers:false, quakeDefender:false, isolation:false, shearwallsAdd:false, lightweight:false },
+    levelKey: 'moderate',
+    lastRun: null
+  };
+
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function lerp(a,b,t){ return a + (b-a)*t; }
+
+  function isHouseType(){ return !!state.typeKey && BUILDING_TYPES[state.typeKey].category==='house'; }
+  function currentSystems(){ return isHouseType() ? HOUSE_SYSTEMS : STANDARD_SYSTEMS; }
+  function currentSystemOrder(){ return isHouseType() ? HOUSE_SYSTEM_ORDER : STANDARD_SYSTEM_ORDER; }
+  function currentProtections(){ return isHouseType() ? HOUSE_PROTECTIONS : STANDARD_PROTECTIONS; }
+  function currentProtectionOrder(){ return isHouseType() ? HOUSE_PROTECTION_ORDER : STANDARD_PROTECTION_ORDER; }
+  function currentAdditions(){ return isHouseType() ? HOUSE_ADDITIONS : STANDARD_ADDITIONS; }
+  function currentAdditionOrder(){ return isHouseType() ? HOUSE_ADDITION_ORDER : STANDARD_ADDITION_ORDER; }
+
+  function budgetBonus(){
+    var b = 0;
+    var pool = currentAdditions();
+    Object.keys(pool).forEach(function(k){
+      if(state.additions[k]) b += pool[k].budgetBonus;
+    });
+    return b;
+  }
+  function budgetTotal(){ return BASE_BUDGET + budgetBonus(); }
+
+  function spentDesign(){
+    if(!state.systemKey) return 0;
+    return currentSystems()[state.systemKey].cost;
+  }
+  function spentProtections(){
+    var s = 0;
+    var pool = currentProtections();
+    Object.keys(pool).forEach(function(k){
+      if(state.protections[k]) s += pool[k].cost;
+    });
+    return s;
+  }
+  function budgetRemaining(){
+    return budgetTotal() - spentDesign() - spentProtections();
+  }
+  function additionMassPct(){
+    var m = 0;
+    var pool = currentAdditions();
+    Object.keys(pool).forEach(function(k){
+      if(state.additions[k]) m += pool[k].massPct;
+    });
+    return m;
+  }
+
+  /* =========================================================
+     NAV
+  ========================================================= */
+  var screens = ['landing','build','additions','protect','shake','results'];
+  function showScreen(id){
+    screens.forEach(function(s){
+      document.getElementById('screen-'+s).classList.toggle('active', s===id);
+    });
+    var topbar = document.getElementById('topbar');
+    topbar.style.display = (id==='landing') ? 'none' : 'flex';
+    document.querySelectorAll('.topbar .step').forEach(function(el){
+      var step = el.getAttribute('data-step');
+      var order = ['build','additions','protect','shake','results'];
+      var curIdx = order.indexOf(id);
+      var elIdx = order.indexOf(step);
+      el.classList.toggle('active', step===id);
+      el.classList.toggle('done', elIdx < curIdx);
+    });
+    window.scrollTo(0,0);
+  }
+
+  /* =========================================================
+     SCREEN 2 - BUILDING TYPE
+  ========================================================= */
+  function typeIcon(key){
+    if(key==='house'){
+      return '<svg width="40" height="38" viewBox="0 0 40 38">'+
+        '<polygon points="4,18 20,4 36,18" fill="none" stroke="#bfe0ec" stroke-width="1.5"/>'+
+        '<rect x="7" y="18" width="26" height="16" fill="none" stroke="#bfe0ec" stroke-width="1.5"/>'+
+        '<rect x="17" y="24" width="7" height="10" fill="#bfe0ec" fill-opacity="0.3"/>'+
+        '</svg>';
+    }
+    if(key==='industrial'){
+      return '<svg width="40" height="38" viewBox="0 0 40 38">'+
+        '<polygon points="3,16 20,9 37,16" fill="none" stroke="#bfe0ec" stroke-width="1.3"/>'+
+        '<rect x="3" y="16" width="34" height="17" fill="none" stroke="#bfe0ec" stroke-width="1.5"/>'+
+        '<rect x="14" y="22" width="12" height="11" fill="none" stroke="#e8a33d" stroke-width="1.1"/>'+
+        '<line x1="14" y1="25.5" x2="26" y2="25.5" stroke="#e8a33d" stroke-width="0.8"/>'+
+        '<line x1="14" y1="29" x2="26" y2="29" stroke="#e8a33d" stroke-width="0.8"/>'+
+        '</svg>';
+    }
+    // commercial
+    var s = '<svg width="40" height="38" viewBox="0 0 40 38">';
+    var floors = 4, fh = 26/floors;
+    for(var i=0;i<floors;i++){
+      var y = 8 + i*fh;
+      s += '<rect x="9" y="'+y.toFixed(1)+'" width="22" height="'+(fh-1.5).toFixed(1)+'" fill="none" stroke="#bfe0ec" stroke-width="1.3" opacity="'+(0.5+0.5*i/floors).toFixed(2)+'"/>';
+    }
+    s += '</svg>';
+    return s;
+  }
+
+  function renderTypeCards(){
+    var wrap = document.getElementById('type-cards');
+    wrap.innerHTML = '';
+    TYPE_ORDER.forEach(function(k){
+      var bt = BUILDING_TYPES[k];
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'card' + (state.typeKey===k?' selected':'');
+      el.innerHTML =
+        '<span class="icon">'+typeIcon(k)+'</span>'+
+        '<span class="body"><span class="name">'+bt.label+'</span>'+
+        '<span class="desc">'+bt.blurb+'</span></span>';
+      el.addEventListener('click', function(){
+        if(state.typeKey !== k){
+          state.typeKey = k;
+          state.systemKey = null;
+          resetAdditions();
+          resetProtections();
+          track('building_type_selected', {type:k});
+        }
+        renderTypeCards();
+        renderSystemCards();
+        document.getElementById('system-group-title').textContent =
+          isHouseType() ? 'Structural System - Bracing' : 'Structural System';
+        document.getElementById('system-section').classList.add('open');
+        syncBudget2();
+      });
+      wrap.appendChild(el);
+    });
+  }
+
+  function systemIcon(key){
+    var s = '<svg width="44" height="40" viewBox="0 0 44 40">';
+    s += '<rect x="10" y="6" width="24" height="30" fill="none" stroke="#bfe0ec" stroke-width="1.5"/>';
+    if(key==='basic' || key==='plasterboard'){
+      s += '<line x1="10" y1="18" x2="34" y2="18" stroke="#bfe0ec" stroke-width="1" opacity="0.5"/>';
+      s += '<line x1="10" y1="28" x2="34" y2="28" stroke="#bfe0ec" stroke-width="1" opacity="0.5"/>';
+    } else if(key==='moment'){
+      [6,18,28].forEach(function(y){
+        s += '<line x1="10" y1="'+y+'" x2="34" y2="'+y+'" stroke="#bfe0ec" stroke-width="1.5"/>';
+      });
+      s += '<rect x="8.5" y="4.5" width="4" height="4" fill="#e8a33d"/><rect x="31.5" y="4.5" width="4" height="4" fill="#e8a33d"/>';
+    } else if(key==='braced' || key==='plywood'){
+      s += '<line x1="10" y1="6" x2="34" y2="18" stroke="#e8a33d" stroke-width="1.5"/>';
+      s += '<line x1="34" y1="6" x2="10" y2="18" stroke="#e8a33d" stroke-width="1.5"/>';
+      s += '<line x1="10" y1="18" x2="34" y2="30" stroke="#e8a33d" stroke-width="1.5"/>';
+      s += '<line x1="34" y1="18" x2="10" y2="30" stroke="#e8a33d" stroke-width="1.5"/>';
+    } else if(key==='shearwalls' || key==='concreteShear'){
+      s += '<rect x="10" y="6" width="8" height="30" fill="#e8a33d" opacity="0.75"/>';
+    }
+    s += '</svg>';
+    return s;
+  }
+
+  function renderSystemCards(){
+    var wrap = document.getElementById('system-cards');
+    wrap.innerHTML = '';
+    if(!state.typeKey) return;
+    var systems = currentSystems();
+    currentSystemOrder().forEach(function(k){
+      var sys = systems[k];
+      var affordable = (budgetRemaining() + (state.systemKey===k?sys.cost:0)) >= sys.cost;
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'card' + (state.systemKey===k?' selected':'') + (!affordable && state.systemKey!==k ? ' disabled':'');
+      el.innerHTML =
+        '<span class="icon">'+systemIcon(k)+'</span>'+
+        '<span class="body"><span class="name">'+sys.label+'</span>'+
+        '<span class="desc">'+sys.desc+'</span></span>'+
+        '<span class="card-meta"><span class="pts-pill spend">'+COIN+sys.cost+'</span></span>';
+      el.addEventListener('click', function(){
+        if(el.classList.contains('disabled') && state.systemKey!==k){
+          flashNote('build-note', 'Not enough budget for that - go back and free some up first.');
+          return;
+        }
+        state.systemKey = k;
+        track('system_selected', {system:k, type:state.typeKey});
+        renderSystemCards(); syncBudget2();
+      });
+      wrap.appendChild(el);
+    });
+  }
+
+  function resetProtections(){
+    state.protections = { upspecBracing:false, frontfootDampers:false, quakeDefender:false, isolation:false, shearwallsAdd:false, lightweight:false };
+  }
+  function resetAdditions(){
+    state.additions = { solar:false, tileRoof:false, chimney:false, greenroof:false, signage:false };
+  }
+
+  function syncBudget2(){
+    var rem = budgetRemaining();
+    var total = budgetTotal();
+    document.getElementById('budget-value-2').innerHTML = COIN + rem + '<span class="of"> / '+total+'</span>';
+    document.getElementById('budget-fill-2').style.width = clamp(rem/total*100,0,100)+'%';
+    document.getElementById('btn-to-additions').disabled = !(state.typeKey && state.systemKey);
+  }
+
+  /* =========================================================
+     SCREEN 2b - ADDITIONS
+  ========================================================= */
+  function renderAdditionCards(){
+    var wrap = document.getElementById('addition-cards');
+    wrap.innerHTML = '';
+    var pool = currentAdditions();
+    currentAdditionOrder().forEach(function(k){
+      var a = pool[k];
+      var selected = state.additions[k];
+      // Deselecting is blocked only if the revenue is already committed to
+      // protection spend (would push the budget negative) - guards back-nav.
+      var blocksRemoval = selected && (budgetRemaining() - a.budgetBonus < 0);
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'card toggle addition' + (selected?' selected':'');
+      el.innerHTML =
+        '<span class="check"></span>'+
+        '<span class="body"><span class="name">'+a.label+'</span>'+
+        '<span class="desc">'+a.desc+'</span></span>'+
+        '<span class="card-meta"><span class="pts-pill gain">+'+COIN+a.budgetBonus+'</span>'+
+        '<span class="mass-pill">+'+Math.round(a.massPct*100)+'% mass penalty</span></span>';
+      el.addEventListener('click', function(){
+        if(blocksRemoval){
+          flashAdditionNote('Free up protection spend before removing this - the revenue is already committed.');
+          return;
+        }
+        state.additions[k] = !state.additions[k];
+        track(state.additions[k] ? 'addition_selected' : 'addition_deselected', {addition:k});
+        renderAdditionCards(); syncBudgetAdd();
+      });
+      wrap.appendChild(el);
+    });
+  }
+  var flashNoteTimers = {};
+  function flashNote(id, msg){
+    var note = document.getElementById(id);
+    if(!note) return;
+    note.textContent = msg;
+    note.classList.add('show');
+    if(flashNoteTimers[id]) clearTimeout(flashNoteTimers[id]);
+    flashNoteTimers[id] = setTimeout(function(){ note.classList.remove('show'); }, 3200);
+  }
+  function flashAdditionNote(msg){ flashNote('addition-note', msg); }
+  function syncBudgetAdd(){
+    var rem = budgetRemaining();
+    var total = budgetTotal();
+    document.getElementById('budget-value-add').innerHTML = COIN + rem + '<span class="of"> / '+total+'</span>';
+    document.getElementById('budget-fill-add').style.width = clamp(rem/total*100,0,100)+'%';
+    var pct = Math.round(additionMassPct()*100);
+    var massEl = document.getElementById('mass-value-add');
+    if(pct===0){ massEl.textContent = 'Base'; massEl.style.color = 'var(--line)'; }
+    else { massEl.textContent = '+'+pct+'%'; massEl.style.color = 'var(--amber)'; }
+  }
+
+  /* =========================================================
+     SCREEN 3 - PROTECTION
+  ========================================================= */
+  function renderProtectionCards(){
+    var wrap = document.getElementById('protection-cards');
+    wrap.innerHTML = '';
+    var pool = currentProtections();
+    currentProtectionOrder().forEach(function(k){
+      if(k==='shearwallsAdd' && state.systemKey==='shearwalls') return; // already maxed
+      var p = pool[k];
+      var selected = state.protections[k];
+      var remAfterToggleOff = budgetRemaining() + (selected ? p.cost : 0);
+      var affordable = remAfterToggleOff >= p.cost;
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'card toggle' + (selected?' selected':'') + (!affordable && !selected ? ' disabled':'') + (p.featured ? ' featured':'');
+      el.innerHTML =
+        '<span class="check"></span>'+
+        '<span class="body">'+(p.featured ? '<span class="featured-tag">Recommended</span>' : '')+
+        '<span class="name">'+p.label+'</span>'+
+        '<span class="desc">'+p.desc+'</span></span>'+
+        '<span class="card-meta"><span class="pts-pill spend">'+COIN+p.cost+'</span></span>';
+      el.addEventListener('click', function(){
+        if(!selected && !affordable){
+          flashNote('protect-note', 'Not enough budget remaining - deselect something first.');
+          return;
+        }
+        state.protections[k] = !state.protections[k];
+        track(state.protections[k] ? 'protection_selected' : 'protection_deselected', {protection:k});
+        renderProtectionCards(); syncBudget3();
+      });
+      wrap.appendChild(el);
+    });
+  }
+  function syncBudget3(){
+    var rem = budgetRemaining();
+    var total = budgetTotal();
+    document.getElementById('budget-value-3').innerHTML = COIN + rem + '<span class="of"> / '+total+'</span>';
+    document.getElementById('budget-fill-3').style.width = clamp(rem/total*100,0,100)+'%';
+  }
+
+  /* =========================================================
+     SIMULATION MODEL
+  ========================================================= */
+  function buildDerivedStats(){
+    var bt = BUILDING_TYPES[state.typeKey];
+    var isHouse = bt.category==='house';
+    var systems = isHouse ? HOUSE_SYSTEMS : STANDARD_SYSTEMS;
+    var sys = systems[state.systemKey];
+    var stiffness = sys.stiffness;
+    var strength = sys.strength;
+    var zeta = sys.zeta;
+    var mass = bt.massBase;
+
+    if(isHouse){
+      if(state.protections.upspecBracing){ stiffness *= 1.5; strength *= 1.5; }
+      if(state.protections.lightweight){ mass *= 0.8; }
+    } else {
+      if(state.protections.quakeDefender){ stiffness += 3; strength += 2; zeta += 0.07; }
+      if(state.protections.shearwallsAdd){ stiffness += 3; strength += 3; }
+    }
+
+    // Revenue additions add mass (mostly roof-level - the worst place for it).
+    mass *= (1 + additionMassPct());
+
+    var isolated = isHouse ? !!state.protections.frontfootDampers : !!state.protections.isolation;
+    var totalHeightM = bt.storeys * bt.storeyHeightM;
+    var fn;
+    if(isolated){
+      fn = 0.4;
+      zeta = 0.12 + ((!isHouse && state.protections.quakeDefender) ? 0.03 : 0);
+    } else {
+      var T = bt.periodK * totalHeightM / Math.sqrt(stiffness/6);
+      fn = 1/T;
+    }
+    return {
+      totalHeightM:totalHeightM, mass:mass, stiffness:stiffness, strength:strength,
+      zeta:zeta, fn:fn, isolated:isolated, isHouse:isHouse, bt:bt
+    };
+  }
+
+  function transmissibility(r, zeta){
+    var num = Math.sqrt(1 + Math.pow(2*zeta*r, 2));
+    var den = Math.sqrt(Math.pow(1-r*r, 2) + Math.pow(2*zeta*r, 2));
+    return clamp(num/den, 0.4, 2.5);
+  }
+
+  function runSimulation(){
+    var derived = buildDerivedStats();
+    var lvl = LEVELS[state.levelKey];
+    var eq = {
+      intensity: rand(lvl.intensity[0], lvl.intensity[1]),
+      freq: rand(lvl.freq[0], lvl.freq[1]),
+      duration: rand(lvl.duration[0], lvl.duration[1])
+    };
+    var r = eq.freq / derived.fn;
+    var tr = transmissibility(r, derived.zeta);
+    var massFactor = Math.sqrt(derived.mass/20);
+    var heightFactor = 1 + derived.totalHeightM/40;
+    var jitter = rand(0.85, 1.15);
+    var demand = tr * eq.intensity * massFactor * heightFactor * 2.5 * jitter;
+    if(derived.isolated) demand *= 0.5;
+    var capacity = derived.strength;
+    var survives = capacity >= demand;
+    var resonant = Math.abs(r-1) < 0.3;
+
+    var cause = null;
+    if(!survives){
+      if(resonant) cause = 'resonance';
+      else if(demand/capacity > 1.6) cause = 'capacity';
+      else cause = 'movement';
+    }
+    var margin = capacity/demand;
+
+    return { derived:derived, eq:eq, r:r, tr:tr, demand:demand, capacity:capacity, survives:survives, cause:cause, margin:margin };
+  }
+
+  /* =========================================================
+     SCORE (for the leaderboard)
+     Deliberately independent of which earthquake level was
+     tested and of that run's random draw - it scores the
+     DESIGN itself, using a fixed reference scenario and an
+     average response across the full plausible frequency
+     range, not the one random earthquake that was actually
+     thrown at it. Weak structural systems are squeezed hard
+     (multiplicative, not additive). Designs that don't use
+     FrontFoot Dampers (house) or Quake Defender (industrial/
+     commercial) are capped below the designs that do, so the
+     top of the leaderboard always belongs to those.
+  ========================================================= */
+  var SCORE_NON_PROMOTED_CAP = 60;
+  var SCORE_PROMOTED_MULTIPLIER = 1.5;
+  var SCORE_FAIL_THRESHOLD = 10;
+  var SCORE_THRIVE_THRESHOLD = 61;
+
+  function averageTransmissibility(fn, zeta){
+    var sum = 0, n = 0;
+    for(var f=0.35; f<=2.2; f+=0.05){
+      sum += transmissibility(f/fn, zeta);
+      n++;
+    }
+    return sum/n;
+  }
+
+  function computeScore(result){
+    if(!result.survives) return 0;
+    var derived = result.derived;
+    var meanTr = averageTransmissibility(derived.fn, derived.zeta);
+    var massFactor = Math.sqrt(derived.mass/20);
+    var heightFactor = 1 + derived.totalHeightM/40;
+    var demandRef = meanTr * 0.35 * massFactor * heightFactor * 2.5;
+    if(derived.isolated) demandRef *= 0.5;
+    var marginRef = derived.strength / demandRef;
+
+    var movementScore = clamp(1 - (meanTr-0.6)/1.3, 0, 1);
+    var marginScore, rawQuality;
+    if(derived.isHouse){
+      // More generous, near-linear curve so surviving houses spread
+      // across the band (plasterboard low, plywood mid, concrete high)
+      // instead of all bunching near zero.
+      marginScore = clamp((marginRef-1)/4, 0, 1);
+      rawQuality = 100 * marginScore * Math.pow(movementScore, 0.8);
+    } else {
+      marginScore = clamp((marginRef-0.7)/3.5, 0, 1);
+      rawQuality = 100 * Math.pow(marginScore, 1.3) * Math.pow(movementScore, 0.8);
+    }
+
+    var promoted = derived.isHouse ? !!state.protections.frontfootDampers : !!state.protections.quakeDefender;
+    if(!promoted) return Math.round(Math.min(rawQuality, SCORE_NON_PROMOTED_CAP));
+    return Math.round(rawQuality * SCORE_PROMOTED_MULTIPLIER);
+  }
+
+  function resultTier(result, score){
+    // Structural Failure means the building actually collapsed - never
+    // just a low score on a building that stayed standing.
+    if(!result.survives) return 'fail';
+    if(score >= SCORE_THRIVE_THRESHOLD) return 'thrive';
+    return 'survive';
+  }
+
+  var TIER_COPY = {
+    fail:    { title:'Structural Failure', sub:'Can you try again and Survive or Thrive?' },
+    survive: { title:'You Survived',       sub:'Well done, but can you try again and thrive?' },
+    thrive:  { title:'You Thrived',        sub:'Excellent design!' }
+  };
+
+  /* =========================================================
+     SCREEN 4 - SCENE BUILD
+  ========================================================= */
+  var SCENE = { storeyEls:[], crackEls:[], groundGroupEl:null, isolatorGroupEl:null, segments:0, buildingBaseY:272, rigidBody:false, singleBay:false };
+
+  /* ---------- 2.5D oblique projection helpers ---------- */
+  var DX3D = 13, DY3D = 8;
+  var FACE_FRONT = '#123a52', FACE_SIDE = '#0d2436', FACE_TOP = '#1b4a6b', FACE_ROOF = '#0f2f45';
+
+  function faceTop(x,y,w,fill){
+    return '<polygon points="'+x+','+y+' '+(x+DX3D)+','+(y-DY3D)+' '+(x+w+DX3D)+','+(y-DY3D)+' '+(x+w)+','+y+'" fill="'+fill+'" stroke="#bfe0ec" stroke-opacity="0.22" stroke-width="0.8"/>';
+  }
+  function faceSide(x,y,h,fill){
+    return '<polygon points="'+x+','+y+' '+(x+DX3D)+','+(y-DY3D)+' '+(x+DX3D)+','+(y+h-DY3D)+' '+x+','+(y+h)+'" fill="'+fill+'" stroke="#bfe0ec" stroke-opacity="0.22" stroke-width="0.8"/>';
+  }
+
+  /* Two-stage crack sets: stage 1 = hairline flexural cracks,
+     stage 2 = full diagonal shear cracking. Drawn per storey so
+     they move (and fall) with the storey they belong to. */
+  function crackSet(i, bx, bw, y, storeyH){
+    var x1 = bx+bw*0.18, x2 = bx+bw*0.52, x3 = bx+bw*0.82;
+    var s1 =
+      '<polyline class="crack" data-stage="1" data-i="'+i+'" opacity="0" fill="none" stroke="#e0574f" stroke-width="1.1" points="'+
+        x1.toFixed(1)+','+(y+2).toFixed(1)+' '+(x1+5).toFixed(1)+','+(y+storeyH*0.32).toFixed(1)+' '+(x1+1).toFixed(1)+','+(y+storeyH*0.55).toFixed(1)+'"/>'+
+      '<polyline class="crack" data-stage="1" data-i="'+i+'" opacity="0" fill="none" stroke="#e0574f" stroke-width="1.1" points="'+
+        x3.toFixed(1)+','+(y+storeyH-2).toFixed(1)+' '+(x3-4).toFixed(1)+','+(y+storeyH*0.6).toFixed(1)+' '+(x3+1).toFixed(1)+','+(y+storeyH*0.38).toFixed(1)+'"/>';
+    var s2 =
+      '<polyline class="crack" data-stage="2" data-i="'+i+'" opacity="0" fill="none" stroke="#e0574f" stroke-width="1.6" points="'+
+        (bx+3).toFixed(1)+','+(y+3).toFixed(1)+' '+(x2-6).toFixed(1)+','+(y+storeyH*0.42).toFixed(1)+' '+(x2+4).toFixed(1)+','+(y+storeyH*0.58).toFixed(1)+' '+(bx+bw-4).toFixed(1)+','+(y+storeyH-3).toFixed(1)+'"/>'+
+      '<polyline class="crack" data-stage="2" data-i="'+i+'" opacity="0" fill="none" stroke="#e0574f" stroke-width="1.6" points="'+
+        (bx+bw-4).toFixed(1)+','+(y+3).toFixed(1)+' '+(x2+5).toFixed(1)+','+(y+storeyH*0.4).toFixed(1)+' '+(x2-5).toFixed(1)+','+(y+storeyH*0.56).toFixed(1)+' '+(bx+4).toFixed(1)+','+(y+storeyH-3).toFixed(1)+'"/>';
+    return s1+s2;
+  }
+
+  function buildScene(){
+    var derived = buildDerivedStats();
+    var bt = derived.bt;
+    var svg = document.getElementById('scene');
+    var isolated = derived.isolated;
+    var buildingBaseY = isolated ? 250 : 272;
+    var renderH = bt.renderH;
+    var segments = bt.renderSegments;
+    var storeyH = renderH/segments;
+    var bw = bt.bw, bx = 150-bw/2;
+
+    svg.setAttribute('viewBox', '0 0 300 400');
+    var P = [];
+
+    // ---- ground: receding surface plane + soil face + shadow + foundation box ----
+    P.push('<g id="groundGroup">');
+    P.push('<polygon points="-60,300 360,300 '+(360+DX3D*3)+','+(300-DY3D*3)+' '+(-60+DX3D*3)+','+(300-DY3D*3)+'" fill="#0c3247"/>');
+    P.push('<rect x="-60" y="300" width="420" height="100" fill="#0a2a3d"/>');
+    for(var gy=308; gy<400; gy+=12){
+      P.push('<line x1="-60" y1="'+gy+'" x2="360" y2="'+(gy+34)+'" stroke="#bfe0ec" stroke-opacity="0.06" stroke-width="5"/>');
+    }
+    P.push('<ellipse cx="'+(150+DX3D/2)+'" cy="299" rx="'+(bw*0.82)+'" ry="5" fill="#04121c" opacity="0.5"/>');
+    var fx=bx-14, fw=bw+28;
+    P.push(faceTop(fx,272,fw,FACE_TOP));
+    P.push(faceSide(fx+fw,272,28,FACE_SIDE));
+    P.push('<rect x="'+fx+'" y="272" width="'+fw+'" height="28" fill="'+FACE_FRONT+'" stroke="#bfe0ec" stroke-opacity="0.4" stroke-width="1"/>');
+    P.push('</g>');
+
+    // ---- isolator layer (3D box + bearings) ----
+    if(isolated){
+      var ix=bx-10, iw=bw+20;
+      P.push('<g id="isolatorGroup">');
+      P.push(faceTop(ix,250,iw,'#143d59'));
+      P.push(faceSide(ix+iw,250,22,FACE_SIDE));
+      P.push('<rect x="'+ix+'" y="250" width="'+iw+'" height="22" fill="#0f3049" stroke="#e8a33d" stroke-opacity="0.5" stroke-width="1"/>');
+      for(var rx=bx; rx<bx+bw; rx+=16){
+        P.push('<circle cx="'+(rx+8)+'" cy="261" r="4.5" fill="none" stroke="#e8a33d" stroke-width="1.4"/>');
+      }
+      P.push('</g>');
+    }
+
+    // ---- building storeys ----
+    P.push('<g id="storeyGroup">');
+    var segFn = bt.key==='house' ? houseSegment : (bt.key==='industrial' ? industrialSegment : commercialSegment);
+    for(var i=0;i<segments;i++){
+      P.push(segFn(i, segments, bx, bw, buildingBaseY, storeyH));
+    }
+    P.push('</g>');
+
+    svg.innerHTML = '<g id="cameraGroup">' + P.join('') + '</g>';
+
+    SCENE.segments = segments;
+    SCENE.buildingBaseY = buildingBaseY;
+    SCENE.storeyH = storeyH;
+    SCENE.bx = bx;
+    SCENE.bw = bw;
+    SCENE.rigidBody = (state.systemKey==='shearwalls' || state.systemKey==='concreteShear');
+    SCENE.singleBay = (segments===1 && !SCENE.rigidBody);
+    SCENE.storeyEls = Array.prototype.slice.call(svg.querySelectorAll('.storey'));
+    SCENE.crackEls = Array.prototype.slice.call(svg.querySelectorAll('.crack'));
+    SCENE.braceEls = Array.prototype.slice.call(svg.querySelectorAll('.brace')).map(function(el){
+      return { el:el, i:parseInt(el.getAttribute('data-i'),10), dir:el.getAttribute('data-dir') };
+    });
+    SCENE.haunchEls = Array.prototype.slice.call(svg.querySelectorAll('.haunch')).map(function(el){
+      return { el:el, i:parseInt(el.getAttribute('data-i'),10) };
+    });
+    SCENE.hasForceViz = (SCENE.braceEls.length>0 || SCENE.haunchEls.length>0);
+    SCENE.groundGroupEl = svg.querySelector('#groundGroup');
+    SCENE.isolatorGroupEl = svg.querySelector('#isolatorGroup');
+    var legend = document.getElementById('force-legend');
+    if(legend) legend.style.display = SCENE.hasForceViz ? 'flex' : 'none';
+  }
+
+  /* Blend two #rrggbb colours; t in [0,1]. Used for force colouring. */
+  function hexLerp(c1, c2, t){
+    var a = parseInt(c1.slice(1),16), b = parseInt(c2.slice(1),16);
+    var r = Math.round(((a>>16)&255) + (((b>>16)&255)-((a>>16)&255))*t);
+    var g = Math.round(((a>>8)&255) + (((b>>8)&255)-((a>>8)&255))*t);
+    var bl = Math.round((a&255) + ((b&255)-(a&255))*t);
+    return 'rgb('+r+','+g+','+bl+')';
+  }
+  var TENSION_COLOR = '#ff6b5a', COMPRESSION_COLOR = '#5aa9ff', FORCE_AMBER = '#e8a33d';
+  var DRIFT_REF = 5.5; // px of interstorey drift mapped to full force intensity
+
+  /* Update brace tension/compression colouring and haunch glow for the
+     current per-storey drifts. us[] holds displacement at each storey
+     boundary. fade in [0,1] dims everything during collapse. */
+  function updateForceViz(us, fade){
+    if(!SCENE.hasForceViz) return;
+    SCENE.braceEls.forEach(function(b){
+      var drift = us[b.i+1] - us[b.i];
+      var isTension = (b.dir==='fwd' && drift>0) || (b.dir==='back' && drift<0);
+      var t = clamp(Math.abs(drift)/DRIFT_REF, 0, 1) * (1-fade);
+      if(fade > 0.6){
+        b.el.setAttribute('stroke', '#5a6b78');
+        b.el.setAttribute('stroke-opacity', (0.3*(1-fade)).toFixed(2));
+        return;
+      }
+      var col = isTension ? hexLerp(FORCE_AMBER, TENSION_COLOR, t) : hexLerp(FORCE_AMBER, COMPRESSION_COLOR, t);
+      b.el.setAttribute('stroke', col);
+      b.el.setAttribute('stroke-opacity', (0.55 + 0.45*t).toFixed(2));
+      b.el.setAttribute('stroke-width', (1.5 + 1.3*t).toFixed(2));
+    });
+    SCENE.haunchEls.forEach(function(h){
+      var i = h.i;
+      var drift = Math.abs(us[Math.min(i+1,us.length-1)] - us[i]);
+      var glow = clamp(drift/DRIFT_REF, 0, 1) * (1-fade);
+      h.el.setAttribute('fill', hexLerp(FORCE_AMBER, TENSION_COLOR, glow*0.85));
+      h.el.setAttribute('fill-opacity', (0.7 + 0.3*glow).toFixed(2));
+    });
+  }
+
+  function resetForceViz(){
+    if(!SCENE.braceEls) return;
+    SCENE.braceEls.forEach(function(b){
+      b.el.setAttribute('stroke', FORCE_AMBER);
+      b.el.setAttribute('stroke-opacity','0.88');
+      b.el.setAttribute('stroke-width', SCENE.singleBay ? '1.6' : '1.3');
+    });
+    (SCENE.haunchEls||[]).forEach(function(h){
+      h.el.setAttribute('fill', FORCE_AMBER);
+      h.el.setAttribute('fill-opacity','0.85');
+    });
+  }
+
+  /* Tile a solar array across a roof plane defined by front edge A->B
+     and a depth vector (dx,dy). Panels lie flush on the plane, so they
+     follow a pitched slope or a flat deck correctly. */
+  function solarPanels(Ax,Ay,Bx,By,dx,dy,cols){
+    var s='', gap=0.08, d0=0.16, d1=0.84;
+    for(var c=0;c<cols;c++){
+      var s0=(c+gap)/cols, s1=(c+1-gap)/cols;
+      function P(sv,dv){ return [Ax+(Bx-Ax)*sv+dx*dv, Ay+(By-Ay)*sv+dy*dv]; }
+      var p0=P(s0,d0), p1=P(s1,d0), p2=P(s1,d1), p3=P(s0,d1);
+      s+='<polygon points="'+p0[0].toFixed(1)+','+p0[1].toFixed(1)+' '+p1[0].toFixed(1)+','+p1[1].toFixed(1)+' '+p2[0].toFixed(1)+','+p2[1].toFixed(1)+' '+p3[0].toFixed(1)+','+p3[1].toFixed(1)+'" fill="#153f73" stroke="#8fc0ec" stroke-width="0.6"/>';
+      var m0=P(s0,0.5), m1=P(s1,0.5);
+      s+='<line x1="'+m0[0].toFixed(1)+'" y1="'+m0[1].toFixed(1)+'" x2="'+m1[0].toFixed(1)+'" y2="'+m1[1].toFixed(1)+'" stroke="#8fc0ec" stroke-width="0.4" stroke-opacity="0.55"/>';
+    }
+    return s;
+  }
+
+  /* Fill a roof plane (parallelogram A->B extruded by depth) with a
+     planted green-roof surface plus short grass tufts. */
+  function greenRoofPlane(Ax,Ay,Bx,By,dx,dy){
+    var s='';
+    s+='<polygon points="'+Ax.toFixed(1)+','+Ay.toFixed(1)+' '+Bx.toFixed(1)+','+By.toFixed(1)+' '+(Bx+dx).toFixed(1)+','+(By+dy).toFixed(1)+' '+(Ax+dx).toFixed(1)+','+(Ay+dy).toFixed(1)+'" fill="#4a7a4a" stroke="#7fb37f" stroke-width="0.7"/>';
+    for(var t=0.08;t<0.98;t+=0.11){
+      for(var d=0.32;d<0.95;d+=0.34){
+        var gx=Ax+(Bx-Ax)*t+dx*d, gy=Ay+(By-Ay)*t+dy*d;
+        s+='<line x1="'+gx.toFixed(1)+'" y1="'+gy.toFixed(1)+'" x2="'+gx.toFixed(1)+'" y2="'+(gy-2.4).toFixed(1)+'" stroke="#a6d9a6" stroke-width="0.7" stroke-opacity="0.75"/>';
+      }
+    }
+    return s;
+  }
+
+  function drawAdditions(type, bx, bw, roofY){
+    var g='';
+    var apexX = bx+bw/2;
+    var dpx = DX3D, dpy = -DY3D;
+    // Roof plane front edge A->B: flat deck for commercial, right slope
+    // for the pitched house/industrial roofs.
+    var Ax,Ay,Bx,By, apexY;
+    if(type==='commercial'){
+      Ax=bx; Ay=roofY; Bx=bx+bw; By=roofY;
+    } else {
+      apexY = roofY - (type==='house' ? 22 : 18);
+      Ax=apexX; Ay=apexY; Bx=bx+bw; By=roofY;
+    }
+
+    // House tile roof - terracotta over the whole visible roof (gable
+    // end + right slope), drawn under panels.
+    if(state.additions.tileRoof){
+      var tay = roofY - 22;
+      g+='<polygon points="'+bx.toFixed(1)+','+roofY.toFixed(1)+' '+apexX.toFixed(1)+','+tay.toFixed(1)+' '+(bx+bw).toFixed(1)+','+roofY.toFixed(1)+'" fill="#b5643c" stroke="#d98a5a" stroke-width="0.8"/>';
+      g+='<polygon points="'+apexX.toFixed(1)+','+tay.toFixed(1)+' '+(bx+bw).toFixed(1)+','+roofY.toFixed(1)+' '+(bx+bw+dpx).toFixed(1)+','+(roofY+dpy).toFixed(1)+' '+(apexX+dpx).toFixed(1)+','+(tay+dpy).toFixed(1)+'" fill="#9d5433" stroke="#d98a5a" stroke-width="0.6"/>';
+      for(var ct=1; ct<=3; ct++){
+        var t=ct/4, hw=(bw/2)*(1-t), ly=roofY-22*t;
+        g+='<line x1="'+(apexX-hw).toFixed(1)+'" y1="'+ly.toFixed(1)+'" x2="'+(apexX+hw).toFixed(1)+'" y2="'+ly.toFixed(1)+'" stroke="#7d3f26" stroke-width="0.8" stroke-opacity="0.8"/>';
+      }
+    }
+
+    // Green roof (industrial/commercial) - covers the roof plane; the
+    // industrial gable end gets a green triangle too.
+    if(state.additions.greenroof){
+      if(type==='industrial'){
+        g+='<polygon points="'+bx.toFixed(1)+','+roofY.toFixed(1)+' '+apexX.toFixed(1)+','+apexY.toFixed(1)+' '+(bx+bw).toFixed(1)+','+roofY.toFixed(1)+'" fill="#4a7a4a" stroke="#7fb37f" stroke-width="0.7"/>';
+      }
+      g+=greenRoofPlane(Ax,Ay,Bx,By,dpx,dpy);
+    }
+
+    // Solar - tiled flush on the roof plane.
+    if(state.additions.solar){
+      var cols = type==='commercial' ? 4 : (type==='industrial' ? 5 : 3);
+      g+=solarPanels(Ax,Ay,Bx,By,dpx,dpy,cols);
+    }
+
+    // House brick chimney - unreinforced masonry stack near the ridge.
+    if(state.additions.chimney){
+      var chX=bx+bw*0.64, chTop=roofY-34, chBot=roofY-4, chW=11;
+      g+='<rect x="'+chX.toFixed(1)+'" y="'+chTop.toFixed(1)+'" width="'+chW+'" height="'+(chBot-chTop).toFixed(1)+'" fill="#8a4b39" stroke="#b5643c" stroke-width="0.8"/>';
+      g+='<rect x="'+(chX-1.5).toFixed(1)+'" y="'+chTop.toFixed(1)+'" width="'+(chW+3)+'" height="3.5" fill="#a35a44" stroke="#b5643c" stroke-width="0.6"/>';
+      for(var bc=1; bc<5; bc++){
+        var by=chTop+3.5+bc*((chBot-chTop-3.5)/5);
+        g+='<line x1="'+chX.toFixed(1)+'" y1="'+by.toFixed(1)+'" x2="'+(chX+chW).toFixed(1)+'" y2="'+by.toFixed(1)+'" stroke="#5f3226" stroke-width="0.6" stroke-opacity="0.7"/>';
+      }
+    }
+
+    // Rooftop signage (industrial/commercial) - billboard on posts.
+    if(state.additions.signage){
+      var sx=bx+bw*0.5-14, sy=roofY-24;
+      g+='<line x1="'+(sx+6).toFixed(1)+'" y1="'+roofY.toFixed(1)+'" x2="'+(sx+6).toFixed(1)+'" y2="'+(sy+10).toFixed(1)+'" stroke="#8aa7b8" stroke-width="1.2"/>';
+      g+='<line x1="'+(sx+22).toFixed(1)+'" y1="'+roofY.toFixed(1)+'" x2="'+(sx+22).toFixed(1)+'" y2="'+(sy+10).toFixed(1)+'" stroke="#8aa7b8" stroke-width="1.2"/>';
+      g+='<rect x="'+sx.toFixed(1)+'" y="'+sy.toFixed(1)+'" width="28" height="11" fill="#12303f" stroke="#e8a33d" stroke-width="1"/>';
+      g+='<line x1="'+(sx+3).toFixed(1)+'" y1="'+(sy+4).toFixed(1)+'" x2="'+(sx+25).toFixed(1)+'" y2="'+(sy+4).toFixed(1)+'" stroke="#e8a33d" stroke-width="0.8" stroke-opacity="0.6"/>';
+      g+='<line x1="'+(sx+3).toFixed(1)+'" y1="'+(sy+7.5).toFixed(1)+'" x2="'+(sx+18).toFixed(1)+'" y2="'+(sy+7.5).toFixed(1)+'" stroke="#e8a33d" stroke-width="0.8" stroke-opacity="0.6"/>';
+    }
+    return g;
+  }
+
+  function houseSegment(i, segments, bx, bw, baseY, storeyH){
+    var y = baseY-(i+1)*storeyH;
+    var top = (i===segments-1);
+    var isPlywood = state.systemKey==='plywood';
+    var isConcrete = state.systemKey==='concreteShear';
+    var upspec = !!state.protections.upspecBracing;
+    var g = '<g class="storey" data-i="'+i+'">';
+    g += faceSide(bx+bw, y, storeyH, FACE_SIDE);
+    g += '<rect x="'+bx+'" y="'+y.toFixed(2)+'" width="'+bw+'" height="'+storeyH.toFixed(2)+'" fill="'+FACE_FRONT+'" stroke="#bfe0ec" stroke-opacity="0.55" stroke-width="1"/>';
+    if(isConcrete){
+      g += '<rect x="'+bx+'" y="'+y.toFixed(2)+'" width="'+(bw*0.28)+'" height="'+storeyH.toFixed(2)+'" fill="#e8a33d" fill-opacity="0.5"/>';
+    }
+    if(isPlywood){
+      for(var d=0; d<3; d++){
+        var xo = bx + d*(bw/3);
+        g += '<line x1="'+xo.toFixed(2)+'" y1="'+y.toFixed(2)+'" x2="'+(xo+bw/3).toFixed(2)+'" y2="'+(y+storeyH).toFixed(2)+'" stroke="#e8a33d" stroke-width="1.1" stroke-opacity="0.8"/>';
+      }
+    }
+    if(upspec){
+      g += '<line x1="'+(bx+bw)+'" y1="'+y.toFixed(2)+'" x2="'+bx+'" y2="'+(y+storeyH).toFixed(2)+'" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.9"/>';
+    }
+    if(i===0){
+      g += '<rect x="'+(bx+bw*0.6)+'" y="'+(y+storeyH*0.3).toFixed(2)+'" width="'+(bw*0.22)+'" height="'+(storeyH*0.7).toFixed(2)+'" fill="#081c29" stroke="#bfe0ec" stroke-width="0.8"/>';
+      g += '<rect x="'+(bx+bw*0.16)+'" y="'+(y+storeyH*0.32).toFixed(2)+'" width="'+(bw*0.26)+'" height="'+(storeyH*0.34).toFixed(2)+'" fill="#081c29" stroke="#bfe0ec" stroke-width="0.8"/>';
+    } else {
+      g += '<rect x="'+(bx+bw*0.16)+'" y="'+(y+storeyH*0.26).toFixed(2)+'" width="'+(bw*0.24)+'" height="'+(storeyH*0.4).toFixed(2)+'" fill="#081c29" stroke="#bfe0ec" stroke-width="0.8"/>';
+      g += '<rect x="'+(bx+bw*0.58)+'" y="'+(y+storeyH*0.26).toFixed(2)+'" width="'+(bw*0.24)+'" height="'+(storeyH*0.4).toFixed(2)+'" fill="#081c29" stroke="#bfe0ec" stroke-width="0.8"/>';
+    }
+    g += '<line x1="'+bx+'" y1="'+(y+storeyH).toFixed(2)+'" x2="'+(bx+bw)+'" y2="'+(y+storeyH).toFixed(2)+'" stroke="#bfe0ec" stroke-opacity="0.3" stroke-width="1"/>';
+    if(top){
+      var apexY = y-22;
+      g += '<polygon points="'+(bx+bw/2)+','+apexY+' '+(bx+bw)+','+y.toFixed(2)+' '+(bx+bw+DX3D)+','+(y-DY3D)+' '+(bx+bw/2+DX3D)+','+(apexY-DY3D)+'" fill="'+FACE_ROOF+'" stroke="#bfe0ec" stroke-opacity="0.3" stroke-width="0.8"/>';
+      g += '<polygon points="'+bx+','+y.toFixed(2)+' '+(bx+bw/2)+','+apexY+' '+(bx+bw)+','+y.toFixed(2)+'" fill="'+FACE_FRONT+'" stroke="#bfe0ec" stroke-opacity="0.7" stroke-width="1.2"/>';
+      g += drawAdditions('house', bx, bw, y);
+    }
+    g += crackSet(i,bx,bw,y,storeyH);
+    g += '</g>';
+    return g;
+  }
+
+  function industrialSegment(i, segments, bx, bw, baseY, storeyH){
+    var y = baseY-(i+1)*storeyH;          // eave line
+    var yb = y + storeyH;                 // ground line
+    var top = (i===segments-1);
+    var system = state.systemKey;
+    var STEEL = '#93b8ce';
+    var apexY = y - 18;
+    var doorW = bw*0.22;
+    var doorL = bx + bw/2 - doorW/2;
+    var doorR = bx + bw/2 + doorW/2;
+    var doorTop = y + storeyH*0.20;
+    var leftBayL = bx + bw*0.07, leftBayR = doorL - bw*0.05;
+    var rightBayL = doorR + bw*0.05, rightBayR = bx + bw*0.93;
+    var g = '<g class="storey" data-i="'+i+'">';
+
+    function xbrace(x1,x2){
+      // Line 1 "\" top-left to bottom-right = 'back'; Line 2 "/" top-right to bottom-left = 'fwd'
+      return '<line class="brace" data-i="'+i+'" data-dir="back" x1="'+x1.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+yb.toFixed(1)+'" stroke="#e8a33d" stroke-width="1.6" stroke-opacity="0.9"/>'+
+             '<line class="brace" data-i="'+i+'" data-dir="fwd" x1="'+x2.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+yb.toFixed(1)+'" stroke="#e8a33d" stroke-width="1.6" stroke-opacity="0.9"/>';
+    }
+    function damperDiag(x1,x2){
+      var ang = Math.atan2(y-yb, x2-x1)*180/Math.PI;
+      var mx=(x1+x2)/2, my=(y+yb)/2;
+      return '<line x1="'+x1.toFixed(1)+'" y1="'+yb.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="#bfe0ec" stroke-width="1.3" stroke-opacity="0.85"/>'+
+             '<rect x="'+(mx-5).toFixed(1)+'" y="'+(my-3).toFixed(1)+'" width="10" height="6" rx="1" fill="#123a52" stroke="#bfe0ec" stroke-width="1" transform="rotate('+ang.toFixed(1)+' '+mx.toFixed(1)+' '+my.toFixed(1)+')"/>';
+    }
+
+    // depth side face
+    g += faceSide(bx+bw, y, storeyH, FACE_SIDE);
+    // front cladding wall
+    g += '<rect x="'+bx.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+storeyH.toFixed(1)+'" fill="'+FACE_FRONT+'" stroke="#bfe0ec" stroke-opacity="0.5" stroke-width="1"/>';
+    // subtle corrugated cladding ribs
+    for(var rx=bx+7; rx<bx+bw-2; rx+=9){
+      g += '<line x1="'+rx.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+rx.toFixed(1)+'" y2="'+yb.toFixed(1)+'" stroke="#bfe0ec" stroke-width="0.5" stroke-opacity="0.09"/>';
+    }
+    // clerestory window band above the door
+    var clT = y + storeyH*0.07, clB = y + storeyH*0.16;
+    var clL = doorL - bw*0.03, clSpan = doorW + bw*0.06, panes = 4, pgap = clSpan/panes;
+    for(var wp=0; wp<panes; wp++){
+      g += '<rect x="'+(clL+wp*pgap+1).toFixed(1)+'" y="'+clT.toFixed(1)+'" width="'+(pgap*0.72).toFixed(1)+'" height="'+(clB-clT).toFixed(1)+'" fill="#0a2436" stroke="#8fb4cb" stroke-opacity="0.45" stroke-width="0.6"/>';
+    }
+
+    // structural system, in the two bays either side of the door
+    if(system==='braced'){
+      g += xbrace(leftBayL,leftBayR) + xbrace(rightBayL,rightBayR);
+    } else if(system==='shearwalls' || state.protections.shearwallsAdd){
+      g += '<rect x="'+leftBayL.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(leftBayR-leftBayL).toFixed(1)+'" height="'+storeyH.toFixed(1)+'" fill="#e8a33d" fill-opacity="0.36" stroke="#e8a33d" stroke-opacity="0.5" stroke-width="0.8"/>';
+      g += '<rect x="'+rightBayL.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(rightBayR-rightBayL).toFixed(1)+'" height="'+storeyH.toFixed(1)+'" fill="#e8a33d" fill-opacity="0.36" stroke="#e8a33d" stroke-opacity="0.5" stroke-width="0.8"/>';
+    }
+
+    // roof: depth plane + front gable end
+    if(top){
+      g += '<polygon points="'+(bx+bw/2).toFixed(1)+','+apexY.toFixed(1)+' '+(bx+bw).toFixed(1)+','+y.toFixed(1)+' '+(bx+bw+DX3D).toFixed(1)+','+(y-DY3D).toFixed(1)+' '+(bx+bw/2+DX3D).toFixed(1)+','+(apexY-DY3D).toFixed(1)+'" fill="'+FACE_ROOF+'" stroke="#bfe0ec" stroke-opacity="0.3" stroke-width="0.8"/>';
+      g += '<polygon points="'+bx.toFixed(1)+','+y.toFixed(1)+' '+(bx+bw/2).toFixed(1)+','+apexY.toFixed(1)+' '+(bx+bw).toFixed(1)+','+y.toFixed(1)+'" fill="'+FACE_FRONT+'" stroke="#bfe0ec" stroke-opacity="0.4" stroke-width="0.8"/>';
+    }
+
+    // portal frame steel: columns + rafters, drawn over cladding and gable
+    g += '<line x1="'+bx.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+bx.toFixed(1)+'" y2="'+yb.toFixed(1)+'" stroke="'+STEEL+'" stroke-width="2.6"/>';
+    g += '<line x1="'+(bx+bw).toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+(bx+bw).toFixed(1)+'" y2="'+yb.toFixed(1)+'" stroke="'+STEEL+'" stroke-width="2.6"/>';
+    g += '<line x1="'+bx.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+(bx+bw/2).toFixed(1)+'" y2="'+apexY.toFixed(1)+'" stroke="'+STEEL+'" stroke-width="2.2"/>';
+    g += '<line x1="'+(bx+bw/2).toFixed(1)+'" y1="'+apexY.toFixed(1)+'" x2="'+(bx+bw).toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+STEEL+'" stroke-width="2.2"/>';
+
+    // moment-frame haunches at the knees + apex
+    if(system==='moment'){
+      var hz = Math.min(bw*0.12, 18);
+      g += '<polygon class="haunch" data-i="'+i+'" points="'+bx.toFixed(1)+','+(y+hz).toFixed(1)+' '+bx.toFixed(1)+','+y.toFixed(1)+' '+(bx+hz).toFixed(1)+','+y.toFixed(1)+'" fill="#e8a33d" fill-opacity="0.85"/>';
+      g += '<polygon class="haunch" data-i="'+i+'" points="'+(bx+bw).toFixed(1)+','+(y+hz).toFixed(1)+' '+(bx+bw).toFixed(1)+','+y.toFixed(1)+' '+(bx+bw-hz).toFixed(1)+','+y.toFixed(1)+'" fill="#e8a33d" fill-opacity="0.85"/>';
+      g += '<polygon class="haunch" data-i="'+i+'" points="'+(bx+bw/2-9).toFixed(1)+','+(apexY+6).toFixed(1)+' '+(bx+bw/2).toFixed(1)+','+apexY.toFixed(1)+' '+(bx+bw/2+9).toFixed(1)+','+(apexY+6).toFixed(1)+'" fill="#e8a33d" fill-opacity="0.85"/>';
+    }
+
+    // roller door (full height, centred)
+    g += '<rect x="'+doorL.toFixed(1)+'" y="'+doorTop.toFixed(1)+'" width="'+doorW.toFixed(1)+'" height="'+(yb-doorTop).toFixed(1)+'" fill="#0a2436" stroke="'+STEEL+'" stroke-width="1.2"/>';
+    var slats = 6;
+    for(var sl=1; sl<slats; sl++){
+      var sly = doorTop + (yb-doorTop)*sl/slats;
+      g += '<line x1="'+doorL.toFixed(1)+'" y1="'+sly.toFixed(1)+'" x2="'+doorR.toFixed(1)+'" y2="'+sly.toFixed(1)+'" stroke="#8fb4cb" stroke-width="0.6" stroke-opacity="0.5"/>';
+    }
+
+    // Quake Defender viscous dampers - a diagonal in each bay
+    if(state.protections.quakeDefender){
+      g += damperDiag(leftBayL,leftBayR) + damperDiag(rightBayL,rightBayR);
+    }
+
+    if(top){ g += drawAdditions('industrial', bx, bw, y); }
+    g += crackSet(i,bx,bw,y,storeyH);
+    g += '</g>';
+    return g;
+  }
+
+  function commercialSegment(i, segments, bx, bw, baseY, storeyH){
+    var y = baseY-(i+1)*storeyH;
+    var top = (i===segments-1);
+    var showBracing = (state.systemKey==='braced');
+    var showShear = (state.systemKey==='shearwalls' || state.protections.shearwallsAdd);
+    var showMoment = (state.systemKey==='moment');
+    var showDampers = state.protections.quakeDefender;
+    var damperHere = showDampers && (i===0 || i===Math.floor(segments/2));
+    var g = '<g class="storey" data-i="'+i+'">';
+    g += faceSide(bx+bw, y, storeyH, FACE_SIDE);
+    g += '<rect x="'+bx+'" y="'+y.toFixed(2)+'" width="'+bw+'" height="'+storeyH.toFixed(2)+'" fill="'+FACE_FRONT+'" stroke="#bfe0ec" stroke-opacity="0.55" stroke-width="1"/>';
+    if(showShear){
+      g += '<rect x="'+bx+'" y="'+y.toFixed(2)+'" width="'+(bw*0.28)+'" height="'+storeyH.toFixed(2)+'" fill="#e8a33d" fill-opacity="0.5"/>';
+    }
+    // window band (kept clear of the shear-wall zone on the left)
+    var winStart = showShear ? 0.36 : 0.14;
+    for(var w2=0; w2<3; w2++){
+      var wx = bx + bw*(winStart + w2*0.22);
+      g += '<rect x="'+wx.toFixed(1)+'" y="'+(y+storeyH*0.26).toFixed(2)+'" width="'+(bw*0.14).toFixed(1)+'" height="'+(storeyH*0.46).toFixed(2)+'" fill="#081c29" stroke="#bfe0ec" stroke-opacity="0.5" stroke-width="0.7"/>';
+    }
+    if(showBracing){
+      var y2c = y+storeyH;
+      g += '<line class="brace" data-i="'+i+'" data-dir="back" x1="'+bx+'" y1="'+y.toFixed(2)+'" x2="'+(bx+bw)+'" y2="'+y2c.toFixed(2)+'" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.85"/>';
+      g += '<line class="brace" data-i="'+i+'" data-dir="fwd" x1="'+(bx+bw)+'" y1="'+y.toFixed(2)+'" x2="'+bx+'" y2="'+y2c.toFixed(2)+'" stroke="#e8a33d" stroke-width="1.3" stroke-opacity="0.85"/>';
+    }
+    if(showMoment){
+      g += '<rect class="haunch" data-i="'+i+'" x="'+(bx-1.5)+'" y="'+(y-1.5).toFixed(2)+'" width="5" height="5" fill="#e8a33d"/>';
+      g += '<rect class="haunch" data-i="'+i+'" x="'+(bx+bw-3.5)+'" y="'+(y-1.5).toFixed(2)+'" width="5" height="5" fill="#e8a33d"/>';
+    }
+    if(damperHere){
+      var midY2 = y+storeyH/2;
+      g += '<circle cx="'+(bx+bw/2)+'" cy="'+midY2.toFixed(2)+'" r="4" fill="none" stroke="#bfe0ec" stroke-width="1.3"/>';
+      g += '<line x1="'+(bx+bw/2-10)+'" y1="'+midY2.toFixed(2)+'" x2="'+(bx+bw/2-4)+'" y2="'+midY2.toFixed(2)+'" stroke="#bfe0ec" stroke-width="1.3"/>';
+      g += '<line x1="'+(bx+bw/2+4)+'" y1="'+midY2.toFixed(2)+'" x2="'+(bx+bw/2+10)+'" y2="'+midY2.toFixed(2)+'" stroke="#bfe0ec" stroke-width="1.3"/>';
+    }
+    g += '<line x1="'+bx+'" y1="'+(y+storeyH).toFixed(2)+'" x2="'+(bx+bw)+'" y2="'+(y+storeyH).toFixed(2)+'" stroke="#bfe0ec" stroke-opacity="0.3" stroke-width="1"/>';
+    if(top){
+      g += faceTop(bx, y, bw, FACE_TOP);
+      g += '<line x1="'+bx+'" y1="'+y.toFixed(2)+'" x2="'+(bx+bw)+'" y2="'+y.toFixed(2)+'" stroke="#bfe0ec" stroke-opacity="0.7" stroke-width="1.6"/>';
+      g += drawAdditions('commercial', bx, bw, y);
+    }
+    g += crackSet(i,bx,bw,y,storeyH);
+    g += '</g>';
+    return g;
+  }
+
+  function setStaticScenePose(){
+    var fx = document.getElementById('scene').querySelector('#fxGroup');
+    if(fx) fx.parentNode.removeChild(fx);
+    if(SCENE.groundGroupEl) SCENE.groundGroupEl.setAttribute('transform','translate(0,0)');
+    if(SCENE.isolatorGroupEl) SCENE.isolatorGroupEl.setAttribute('transform','translate(0,0)');
+    SCENE.storeyEls.forEach(function(el){ el.setAttribute('transform','translate(0,0)'); });
+    SCENE.crackEls.forEach(function(el){ el.setAttribute('opacity','0'); });
+    resetForceViz();
+  }
+
+  function updateSpecLine(){
+    var bt = BUILDING_TYPES[state.typeKey];
+    document.getElementById('spec-type').textContent = bt.label;
+    document.getElementById('spec-system').textContent = currentSystems()[state.systemKey].label;
+    var addPool = currentAdditions();
+    var addChosen = Object.keys(state.additions).filter(function(k){
+      return state.additions[k] && addPool[k];
+    }).map(function(k){ return addPool[k].label; });
+    document.getElementById('spec-additions').textContent = addChosen.length ? addChosen.join(', ') : 'None';
+    var pool = currentProtections();
+    var chosen = Object.keys(state.protections).filter(function(k){
+      return state.protections[k] && pool[k];
+    }).map(function(k){ return pool[k].label; });
+    document.getElementById('spec-protection').textContent = chosen.length ? chosen.join(', ') : 'None';
+  }
+
+  function renderLevelSelect(){
+    var wrap = document.getElementById('level-select');
+    wrap.innerHTML = '';
+    Object.keys(LEVELS).forEach(function(k){
+      var lvl = LEVELS[k];
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'level-btn' + (state.levelKey===k ? ' selected':'');
+      el.textContent = lvl.label;
+      el.addEventListener('click', function(){
+        state.levelKey = k;
+        renderLevelSelect();
+      });
+      wrap.appendChild(el);
+    });
+  }
+
+  /* =========================================================
+     SEISMOGRAPH CANVAS
+  ========================================================= */
+  var seisCtx = null;
+  var seisHistory = [];
+  function initSeismograph(){
+    var c = document.getElementById('seismograph');
+    seisCtx = c.getContext('2d');
+    seisHistory = [];
+    drawSeismograph();
+  }
+  function drawSeismograph(){
+    if(!seisCtx) return;
+    var c = seisCtx.canvas;
+    var w = c.width, h = c.height;
+    seisCtx.clearRect(0,0,w,h);
+    seisCtx.strokeStyle = 'rgba(191,224,236,0.15)';
+    seisCtx.lineWidth = 1;
+    seisCtx.beginPath();
+    seisCtx.moveTo(0,h/2); seisCtx.lineTo(w,h/2);
+    seisCtx.stroke();
+    if(seisHistory.length < 2) return;
+    seisCtx.strokeStyle = '#e8a33d';
+    seisCtx.lineWidth = 1.6;
+    seisCtx.beginPath();
+    var n = seisHistory.length;
+    for(var i=0;i<n;i++){
+      var x = (i/(n-1)) * w;
+      var y = h/2 - seisHistory[i]*3.2;
+      if(i===0) seisCtx.moveTo(x,y); else seisCtx.lineTo(x,y);
+    }
+    seisCtx.stroke();
+  }
+
+  /* =========================================================
+     ANIMATION
+  ========================================================= */
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var animRunning = false;
+
+  function modeShape(x){ return Math.pow(x, 1.5); }
+
+  /* ---------- Parallax camera ----------
+     A wrapper transform on #cameraGroup gives the 2.5D scene a sense of
+     a real 3D vantage: a slow idle orbit (subtle rotate + drift + scale
+     breathing) when at rest, plus a decaying camera-shake during the
+     quake. cameraShake is written by the shake loop each frame and
+     decays here, so it tracks the shaking and settles afterwards. The
+     loop self-terminates when the shake screen is no longer active. */
+  var cameraRAF = null, cameraShake = 0, cameraStartT = null;
+
+  function startCamera(){
+    if(reduceMotion) { var cg=document.getElementById('cameraGroup'); if(cg) cg.removeAttribute('transform'); return; }
+    cameraShake = 0;
+    if(cameraRAF) return;
+    cameraStartT = null;
+    cameraRAF = requestAnimationFrame(cameraFrame);
+  }
+  function bumpCameraShake(v){ if(v > cameraShake) cameraShake = v; }
+
+  function cameraFrame(ts){
+    var shakeScreen = document.getElementById('screen-shake');
+    if(!shakeScreen || !shakeScreen.classList.contains('active')){ cameraRAF = null; return; }
+    var cam = document.getElementById('cameraGroup');
+    if(cam){
+      if(cameraStartT===null) cameraStartT = ts;
+      var t = (ts - cameraStartT)/1000;
+      // idle orbit - slow and subtle
+      var rot = Math.sin(t*0.5)*0.5;
+      var tx = Math.sin(t*0.37)*2.4;
+      var ty = Math.cos(t*0.42)*1.1;
+      var zoom = 1 + Math.sin(t*0.30)*0.004;
+      // camera shake - jitter + zoom-in, scaled by the current quake
+      var mag = Math.min(cameraShake, 7);
+      if(mag > 0.05){
+        tx += (Math.random()-0.5)*mag*1.3;
+        ty += (Math.random()-0.5)*mag*0.8;
+        rot += (Math.random()-0.5)*mag*0.15;
+        zoom += mag*0.003;
+      }
+      cameraShake *= 0.90;
+      cam.setAttribute('transform',
+        'translate('+tx.toFixed(2)+','+ty.toFixed(2)+') '+
+        'translate(150 300) scale('+zoom.toFixed(4)+') rotate('+rot.toFixed(3)+') translate(-150 -300)');
+    }
+    cameraRAF = requestAnimationFrame(cameraFrame);
+  }
+
+  function runShakeAnimation(result, onDone){
+    var derived = result.derived;
+    var eq = result.eq;
+    var animMs = clamp(eq.duration*300, reduceMotion?3200:5000, reduceMotion?4200:9500);
+    var groundAmp = lerp(6, 26, clamp((eq.intensity-0.15)/(0.5-0.15), 0, 1)) * (reduceMotion?0.5:1);
+    var isolatedBaseFactor = derived.isolated ? clamp(result.tr, 0.15, 1.2) : 1;
+
+    /* Visible building drift is driven by how hard the structure is
+       being pushed relative to its capacity - the SAME demand/capacity
+       ratio that decides pass/fail - expressed as a drift ratio of the
+       building's rendered height. This keeps the movement consistent
+       with the verdict (a failing building always visibly deforms a
+       lot) and consistent across building types (drift as a fraction
+       of height, not raw pixels). The building sways at its own natural
+       period, so flexible frames sway slowly and stiff ones quickly. */
+    var dcr = result.demand / Math.max(result.capacity, 0.1);
+    var peakDriftRatio = clamp(0.018 + dcr*0.072, 0.018, 0.16) * (reduceMotion?0.6:1);
+    var buildingPxH = Math.max(SCENE.segments * SCENE.storeyH, 1);
+    var peakTopDrift = peakDriftRatio * buildingPxH;
+    var fB = clamp(derived.fn, 0.28, 3.2);   // sway rate = natural frequency
+
+    var f1 = eq.freq, f2 = eq.freq*1.37;
+    /* Depth-axis component: a second, independent horizontal ground
+       motion along the oblique depth direction, at a slightly
+       different frequency so the combined motion is orbital rather
+       than a straight diagonal. */
+    var fD = eq.freq*0.83;
+    var depthAmp = groundAmp*0.55;
+    var DEPTH_UX = DX3D/16, DEPTH_UY = DY3D/16;
+
+    var isoSmoothed = 0, topSmoothed = 0, depthSmoothed = 0;
+    var startT = null, lastTs = null, seisSampleAcc = 0;
+
+    var sched;
+    if(!result.survives) sched = { c1:0.32, c2:0.52, collapse:0.66 };
+    else if(result.margin < 1.8) sched = { c1:0.55, c2:9, collapse:9 };
+    else sched = { c1:9, c2:9, collapse:9 };
+    var tiltDir = Math.random()<0.5 ? -1 : 1;
+    var residual = (result.survives && result.margin < 1.4) ? 1 : 0;
+
+    var svg = document.getElementById('scene');
+    var fxGroup = null, particles = [], dust = [];
+
+    function spawnCollapseFx(groundX){
+      var old = svg.querySelector('#fxGroup');
+      if(old) old.parentNode.removeChild(old);
+      fxGroup = document.createElementNS('http://www.w3.org/2000/svg','g');
+      fxGroup.setAttribute('id','fxGroup');
+      var camG = svg.querySelector('#cameraGroup');
+      (camG || svg).appendChild(fxGroup);
+      var buildingTop = SCENE.buildingBaseY - SCENE.segments*SCENE.storeyH;
+      var n = reduceMotion ? 6 : 12;
+      for(var p=0;p<n;p++){
+        var el = document.createElementNS('http://www.w3.org/2000/svg','rect');
+        var sz = 2+Math.random()*3.5;
+        el.setAttribute('width', sz);
+        el.setAttribute('height', sz);
+        el.setAttribute('fill', Math.random()<0.5 ? '#1b4a6b' : '#bfe0ec');
+        el.setAttribute('opacity', '0.75');
+        fxGroup.appendChild(el);
+        particles.push({
+          el: el,
+          x: SCENE.bx + Math.random()*SCENE.bw + groundX,
+          y: buildingTop + Math.random()*(SCENE.segments*SCENE.storeyH*0.7),
+          vx: (Math.random()-0.5)*70 + tiltDir*20,
+          vy: -20 - Math.random()*50
+        });
+      }
+      for(var d=0; d<3; d++){
+        var e = document.createElementNS('http://www.w3.org/2000/svg','ellipse');
+        e.setAttribute('cx', (SCENE.bx + SCENE.bw*(0.2+0.3*d)).toFixed(1));
+        e.setAttribute('cy', '297');
+        e.setAttribute('rx', '4');
+        e.setAttribute('ry', '3');
+        e.setAttribute('fill', '#bfe0ec');
+        e.setAttribute('opacity', '0');
+        fxGroup.appendChild(e);
+        dust.push({ el:e, delay: d*0.08 });
+      }
+    }
+
+    document.getElementById('seis-status').textContent = 'RECORDING';
+    seisHistory = [];
+    drawSeismograph();
+
+    function envelope(frac){
+      if(frac < 0.15) return frac/0.15;
+      if(frac > 0.65) return Math.max(0, 1 - (frac-0.65)/0.35);
+      return 1;
+    }
+
+    function frame(ts){
+      if(startT===null){ startT = ts; lastTs = ts; }
+      var elapsed = ts-startT;
+      var dtReal = Math.min(0.05, (ts-lastTs)/1000);
+      lastTs = ts;
+      var frac = clamp(elapsed/animMs, 0, 1);
+      var tSec = elapsed/1000;
+      var env = envelope(frac);
+      var raw = (Math.sin(2*Math.PI*f1*tSec)*0.7 + Math.sin(2*Math.PI*f2*tSec+1.1)*0.3);
+      var groundX = groundAmp * env * raw;
+
+      var rawD = Math.sin(2*Math.PI*fD*tSec + 0.7)*0.8 + Math.sin(2*Math.PI*fD*1.61*tSec)*0.2;
+      var depthG = depthAmp * env * rawD;
+      /* The structure lags the ground's depth motion; an isolated
+         building barely follows it at all. */
+      depthSmoothed += (depthG - depthSmoothed) * (derived.isolated ? 0.05 : 0.3);
+      var gdx = depthG*DEPTH_UX, gdy = -depthG*DEPTH_UY;
+      var bdx = depthSmoothed*DEPTH_UX, bdy = -depthSmoothed*DEPTH_UY;
+
+      SCENE.groundGroupEl.setAttribute('transform','translate('+(groundX+gdx).toFixed(2)+','+gdy.toFixed(2)+')');
+
+      var baseX;
+      if(derived.isolated){
+        isoSmoothed += (groundX - isoSmoothed) * 0.05;
+        baseX = isoSmoothed * isolatedBaseFactor;
+        /* The isolator layer shears in place: its underside stays
+           with the ground, its top plate moves with the building -
+           the bearings visibly rack sideways. */
+        if(SCENE.isolatorGroupEl){
+          var isoDrift = baseX - groundX;
+          var cI = -isoDrift/22;
+          var eI = groundX + 272*isoDrift/22 + (gdx+bdx)/2;
+          SCENE.isolatorGroupEl.setAttribute('transform','matrix(1,0,'+cI.toFixed(4)+',1,'+eI.toFixed(2)+','+((gdy+bdy)/2).toFixed(2)+')');
+        }
+      } else {
+        baseX = groundX;
+      }
+
+      /* Building top drift: oscillates at the building's own natural
+         period, with peak amplitude set by demand/capacity. A small
+         ground-coupled term adds texture so it visibly responds to the
+         shaking pattern rather than looking metronomic. The base stays
+         anchored to the ground (baseX) - only the drift on top of it is
+         damped. Higher damping (e.g. Quake Defender) makes that drift
+         both smaller and settle faster, so you see the dampers working
+         WITHIN the frame rather than any motion at the base. */
+      var dampEnv = Math.exp(-derived.zeta * 5.5 * frac);
+      var driftOsc = 0.9*Math.sin(2*Math.PI*fB*tSec + 0.3) + 0.1*raw;
+      topSmoothed = baseX + peakTopDrift * env * dampEnv * driftOsc;
+
+      var collapseFrac = frac > sched.collapse ? clamp((frac-sched.collapse)/(1-sched.collapse)*1.2, 0, 1) : 0;
+      if(collapseFrac > 0 && !fxGroup) spawnCollapseFx(groundX);
+      // drive the parallax camera shake from the current shaking + collapse
+      bumpCameraShake(env * (groundAmp/26) * 3.0 + collapseFrac*5);
+      var crushPx = collapseFrac * SCENE.storeyH * 0.7;
+      var swayDamp = 1 - collapseFrac*0.7;
+      var residualAngle = residual ? tiltDir*1.1*clamp((frac-0.8)/0.2,0,1) : 0;
+
+      function uAt(hf){ return baseX + (topSmoothed-baseX)*modeShape(hf); }
+
+      SCENE.storeyEls.forEach(function(el){
+        var i = parseInt(el.getAttribute('data-i'),10);
+        var tf;
+        if(collapseFrac > 0){
+          var hfC = SCENE.rigidBody ? 1 : (i+1)/SCENE.segments;
+          var sway = uAt(hfC) * swayDamp;
+          if(SCENE.rigidBody){
+            var pivotX = 150 + tiltDir*SCENE.bw/2;
+            var angR = tiltDir * collapseFrac * 24;
+            tf = 'translate('+(sway+bdx).toFixed(2)+','+bdy.toFixed(2)+') rotate('+angR.toFixed(2)+' '+pivotX.toFixed(1)+' '+SCENE.buildingBaseY+')';
+          } else if(SCENE.singleBay){
+            /* Portal-frame sway collapse: the single bay racks over
+               to one side and sinks, rather than pancaking. Driven
+               through the same shear matrix as the elastic racking,
+               so it reads as the frame folding. */
+            var u0s = baseX * swayDamp;
+            var driftTop = tiltDir * SCENE.bw * 0.5 * collapseFrac + (topSmoothed-baseX)*swayDamp;
+            var cS = -driftTop/SCENE.storeyH;
+            var eS = u0s + SCENE.buildingBaseY*driftTop/SCENE.storeyH + bdx;
+            var dropS = collapseFrac * SCENE.storeyH * 0.5;
+            tf = 'matrix(1,0,'+cS.toFixed(4)+',1,'+eS.toFixed(2)+','+(dropS+bdy).toFixed(2)+')';
+          } else if(i===0){
+            var sy = 1 - 0.7*collapseFrac;
+            var ky = SCENE.buildingBaseY*(1-sy);
+            tf = 'translate('+(sway+bdx).toFixed(2)+','+(ky+bdy).toFixed(2)+') scale(1,'+sy.toFixed(3)+')';
+          } else {
+            var ang = tiltDir * collapseFrac * (4 + hfC*22);
+            tf = 'translate('+(sway+bdx).toFixed(2)+','+(crushPx+bdy).toFixed(2)+') rotate('+ang.toFixed(2)+' 150 '+SCENE.buildingBaseY+')';
+          }
+        } else if(SCENE.rigidBody){
+          /* Wall-braced buildings translate as one stiff block -
+             negligible racking between storeys. */
+          var uR = uAt(1);
+          tf = 'translate('+(uR+bdx).toFixed(2)+','+bdy.toFixed(2)+')';
+          if(residualAngle) tf += ' rotate('+residualAngle.toFixed(2)+' 150 '+SCENE.buildingBaseY+')';
+        } else {
+          /* Flexural racking: each storey deforms as a parallelogram.
+             Its base displacement u0 equals the top displacement of
+             the storey below (u0 = base motion for the ground storey),
+             so storeys stay connected - the walls flex, nothing
+             slides. Implemented as an SVG shear matrix:
+             x' = x + u0 + ((yBase - y)/h) * (u1 - u0). */
+          var u0 = uAt(i/SCENE.segments);
+          var u1 = uAt((i+1)/SCENE.segments);
+          var drift = u1 - u0;
+          var yb = SCENE.buildingBaseY - i*SCENE.storeyH;
+          var c = -drift/SCENE.storeyH;
+          var e = u0 + yb*drift/SCENE.storeyH + bdx;
+          tf = 'matrix(1,0,'+c.toFixed(4)+',1,'+e.toFixed(2)+','+bdy.toFixed(2)+')';
+          if(residualAngle) tf += ' rotate('+residualAngle.toFixed(2)+' 150 '+SCENE.buildingBaseY+')';
+        }
+        el.setAttribute('transform', tf);
+      });
+
+      // Live force visualisation: colour braces by tension/compression
+      // and glow moment haunches by demand, from the current drifts.
+      if(SCENE.hasForceViz){
+        var us = [];
+        for(var k=0;k<=SCENE.segments;k++){ us[k] = uAt(k/SCENE.segments); }
+        updateForceViz(us, collapseFrac);
+      }
+
+      SCENE.crackEls.forEach(function(el){
+        var stage = el.getAttribute('data-stage');
+        var at = stage==='1' ? sched.c1 : sched.c2;
+        if(frac >= at){
+          el.setAttribute('opacity', clamp((frac-at)/0.06, 0, 1).toFixed(2));
+        }
+      });
+
+      if(particles.length){
+        for(var p2=0;p2<particles.length;p2++){
+          var pt = particles[p2];
+          pt.vy += 320*dtReal;
+          pt.x += pt.vx*dtReal;
+          pt.y += pt.vy*dtReal;
+          if(pt.y > 296){ pt.y = 296; pt.vy = 0; pt.vx *= 0.6; }
+          pt.el.setAttribute('x', pt.x.toFixed(1));
+          pt.el.setAttribute('y', pt.y.toFixed(1));
+        }
+        for(var d3=0; d3<dust.length; d3++){
+          var du = dust[d3];
+          var p3 = clamp((collapseFrac - du.delay)/0.5, 0, 1);
+          du.el.setAttribute('rx', (4+56*p3).toFixed(1));
+          du.el.setAttribute('ry', (3+9*p3).toFixed(1));
+          du.el.setAttribute('opacity', (p3>0 ? 0.3*(1-p3) : 0).toFixed(2));
+        }
+      }
+
+      seisSampleAcc += dtReal;
+      if(seisSampleAcc > 0.02){
+        seisSampleAcc = 0;
+        seisHistory.push(groundX);
+        if(seisHistory.length > 140) seisHistory.shift();
+        drawSeismograph();
+      }
+
+      if(frac < 1){
+        requestAnimationFrame(frame);
+      } else {
+        document.getElementById('seis-status').textContent = 'COMPLETE';
+        animRunning = false;
+        onDone && onDone();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  /* =========================================================
+     RESULTS
+  ========================================================= */
+  var CAUSE_TEXT = {
+    resonance: "The earthquake's rhythm matched your building's natural sway, and each cycle pumped in more energy than the last.",
+    capacity: "The seismic demand simply outgrew what your structural system could carry.",
+    movement: "Your building moved too far, too fast - the sway itself became the problem."
+  };
+
+  function buildNarrative(result){
+    var derived = result.derived;
+    if(result.survives){
+      if(derived.isolated){
+        return derived.isHouse
+          ? "The FrontFoot dampers in the floor slab kept most of the ground's motion from ever reaching the home above."
+          : "Base isolation kept most of the ground's motion from ever reaching the structure above.";
+      }
+      if(!derived.isHouse && state.protections.quakeDefender) return "Quake Defender bracing soaked up the shaking's energy and calmed the sway quickly.";
+      if(derived.isHouse && state.protections.upspecBracing) return "Your up-specced bracing held the sway well within safe limits.";
+      if(derived.strength > 7) return "Your structural system held firm against the shaking, with margin to spare.";
+      return "Your design had just enough strength and flexibility to ride out the shake.";
+    } else {
+      return CAUSE_TEXT[result.cause];
+    }
+  }
+
+  function pickConcept(result){
+    var derived = result.derived;
+    if(derived.isolated){
+      return derived.isHouse
+        ? { tag:'FrontFoot Dampers', text:"Dampers in the floor slab let the home above slide relative to the ground, so far less shaking reaches the structure - the same principle as base isolation, scaled for a house." }
+        : { tag:'Base Isolation', text:"Base isolation separates the building from much of the ground's movement. A flexible layer at the base absorbs the relative motion, so far less shaking reaches the structure above." };
+    }
+    if(!derived.isHouse && state.protections.quakeDefender) return { tag:'Damping', text:'Dampers absorb energy as the building sways, shortening how long - and how far - it keeps moving after the ground settles.' };
+    if(result.cause==='resonance') return { tag:'Resonance', text:'Every building has a natural rhythm. When an earthquake shakes at close to that same rhythm, the sway can build with every cycle rather than cancel out.' };
+    if(result.cause==='capacity' || derived.strength<=5) return { tag:'Stiffness & Strength', text:"A stiffer structure generally moves less, but stiffness alone isn't everything - the goal is managing both movement and the forces that movement creates." };
+    return { tag:'Mass', text:'The heavier a building is, the greater the inertial forces generated when the ground accelerates beneath it.' };
+  }
+
+  function showResults(result){
+    var score = computeScore(result);
+    var tier = resultTier(result, score);
+    var copy = TIER_COPY[tier];
+
+    var banner = document.getElementById('result-banner');
+    banner.textContent = copy.title;
+    banner.className = 'result-banner ' + tier;
+    document.getElementById('result-subtag').textContent = copy.sub;
+
+    document.getElementById('result-narrative').textContent = buildNarrative(result);
+
+    var maxMove = Math.round(clamp(result.tr,0.4,2.5)* (result.eq.intensity*100) );
+    var statGrid = document.getElementById('stat-grid');
+    var stats = [];
+    stats.push(['Damage', result.survives ? (result.margin>1.8?'Low':'Moderate') : 'Severe']);
+    stats.push(['Max. Movement', maxMove + ' mm~']);
+    stats.push(['Budget Spent', COIN + (spentDesign()+spentProtections()) + ' / ' + budgetTotal()]);
+    stats.push(['Earthquake Level', LEVELS[state.levelKey].label]);
+    statGrid.innerHTML = stats.map(function(s){
+      return '<div class="stat"><div class="k">'+s[0]+'</div><div class="v">'+s[1]+'</div></div>';
+    }).join('');
+
+    var concept = pickConcept(result);
+    document.getElementById('concept-card').querySelector('.tag').textContent = concept.tag;
+    document.getElementById('concept-text').textContent = concept.text;
+
+    var learnLabel = result.derived.isHouse ? 'Learn more about FrontFoot' : 'Learn more about Quake Defender';
+    var learnUrl = result.derived.isHouse ? LEARN_MORE_URLS.house : LEARN_MORE_URLS.standard;
+    document.getElementById('learn-more-slot').innerHTML =
+      '<a class="learn-more-link" href="'+learnUrl+'" target="_blank" rel="noopener">'+learnLabel+' &rarr;</a>';
+
+    var how = document.getElementById('how-panel');
+    how.classList.remove('open');
+    how.innerHTML =
+      '<div class="spec-line"><span>Earthquake frequency</span><span>'+result.eq.freq.toFixed(2)+' Hz</span></div>'+
+      '<div class="spec-line"><span>Building natural frequency</span><span>'+result.derived.fn.toFixed(2)+' Hz</span></div>'+
+      '<div class="spec-line"><span>Response amplification</span><span>'+result.tr.toFixed(2)+'x</span></div>'+
+      '<div class="spec-line"><span>Demand vs. capacity</span><span>'+result.demand.toFixed(1)+' / '+result.capacity.toFixed(1)+'</span></div>';
+
+    renderLeaderboardCard(result, score);
+
+    document.getElementById('btn-how').textContent = 'See How It Works';
+    showScreen('results');
+    track(result.survives ? 'earthquake_survived' : 'earthquake_failure', {
+      type: state.typeKey, system: state.systemKey, protections: state.protections, level: state.levelKey, score: score
+    });
+  }
+
+  /* =========================================================
+     LEADERBOARD
+  ========================================================= */
+  function renderLeaderboardCard(result, score){
+    var card = document.getElementById('leaderboard-card');
+    if(!result.survives){
+      card.innerHTML =
+        '<div class="lb-title">Leaderboard</div>'+
+        '<p class="lb-sub">Your building didn\'t survive, so there\'s no score to submit this run. Try again!</p>';
+      return;
+    }
+    card.innerHTML =
+      '<div class="lb-title">Your Score</div>'+
+      '<div class="lb-score">'+score+'</div>'+
+      '<p class="lb-sub">Add your name to the leaderboard - we\'ll be drawing a prize from the entries.</p>'+
+      '<div class="lb-field"><label for="lb-name">Name</label><input type="text" id="lb-name" autocomplete="name" placeholder="Your name" maxlength="60"></div>'+
+      '<div class="lb-field"><label for="lb-email">Email</label><input type="email" id="lb-email" autocomplete="email" placeholder="you@email.com" maxlength="120"></div>'+
+      '<button class="cta-secondary" id="btn-submit-score" style="margin-top:2px;">Add to Leaderboard</button>'+
+      '<div class="lb-status" id="lb-status"></div>'+
+      '<p class="lb-privacy">Your name and email are only used to contact you if you win a prize, and to show your name on the leaderboard.</p>';
+
+    document.getElementById('btn-submit-score').addEventListener('click', function(){
+      submitScore(score);
+    });
+  }
+
+  function submitScore(score){
+    var nameEl = document.getElementById('lb-name');
+    var emailEl = document.getElementById('lb-email');
+    var statusEl = document.getElementById('lb-status');
+    var submitBtn = document.getElementById('btn-submit-score');
+    var name = nameEl.value.trim();
+    var email = emailEl.value.trim();
+
+    if(!name){
+      statusEl.textContent = 'Enter your name to submit.';
+      statusEl.className = 'lb-status err';
+      return;
+    }
+    if(!email || email.indexOf('@')===-1){
+      statusEl.textContent = 'Enter a valid email to submit.';
+      statusEl.className = 'lb-status err';
+      return;
+    }
+    if(!LEADERBOARD_ENDPOINT_URL){
+      statusEl.textContent = "Leaderboard isn't connected yet - ask your organiser to set it up.";
+      statusEl.className = 'lb-status err';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+
+    var payload = {
+      name: name,
+      email: email,
+      score: score,
+      buildingType: state.typeKey,
+      system: state.systemKey,
+      level: state.levelKey,
+      t: Date.now()
+    };
+
+    fetch(LEADERBOARD_ENDPOINT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function(){
+      statusEl.textContent = 'Score submitted - good luck!';
+      statusEl.className = 'lb-status ok';
+      submitBtn.textContent = 'Submitted';
+      track('leaderboard_submitted', { score: score });
+    }).catch(function(){
+      statusEl.textContent = "Couldn't submit right now - check your connection and try again.";
+      statusEl.className = 'lb-status err';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add to Leaderboard';
+    });
+  }
+
+  /* =========================================================
+     HERO WAVEFORM (landing)
+  ========================================================= */
+  function drawHeroWave(){
+    var pts = [];
+    for(var x=0; x<=400; x+=4){
+      var y = 48 + Math.sin(x*0.045)*10*Math.sin(x*0.008) + Math.sin(x*0.11)*4;
+      pts.push(x+','+y.toFixed(1));
+    }
+    document.getElementById('hero-wave').setAttribute('points', pts.join(' '));
+  }
+
+  /* =========================================================
+     RESET / INIT FLOWS
+  ========================================================= */
+  function resetDesign(){
+    state.typeKey = null;
+    state.systemKey = null;
+    resetAdditions();
+    resetProtections();
+    state.levelKey = 'moderate';
+    document.getElementById('system-section').classList.remove('open');
+    document.getElementById('system-cards').innerHTML = '';
+  }
+
+  function wireEvents(){
+    document.getElementById('btn-start').addEventListener('click', function(){
+      track('game_started', {});
+      resetDesign();
+      renderTypeCards(); syncBudget2();
+      showScreen('build');
+    });
+
+    document.getElementById('btn-to-additions').addEventListener('click', function(){
+      track('building_configuration_selected', {type:state.typeKey, system:state.systemKey});
+      renderAdditionCards(); syncBudgetAdd();
+      showScreen('additions');
+    });
+
+    document.getElementById('btn-additions-to-protect').addEventListener('click', function(){
+      track('additions_selected', {additions:state.additions});
+      renderProtectionCards(); syncBudget3();
+      showScreen('protect');
+    });
+
+    document.getElementById('btn-to-shake').addEventListener('click', function(){
+      buildScene(); setStaticScenePose(); updateSpecLine(); renderLevelSelect();
+      document.getElementById('btn-shake').disabled = false;
+      initSeismograph();
+      document.getElementById('seis-status').textContent = 'STANDBY';
+      showScreen('shake'); startCamera();
+    });
+
+    document.getElementById('btn-back-build-from-add').addEventListener('click', function(){
+      renderTypeCards(); renderSystemCards();
+      if(state.typeKey) document.getElementById('system-section').classList.add('open');
+      syncBudget2();
+      showScreen('build');
+    });
+
+    document.getElementById('btn-back-landing').addEventListener('click', function(){
+      showScreen('landing');
+    });
+
+    document.getElementById('btn-back-additions').addEventListener('click', function(){
+      renderAdditionCards(); syncBudgetAdd();
+      showScreen('additions');
+    });
+
+    document.getElementById('btn-back-protect').addEventListener('click', function(){
+      renderProtectionCards(); syncBudget3();
+      showScreen('protect');
+    });
+
+    document.getElementById('btn-shake').addEventListener('click', function(){
+      if(animRunning) return;
+      animRunning = true;
+      this.disabled = true;
+      track('earthquake_started', {level: state.levelKey});
+      var result = runSimulation();
+      state.lastRun = result;
+      runShakeAnimation(result, function(){
+        setTimeout(function(){ showResults(result); }, reduceMotion?150:500);
+      });
+    });
+
+    document.getElementById('btn-how').addEventListener('click', function(){
+      var how = document.getElementById('how-panel');
+      how.classList.toggle('open');
+      this.textContent = how.classList.contains('open') ? 'Hide Details' : 'See How It Works';
+    });
+
+    document.getElementById('btn-build-again').addEventListener('click', function(){
+      track('game_replayed', {mode:'new_design'});
+      resetDesign();
+      renderTypeCards(); syncBudget2();
+      showScreen('build');
+    });
+
+    document.getElementById('btn-retest').addEventListener('click', function(){
+      track('game_replayed', {mode:'retest_design'});
+      buildScene(); setStaticScenePose(); updateSpecLine(); renderLevelSelect();
+      document.getElementById('btn-shake').disabled = false;
+      initSeismograph();
+      document.getElementById('seis-status').textContent = 'STANDBY';
+      showScreen('shake'); startCamera();
+    });
+  }
+
+  /* =========================================================
+     BOOT
+  ========================================================= */
+  function init(){
+    drawHeroWave();
+    wireEvents();
+    track('landing_page_viewed', {});
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
