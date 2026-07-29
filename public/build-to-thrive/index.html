@@ -81,15 +81,16 @@
     z-index:30;
     pointer-events:none;
   }
-  .logo-placeholder{
-    font-family:var(--mono);
-    font-size:9px;
-    letter-spacing:.1em;
-    text-transform:uppercase;
-    color:var(--line-dim);
-    border:1px dashed var(--line-dim);
-    border-radius:3px;
-    padding:6px 10px;
+  .logo-img{
+    display:block;
+    height:26px;
+    width:auto;
+    max-width:140px;
+    /* the logo is black on transparent; recolour it to white so it
+       reads on the dark navy background. Change 'invert(1)' below if
+       you'd prefer a different tint. */
+    filter:brightness(0) invert(1);
+    opacity:0.92;
   }
 
   .screen{
@@ -368,8 +369,8 @@
 <body>
 <div id="app">
 
-  <div class="logo-slot" aria-hidden="true">
-    <div class="logo-placeholder">LOGO</div>
+  <div class="logo-slot">
+    <img class="logo-img" src="/logo.png" alt="Seismic Shift" onerror="this.style.display='none'">
   </div>
 
   <div class="topbar" id="topbar" style="display:none;">
