@@ -29,4 +29,6 @@ jobs:
           LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}        # 'openai' | 'gemini' | 'mock'
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           NOMINATIM_UA: ${{ secrets.NOMINATIM_UA }}
+          BLUESKY_IDENTIFIER: ${{ secrets.BLUESKY_IDENTIFIER }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
         run: python scripts/ingest_triage_data.py
