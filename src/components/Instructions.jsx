@@ -34,7 +34,8 @@ export default function Instructions({ onGoTo }) {
           manual entry, blue for Bluesky, amber for news/RSS. A dashed red halo
           means the record looks like a possible duplicate of an already-triaged
           site. Where several observations share a location they collapse into a
-          numbered badge; click it to fan them out.
+          numbered badge; click it to fan them out. A violet ring means someone
+          else currently has that record open, so you can avoid double-handling it.
         </p>
         <p><b>Reviewing a record:</b> in the panel you can correct the
           classification, observation type, mechanism, and coordinates. Scraped

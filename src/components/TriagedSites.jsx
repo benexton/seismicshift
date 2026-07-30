@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase, RECORD_COLUMNS } from '../lib/supabase.js';
@@ -35,7 +35,7 @@ function FitToData({ records }) {
  * extra photos, sources, or notes. Same clustering and classification colours
  * as the triage queue.
  */
-export default function TriagedSites({ reviewer }) {
+export default function TriagedSites({ reviewer, othersByRecord, setActiveRecord }) {
   const [records, setRecords] = useState([]);
   const [selected, setSelected] = useState(null);
   const [basemap, setBasemap] = useState('photo');
@@ -73,6 +73,9 @@ export default function TriagedSites({ reviewer }) {
     );
   }
 
+  function openRecord(r) { setSelected(r); setActiveRecord?.(r.id); }
+  function closeRecord() { setSelected(null); setActiveRecord?.(null); }
+
   const base = BASEMAPS[basemap];
 
   return (
@@ -108,7 +111,8 @@ export default function TriagedSites({ reviewer }) {
         <SiteDetailModal
           record={selected}
           reviewer={reviewer}
-          onClose={() => setSelected(null)}
+          others={othersByRecord?.get(selected.id) ?? []}
+          onClose={closeRecord}
           onSaved={(id, patch) => setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))}
         />
       )}

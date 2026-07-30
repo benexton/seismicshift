@@ -11,7 +11,7 @@ import AttachmentAdder from './AttachmentAdder.jsx';
  * all attribute fields, coordinates, notes, and attachments (add multiple
  * images, links, notes). Changes save in place.
  */
-export default function SiteDetailModal({ record, reviewer, onClose, onSaved }) {
+export default function SiteDetailModal({ record, reviewer, others = [], onClose, onSaved }) {
   const [v, setV] = useState({ ...record });
   const [notes, setNotes] = useState(record.engineer_notes ?? '');
   const [lat, setLat] = useState(record.latitude ?? '');
@@ -54,6 +54,10 @@ export default function SiteDetailModal({ record, reviewer, onClose, onSaved }) 
           <h2>{record.site_id != null ? `#${record.site_id} · ` : ''}{record.region ?? 'Unspecified region'}</h2>
           <button className="x" onClick={onClose} aria-label="Close">×</button>
         </div>
+
+        {others.length > 0 && (
+          <div className="presence-banner">Heads up: also being viewed by {others.join(', ')}. Coordinate to avoid double-handling.</div>
+        )}
 
         <div className="body">
           <div>

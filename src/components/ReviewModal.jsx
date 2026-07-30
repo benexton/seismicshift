@@ -12,7 +12,7 @@ import MergeModal from './MergeModal.jsx';
  * attachments. Actions: Cancel, Save draft (keep in queue), Reject (confirmed),
  * Approve, and Merge (reconcile into an existing site).
  */
-export default function ReviewModal({ record, reviewer, onClose, onResolved, onSavedDraft }) {
+export default function ReviewModal({ record, reviewer, others = [], onClose, onResolved, onSavedDraft }) {
   const [v, setV] = useState({ ...record });
   const [notes, setNotes] = useState(record.engineer_notes ?? '');
   const [lat, setLat] = useState(record.latitude ?? '');
@@ -103,6 +103,10 @@ export default function ReviewModal({ record, reviewer, onClose, onResolved, onS
           <h2>{record.site_id != null ? `#${record.site_id} · ` : ''}{record.region ?? 'Unspecified region'}</h2>
           <button className="x" onClick={onClose} aria-label="Close">×</button>
         </div>
+
+        {others.length > 0 && (
+          <div className="presence-banner">Heads up: also being viewed by {others.join(', ')}. Coordinate to avoid double-handling.</div>
+        )}
 
         {record._dupes?.length > 0 && (
           <div className="dup-banner">

@@ -39,7 +39,7 @@ function FitToData({ records }) {
  * get a dashed red halo. Records sharing a coordinate cluster into a count
  * badge that fans out on click. Approving/rejecting/merging clears the dot.
  */
-export default function TriageMap({ reviewer }) {
+export default function TriageMap({ reviewer, othersByRecord, setActiveRecord }) {
   const [queue, setQueue] = useState([]);
   const [approved, setApproved] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -65,22 +65,31 @@ export default function TriageMap({ reviewer }) {
     [queue, approved]
   );
 
+  function openRecord(r) { setSelected(r); setActiveRecord?.(r.id); }
+  function closeRecord() { setSelected(null); setActiveRecord?.(null); }
+
   function handleResolved(id) {
     setQueue((prev) => prev.filter((r) => r.id !== id));
-    setSelected(null);
+    closeRecord();
   }
 
   function handleSavedDraft(id, patch) {
     setQueue((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-    setSelected(null);
+    closeRecord();
   }
 
   function renderMarker(r, pos, key) {
+    const others = othersByRecord?.get(r.id) ?? [];
     return (
       <Fragment key={key}>
         {r._dupes?.length > 0 && (
           <CircleMarker center={pos} radius={15}
             pathOptions={{ color: '#e11d48', weight: 2, dashArray: '4 4', fill: false }}
+            interactive={false} />
+        )}
+        {others.length > 0 && (
+          <CircleMarker center={pos} radius={13}
+            pathOptions={{ color: '#7c3aed', weight: 3, fill: false }}
             interactive={false} />
         )}
         <CircleMarker center={pos} radius={9}
@@ -90,11 +99,12 @@ export default function TriageMap({ reviewer }) {
             fillColor: DAMAGE_COLOR[r.damage_score] ?? '#9e9e9e',
             fillOpacity: 0.9,
           }}
-          eventHandlers={{ click: () => setSelected(r) }}>
+          eventHandlers={{ click: () => openRecord(r) }}>
           <Tooltip direction="top">
               {r.site_id != null && `#${r.site_id} · `}
             {DAMAGE_LABEL[r.damage_score]?.split(' - ')[0] ?? '?'} · {OBSERVATION_LABEL[r.observation_type] ?? 'building'} · {SOURCE_LABEL[r.source_type] ?? 'other'}
             {r._dupes?.length > 0 && ' · possible duplicate'}
+            {others.length > 0 && ` · in use by ${others.join(', ')}`}
           </Tooltip>
         </CircleMarker>
       </Fragment>
@@ -143,13 +153,18 @@ export default function TriageMap({ reviewer }) {
           <span className="dot ring" style={{ borderColor: '#e11d48', borderStyle: 'dashed' }} />
           Possible duplicate
         </div>
+        <div className="row">
+          <span className="dot ring" style={{ borderColor: '#7c3aed' }} />
+          In use by someone
+        </div>
       </div>
 
       {selected && (
         <ReviewModal
           record={selected}
           reviewer={reviewer}
-          onClose={() => setSelected(null)}
+          others={othersByRecord?.get(selected.id) ?? []}
+          onClose={closeRecord}
           onResolved={handleResolved}
           onSavedDraft={handleSavedDraft}
         />
