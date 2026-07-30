@@ -1,45 +1,34 @@
 // -----------------------------------------------------------------------------
-// Domain constants + report synthesis.
+// Report synthesis. Aggregates Approved triage_records into a Markdown draft
+// modelled on the NZSEE "Learning from Earthquakes" (LFE) report format:
+// metadata header, introduction, context, event characteristics, then damage
+// grouped by observation type (buildings by region, plus ground failure,
+// landslides, and lifelines), aggregate statistics, and a data-provenance note.
 //
-// Aggregates Approved triage_records and injects them into a Markdown template
-// modelled on the NZSEE "Learning from Earthquakes" (LFE) VERT significant-event
-// report format: metadata header, introduction, seismotectonic/code context,
-// event characteristics, building damage BY REGION with structural narratives,
-// aggregate statistics, observed failure mechanisms, and geotechnical notes.
+// Style: short dashes only, no em dashes.
 // -----------------------------------------------------------------------------
 
-// ---- Constants --------------------------------------------------------------
+import {
+  DAMAGE_SCORES,
+  DAMAGE_LABEL,
+  OBSERVATION_LABEL,
+  SOURCE_LABEL,
+} from './constants.js';
 
-export const DAMAGE_SCORES = [0, 1, 2, 3, 4];
-
-export const DAMAGE_LABEL = {
-  0: 'D0 — None / negligible',
-  1: 'D1 — Slight',
-  2: 'D2 — Moderate',
-  3: 'D3 — Heavy',
-  4: 'D4 — Collapse / destruction',
-};
-
-// green -> dark red ramp
-export const DAMAGE_COLOR = {
-  0: '#2e7d32',
-  1: '#9acd32',
-  2: '#f9a825',
-  3: '#e53935',
-  4: '#7b1414',
-};
-
-// Japanese seismic-code era buckets (key thresholds: 1981 shin-taishin, 2000 rev.)
-export const CODE_ERAS = ['pre-1981', '1981-2000', 'post-2000', 'unknown'];
-
-export const RETROFIT_OPTIONS = [
-  'none',
-  'tension-only bracing',
-  'supplementary friction dampers',
-  'other (see notes)',
-];
-
-// ---- Aggregation helpers ----------------------------------------------------
+// Re-export so existing imports from './report.js' keep working.
+export {
+  DAMAGE_SCORES,
+  DAMAGE_LABEL,
+  DAMAGE_COLOR,
+  CODE_ERAS,
+  RETROFIT_OPTIONS,
+  SOURCE_TYPES,
+  SOURCE_LABEL,
+  SOURCE_COLOR,
+  OBSERVATION_TYPES,
+  OBSERVATION_LABEL,
+  PRECISION_OPTIONS,
+} from './constants.js';
 
 function tally(values) {
   const out = {};
@@ -71,17 +60,21 @@ function mdCountTable(header, counts) {
   return out;
 }
 
+function slug(s) {
+  return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
 function damageScoreTable(records) {
   const counts = {};
   for (const s of DAMAGE_SCORES) counts[DAMAGE_LABEL[s]] = 0;
   for (const r of records) {
-    if (r.damage_score !== null && r.damage_score !== undefined)
+    if (r.damage_score !== null && r.damage_score !== undefined) {
       counts[DAMAGE_LABEL[r.damage_score]] += 1;
+    }
   }
   return mdCountTable('Damage score', counts);
 }
 
-// Per-region structural performance narrative (auto-drafted; reviewer expands).
 function regionNarrative(name, records) {
   const n = records.length;
   const heavy = records.filter((r) => r.damage_score >= 3).length;
@@ -91,75 +84,87 @@ function regionNarrative(name, records) {
   const retros = records.filter(
     (r) => r.observed_retrofits && r.observed_retrofits.toLowerCase() !== 'none'
   );
-
-  const topMech = Object.entries(mechs)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([m]) => m);
+  const topMech = Object.entries(mechs).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([m]) => m);
   const dominantEra = Object.entries(eras).sort((a, b) => b[1] - a[1])[0];
 
-  let out = `### ${name}\n\n`;
-  out += `A total of **${n}** structures were inspected and approved in ${name}. `;
-  out += `Of these, **${heavy} (${heavyPct}%)** sustained heavy-to-severe damage (score D3–D4). `;
+  let out = `#### ${name}\n\n`;
+  out += `A total of ${n} structures were inspected and approved in ${name}. `;
+  out += `Of these, ${heavy} (${heavyPct}%) sustained heavy-to-severe damage (score D3-D4). `;
   if (dominantEra) {
-    out += `The affected building stock was predominantly of the **${dominantEra[0]}** seismic-code era (${dominantEra[1]} structures). `;
+    out += `The affected stock was predominantly of the ${dominantEra[0]} seismic-code era (${dominantEra[1]} structures). `;
   }
-  if (topMech.length) {
-    out += `Recurring failure mechanisms observed: ${topMech.join('; ')}. `;
-  }
+  if (topMech.length) out += `Recurring failure mechanisms: ${topMech.join('; ')}. `;
   if (retros.length) {
     const rt = tally(retros.map((r) => r.observed_retrofits));
-    const rtStr = Object.entries(rt)
-      .map(([k, v]) => `${k} (${v})`)
-      .join(', ');
+    const rtStr = Object.entries(rt).map(([k, v]) => `${k} (${v})`).join(', ');
     out += `Seismic retrofits were noted on ${retros.length} structure(s): ${rtStr}. `;
   } else {
-    out += `No seismic retrofits (e.g. tension-only bracing, supplementary friction dampers) were observed in this area. `;
+    out += `No seismic retrofits were observed in this area. `;
   }
   out += `\n\n_[Reviewer: expand with representative case studies and figures.]_\n\n`;
-  out += `![Figure — representative damage in ${name}](media/${slug(name)}_01.jpg)\n`;
+  out += `![Figure - representative damage in ${name}](media/${slug(name)}_01.jpg)\n`;
   out += `*Figure. Representative building damage in ${name}. [Insert caption and source.]*\n`;
+  return out;
+}
+
+function categoryNarrative(records) {
+  const n = records.length;
+  const byRegion = tally(records.map((r) => r.region));
+  const mechs = tally(records.map((r) => r.failure_mechanism));
+  const topMech = Object.entries(mechs).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([m]) => m);
+  let out = `${n} observation(s) approved. `;
+  const regions = Object.keys(byRegion);
+  if (regions.length) out += `Affected areas: ${regions.join(', ')}. `;
+  if (topMech.length) out += `Reported mechanisms / features: ${topMech.join('; ')}. `;
+  out += `\n\n_[Reviewer: expand with detail and figures.]_\n`;
   return out;
 }
 
 function inventoryTable(records) {
   let out =
-    '| ID | Region | Score | Code era | Failure mechanism | Retrofit | Reviewer |\n' +
-    '| --- | --- | :---: | --- | --- | --- | --- |\n';
+    '| ID | Source | Type | Region | Score | Mechanism | Reviewer |\n' +
+    '| --- | --- | --- | --- | :---: | --- | --- |\n';
   for (const r of records) {
-    out += `| ${String(r.id).slice(0, 8)} | ${r.region ?? '—'} | D${r.damage_score ?? '—'} | ${r.code_era ?? '—'} | ${r.failure_mechanism ?? '—'} | ${r.observed_retrofits ?? '—'} | ${r.reviewed_by ?? '—'} |\n`;
+    out += `| ${String(r.id).slice(0, 8)} | ${SOURCE_LABEL[r.source_type] ?? r.source_type ?? '-'} `;
+    out += `| ${OBSERVATION_LABEL[r.observation_type] ?? r.observation_type ?? '-'} `;
+    out += `| ${r.region ?? '-'} | D${r.damage_score ?? '-'} | ${r.failure_mechanism ?? '-'} | ${r.reviewed_by ?? '-'} |\n`;
   }
   return out;
 }
 
-function slug(s) {
-  return String(s)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
-// ---- Master template --------------------------------------------------------
-
-/**
- * @param {Array<object>} records  Approved triage_records rows.
- * @param {object} meta            Event metadata (see ReportGenerator defaults).
- * @returns {string} Markdown draft report.
- */
 export function buildReport(records, meta) {
   const approved = records.filter((r) => r.status === 'Approved');
   const now = new Date().toISOString().slice(0, 10);
 
-  const byRegion = groupBy(approved, (r) => r.region);
-  const totalHeavy = approved.filter((r) => r.damage_score >= 3).length;
+  const buildings = approved.filter((r) => (r.observation_type ?? 'building') === 'building');
+  const geotech = approved.filter((r) => r.observation_type === 'geotechnical');
+  const landslides = approved.filter((r) => r.observation_type === 'landslide');
+  const lifelines = approved.filter((r) => r.observation_type === 'lifeline');
+  const tsunami = approved.filter((r) => r.observation_type === 'tsunami');
 
-  const regionSections = [...byRegion.entries()]
+  const byRegion = groupBy(buildings, (r) => r.region);
+  const buildingRegionSections = [...byRegion.entries()]
     .sort((a, b) => b[1].length - a[1].length)
     .map(([name, recs]) => regionNarrative(name, recs))
     .join('\n');
 
-  return `# Learning from Earthquakes — Significant Event Report
-## ${meta.eventName} — Version ${meta.version}
+  const totalHeavy = buildings.filter((r) => r.damage_score >= 3).length;
+
+  const groundSection =
+    geotech.length || landslides.length
+      ? `### Ground Damage\n\n` +
+        (geotech.length ? `#### Geotechnical / ground failure\n\n${categoryNarrative(geotech)}\n` : '') +
+        (landslides.length ? `#### Landslides / slope failures\n\n${categoryNarrative(landslides)}\n` : '')
+      : `### Ground Damage\n\n_[Reviewer: no geotechnical or landslide observations approved yet. Summarise liquefaction, lateral spreading, settlement, and slope failures here.]_\n`;
+
+  const lifelineSection = lifelines.length
+    ? `### Lifelines and Infrastructure\n\n${categoryNarrative(lifelines)}\n`
+    : `### Lifelines and Infrastructure\n\n_[Reviewer: no lifeline observations approved yet. Summarise impacts to roads, bridges, water, power, and telecommunications here.]_\n`;
+
+  const tsunamiSection = tsunami.length ? `### Tsunami Effects\n\n${categoryNarrative(tsunami)}\n` : '';
+
+  return `# Learning from Earthquakes - Significant Event Report
+## ${meta.eventName} - Version ${meta.version}
 
 **Report issued:** ${now}
 **Magnitude (Mw):** ${meta.magnitude}
@@ -169,12 +174,9 @@ export function buildReport(records, meta) {
 **Time and date:** ${meta.eventDatetime}
 **Faulting mechanism:** ${meta.faulting}
 **Maximum Modified Mercalli Intensity:** ${meta.maxMMI}
-**LFE programme interest:** ${meta.lfeInterest}
-**Virtual Earthquake Reconnaissance Team (VERT) deployment:** ${meta.vertDeployment}
-**Physical mission deployment:** ${meta.physicalDeployment}
 **Tsunami alert issued:** ${meta.tsunami}
 
-![Figure 1 — epicentre location and shaking intensity](media/figure1_shakemap.png)
+![Figure 1 - epicentre location and shaking intensity](media/figure1_shakemap.png)
 *Figure 1. Epicentre location and shaking intensity. [Insert ShakeMap source.]*
 
 ---
@@ -186,31 +188,27 @@ This report was prepared through the voluntary contribution of: ${meta.contribut
 ## Introduction
 
 This report presents the findings of a virtual reconnaissance conducted by the
-Learning from Earthquakes (LfE) group of the New Zealand Society for Earthquake
-Engineering (NZSEE) following the ${meta.eventName}. The initial assessment is
-based on information gathered from publicly available sources — including social
-media, news feeds, and satellite imagery — used to geolocate buildings and
-assess observed damage. Findings are preliminary and may be revised as
-additional information becomes available.
+Learning from Earthquakes (LfE) group of NZSEE following the ${meta.eventName}.
+The assessment draws on publicly available sources (social media via Bluesky,
+news and RSS feeds) together with observations entered directly by volunteer
+engineers. Each record was given a preliminary AI triage, then reviewed,
+corrected, and approved by a second volunteer before inclusion. Findings are
+preliminary and may be revised as further information becomes available.
 
-Crowdsourced media were ingested and given a preliminary AI triage (damage
-score, seismic-code era, failure mechanism, and observed retrofits), then
-reviewed, corrected, and approved by volunteer structural engineers before
-inclusion below. **${approved.length}** engineer-approved building observations
-inform this draft, of which **${totalHeavy}** sustained heavy-to-severe damage.
+**${approved.length}** engineer-approved observations inform this draft:
+${buildings.length} building, ${geotech.length} geotechnical, ${landslides.length} landslide, ${lifelines.length} lifeline, and ${tsunami.length} tsunami. Of the building observations, ${totalHeavy} sustained heavy-to-severe damage.
+
+## Data Sources and Provenance
+
+${mdCountTable('Source', tally(approved.map((r) => SOURCE_LABEL[r.source_type] ?? r.source_type)))}
+
+Location precision (exact pin vs geocoded approximation):
+
+${mdCountTable('Precision', tally(approved.map((r) => r.location_precision)))}
 
 ## Seismotectonic Setting and Recent Earthquake History
 
-_[Reviewer: summarise the regional tectonic setting, causative fault, and recent
-seismicity relevant to ${meta.eventName}.]_
-
-## Seismic Codes and Building Code Eras
-
-Observations are grouped by seismic-code era. For Japan the key thresholds are
-the 1981 revision (*shin-taishin*) and the 2000 revision. The distribution of
-inspected structures by code era is:
-
-${mdCountTable('Code era', tally(approved.map((r) => r.code_era)))}
+_[Reviewer: summarise the regional tectonic setting, causative fault, and recent seismicity relevant to ${meta.eventName}.]_
 
 ## Event Characteristics
 
@@ -224,62 +222,54 @@ ${mdCountTable('Code era', tally(approved.map((r) => r.code_era)))}
 | Maximum MMI | ${meta.maxMMI} |
 | Tsunami | ${meta.tsunami} |
 
-## Structural Performance — Summary Statistics
+## Structural Performance - Summary Statistics
 
-Total structures inspected and approved: **${approved.length}**.
+Total building observations approved: ${buildings.length}.
 
-### Damage-score distribution
+### Damage-score distribution (buildings)
 
-${damageScoreTable(approved)}
+${damageScoreTable(buildings)}
 
-### Observations by region
+### Building observations by region
 
-${mdCountTable('Region', tally(approved.map((r) => r.region)))}
+${mdCountTable('Region', tally(buildings.map((r) => r.region)))}
 
-### Retrofit performance
+### Seismic-code era (buildings)
 
-${mdCountTable('Observed retrofit', tally(approved.map((r) => r.observed_retrofits)))}
+${mdCountTable('Code era', tally(buildings.map((r) => r.code_era)))}
 
-_[Reviewer: comment on the performance of retrofitted structures — in particular
-any tension-only bracing or supplementary friction dampers — relative to
-comparable un-retrofitted stock.]_
+### Retrofit performance (buildings)
+
+${mdCountTable('Observed retrofit', tally(buildings.map((r) => r.observed_retrofits)))}
+
+_[Reviewer: comment on the performance of retrofitted structures, in particular any tension-only bracing or supplementary friction dampers, relative to comparable un-retrofitted stock.]_
 
 ## Building Damage by Region
 
-${regionSections}
+${buildingRegionSections || '_[Reviewer: no building observations approved yet.]_'}
 
-## Observed Failure Mechanisms
+## Observed Failure Mechanisms (buildings)
 
-${mdCountTable('Failure mechanism', tally(approved.map((r) => r.failure_mechanism)))}
+${mdCountTable('Failure mechanism', tally(buildings.map((r) => r.failure_mechanism)))}
 
-_[Reviewer: discuss the most significant mechanisms — e.g. reinforced-concrete
-soft-story mechanisms, masonry infill in-plane vs out-of-plane response,
-beam-column joint failure — with reference to representative structures in the
-appendix.]_
+_[Reviewer: discuss the most significant mechanisms, e.g. soft-story mechanisms, masonry infill in-plane vs out-of-plane response, beam-column joint failure.]_
 
-## Geotechnical Observations
+${groundSection}
 
-_[Reviewer: summarise ground damage — liquefaction, lateral spreading, slope
-failures, foundation settlement, and any effects on lifelines and
-infrastructure. Note imagery resolution limits on geotechnical interpretation.]_
-
+${lifelineSection}
+${tsunamiSection}
 ## Data Provenance and Acknowledgements
 
-Observations were sourced from crowdsourced media, triaged by an automated
-pipeline (perceptual-hash deduplication followed by multimodal LLM structural
-assessment), and verified by named VERT volunteer engineers. Per-record source
-links are retained in the underlying database.
+Observations were sourced from crowdsourced media (Bluesky, news/RSS) and direct volunteer entry, triaged by an automated pipeline (perceptual-hash deduplication, multimodal LLM assessment, and geocoding of place names), then verified by named VERT volunteers. Per-record source links are retained in the underlying database.
 
 ---
 
-## Appendix A — Approved Observation Inventory
+## Appendix A - Approved Observation Inventory
 
 ${inventoryTable(approved)}
 
 ---
 
-_Generated by the VERT Kumamoto Triage Hub on ${now}. This is an automated
-draft: all bracketed placeholders and figure references require reviewer
-completion before publication._
+_Generated by the VERT Kumamoto Triage Hub on ${now}. This is an automated draft: all bracketed placeholders and figure references require reviewer completion before publication._
 `;
 }

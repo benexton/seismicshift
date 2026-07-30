@@ -1,15 +1,24 @@
 import { useState } from 'react';
 import LoginGate from './LoginGate.jsx';
+import EventDetails from './EventDetails.jsx';
+import ScraperConfig from './ScraperConfig.jsx';
+import ManualInput from './ManualInput.jsx';
 import TriageMap from './TriageMap.jsx';
+import TriagedSites from './TriagedSites.jsx';
 import ReportGenerator from './ReportGenerator.jsx';
 
-/**
- * Composition root for the Kumamoto triage hub. Because an authenticated
- * session must gate sibling functionality, everything lives inside a single
- * `client:only="react"` island rather than several independent islands.
- *
- * Tabs: "Triage" (the map queue) and "Report" (team-lead draft generator).
- */
+// Composition root. One client:only island: the Supabase Auth session gates all
+// tabs and Leaflet needs window. Full-height flex shell (no fixed height calc)
+// so the layout fills the viewport with no white strip.
+const TABS = [
+  ['event', 'Event details'],
+  ['scraper', 'Scraper keywords'],
+  ['manual', 'Manual input'],
+  ['triage', 'Triage queue'],
+  ['triaged', 'Triaged sites'],
+  ['report', 'Report generator'],
+];
+
 export default function TriageApp() {
   const [tab, setTab] = useState('triage');
 
@@ -18,38 +27,28 @@ export default function TriageApp() {
       {({ session, signOut }) => {
         const reviewer = session.user?.email ?? session.user?.id ?? 'unknown';
         return (
-          <>
+          <div className="triage-shell">
             <div className="tabs">
-              <button
-                className={tab === 'triage' ? 'active' : ''}
-                onClick={() => setTab('triage')}
-              >
-                Triage queue
-              </button>
-              <button
-                className={tab === 'report' ? 'active' : ''}
-                onClick={() => setTab('report')}
-              >
-                Report generator
-              </button>
-              <span style={{ flex: 1 }} />
-              <button
-                onClick={signOut}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#cdd6e4',
-                  cursor: 'pointer',
-                  padding: '9px 12px',
-                }}
-                title={reviewer}
-              >
+              {TABS.map(([id, label]) => (
+                <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
+                  {label}
+                </button>
+              ))}
+              <span className="tab-spacer" />
+              <button className="signout" onClick={signOut} title={reviewer}>
                 Sign out ({reviewer})
               </button>
             </div>
 
-            {tab === 'triage' ? <TriageMap reviewer={reviewer} /> : <ReportGenerator />}
-          </>
+            <div className="tab-body">
+              {tab === 'event' && <EventDetails reviewer={reviewer} />}
+              {tab === 'scraper' && <ScraperConfig />}
+              {tab === 'manual' && <ManualInput reviewer={reviewer} />}
+              {tab === 'triage' && <TriageMap reviewer={reviewer} />}
+              {tab === 'triaged' && <TriagedSites reviewer={reviewer} />}
+              {tab === 'report' && <ReportGenerator />}
+            </div>
+          </div>
         );
       }}
     </LoginGate>
