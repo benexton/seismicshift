@@ -59,7 +59,7 @@ SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "mock").lower()
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 NOMINATIM_UA = os.environ.get("NOMINATIM_UA", "vert-kumamoto-recon/1.0 (contact: set NOMINATIM_UA)")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "")  # optional explicit override
 
 # Fallback sources if the Supabase config table can't be read.
 DEFAULT_BLUESKY = ["熊本地震", "Kumamoto earthquake"]
@@ -117,7 +117,22 @@ def _bluesky_login(pds: str, identifier: str, password: str) -> str | None:
         return None
 
 
-def collect_from_bluesky(terms: list[str], per_term: int = 25) -> list[MediaItem]:
+def _extract_bsky_image(embed: dict) -> str | None:
+    """Pull a photo URL from a Bluesky post embed view, across the common types:
+    app.bsky.embed.images#view (images[]), and recordWithMedia#view where the
+    media is itself an images view. Returns fullsize, else thumb, else None."""
+    if not embed:
+        return None
+    images = embed.get("images")
+    if not images:
+        media = embed.get("media") or {}          # recordWithMedia#view
+        images = media.get("images")
+    if not images:
+        return None
+    return images[0].get("fullsize") or images[0].get("thumb")
+
+
+def collect_from_bluesky(terms: list[str], per_term: int = 100) -> list[MediaItem]:
     """
     Bluesky post search. searchPosts now requires an authenticated session, so
     we log in with an app password (BLUESKY_IDENTIFIER / BLUESKY_APP_PASSWORD)
@@ -149,7 +164,7 @@ def collect_from_bluesky(terms: list[str], per_term: int = 25) -> list[MediaItem
             try:
                 resp = requests.get(
                     f"{host}/xrpc/app.bsky.feed.searchPosts",
-                    params={"q": term, "limit": per_term},
+                    params={"q": term, "limit": per_term, "sort": "latest"},
                     headers=headers,
                     timeout=REQUEST_TIMEOUT,
                 )
@@ -162,11 +177,7 @@ def collect_from_bluesky(terms: list[str], per_term: int = 25) -> list[MediaItem
             print(f"  ! bluesky '{term}' failed: {last}", file=sys.stderr)
             continue
         for post in posts:
-            embed = post.get("embed") or {}
-            images = embed.get("images") or []
-            if not images:
-                continue
-            media = images[0].get("fullsize") or images[0].get("thumb")
+            media = _extract_bsky_image(post.get("embed") or {})
             if not media:
                 continue
             author = post.get("author", {})
@@ -290,27 +301,95 @@ def _triage_openai(item: MediaItem) -> dict[str, Any]:
     return _parse_json(resp.json()["choices"][0]["message"]["content"]) | {"ai_model": "gpt-4o"}
 
 
+_GEMINI_CANDIDATES = None
+_GEMINI_IDX = 0
+
+
+def _list_gemini_models() -> list[dict]:
+    r = requests.get(
+        f"https://generativelanguage.googleapis.com/v1beta/models?key={LLM_API_KEY}",
+        timeout=REQUEST_TIMEOUT,
+    )
+    r.raise_for_status()
+    return r.json().get("models", [])
+
+
+def _gemini_candidates() -> list[str]:
+    """Ranked list of usable multimodal chat models for this key (best first).
+    An explicit, available GEMINI_MODEL is tried first; otherwise stable 'flash'
+    models by version, newest first, then any other gemini generateContent
+    model. We try these in order at call time and skip any that 404."""
+    global _GEMINI_CANDIDATES
+    if _GEMINI_CANDIDATES is not None:
+        return _GEMINI_CANDIDATES
+    try:
+        models = _list_gemini_models()
+    except Exception as exc:  # noqa: BLE001
+        print(f"  ! could not list Gemini models ({exc}); trying '{GEMINI_MODEL}'", file=sys.stderr)
+        _GEMINI_CANDIDATES = [GEMINI_MODEL] if GEMINI_MODEL else ["gemini-2.5-flash", "gemini-2.0-flash"]
+        return _GEMINI_CANDIDATES
+
+    usable = [
+        m["name"].split("/")[-1]
+        for m in models
+        if "generateContent" in (m.get("supportedGenerationMethods") or [])
+        and m.get("name", "").split("/")[-1].startswith("gemini")
+    ]
+    bad = ("preview", "exp", "tts", "image", "audio", "vision", "lite", "-8b",
+           "robotics", "computer-use", "omni", "embedding")
+
+    def ver(n):
+        m = re.search(r"gemini-(\d+(?:\.\d+)?)", n)
+        return float(m.group(1)) if m else 0.0
+
+    flash = sorted((n for n in usable if "flash" in n and not any(b in n for b in bad)),
+                   key=ver, reverse=True)
+    others = sorted((n for n in usable if n not in flash and not any(b in n for b in bad)),
+                    key=ver, reverse=True)
+    ranked = flash + others
+    # Put an explicit, available choice at the very front.
+    if GEMINI_MODEL in usable:
+        ranked = [GEMINI_MODEL] + [n for n in ranked if n != GEMINI_MODEL]
+
+    _GEMINI_CANDIDATES = ranked or ([GEMINI_MODEL] if GEMINI_MODEL else ["gemini-2.5-flash"])
+    print(f"  i Gemini model order: {', '.join(_GEMINI_CANDIDATES[:6])}"
+          f"{' ...' if len(_GEMINI_CANDIDATES) > 6 else ''}")
+    return _GEMINI_CANDIDATES
+
+
 def _triage_gemini(item: MediaItem) -> dict[str, Any]:
     import base64
+    global _GEMINI_IDX
     img = requests.get(item.media_url, timeout=REQUEST_TIMEOUT)
     img.raise_for_status()
     b64 = base64.b64encode(img.content).decode()
-    endpoint = ("https://generativelanguage.googleapis.com/v1beta/models/"
-                f"{GEMINI_MODEL}:generateContent?key={LLM_API_KEY}")
-    resp = requests.post(
-        endpoint, headers={"Content-Type": "application/json"},
-        json={
-            "system_instruction": {"parts": [{"text": TRIAGE_PROMPT}]},
-            "contents": [{"parts": [
-                {"text": f"Caption: {item.text[:500]}"},
-                {"inline_data": {"mime_type": "image/jpeg", "data": b64}},
-            ]}],
-            "generationConfig": {"temperature": 0, "responseMimeType": "application/json"},
-        },
-        timeout=REQUEST_TIMEOUT,
-    )
-    resp.raise_for_status()
-    return _parse_json(resp.json()["candidates"][0]["content"]["parts"][0]["text"]) | {"ai_model": GEMINI_MODEL}
+
+    cands = _gemini_candidates()
+    payload = {
+        "system_instruction": {"parts": [{"text": TRIAGE_PROMPT}]},
+        "contents": [{"parts": [
+            {"text": f"Caption: {item.text[:500]}"},
+            {"inline_data": {"mime_type": "image/jpeg", "data": b64}},
+        ]}],
+        "generationConfig": {"temperature": 0, "responseMimeType": "application/json"},
+    }
+
+    last_exc = None
+    while _GEMINI_IDX < len(cands):
+        model = cands[_GEMINI_IDX]
+        endpoint = ("https://generativelanguage.googleapis.com/v1beta/models/"
+                    f"{model}:generateContent?key={LLM_API_KEY}")
+        resp = requests.post(endpoint, headers={"Content-Type": "application/json"},
+                             json=payload, timeout=REQUEST_TIMEOUT)
+        if resp.status_code == 404:
+            print(f"  i model '{model}' returned 404; trying next candidate", file=sys.stderr)
+            _GEMINI_IDX += 1
+            last_exc = requests.HTTPError(f"404 for {model}")
+            continue
+        resp.raise_for_status()
+        return _parse_json(resp.json()["candidates"][0]["content"]["parts"][0]["text"]) | {"ai_model": model}
+
+    raise last_exc or RuntimeError("no usable Gemini model")
 
 
 _MOCK_PLACES = ["Mashiki, Kumamoto", "Kumamoto City", "Minamiaso, Kumamoto", "Aso, Kumamoto"]
