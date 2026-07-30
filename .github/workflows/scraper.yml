@@ -1,9 +1,8 @@
 name: Ingest triage data
 
-# Runs the scraper + AI triage pipeline every 4 hours and pushes results to
-# Supabase. Also runnable on demand from the Actions tab.
+# Runs the scraper + AI triage pipeline on demand from the Actions tab.
 on:
-   workflow_dispatch:
+  workflow_dispatch:
 
 concurrency:
   group: ingest
@@ -25,8 +24,9 @@ jobs:
 
       - name: Run ingestion pipeline
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}        # 'openai' | 'gemini' | 'mock'
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          NOMINATIM_UA: ${{ secrets.NOMINATIM_UA }}
         run: python scripts/ingest_triage_data.py
