@@ -3,9 +3,7 @@ name: Ingest triage data
 # Runs the scraper + AI triage pipeline every 4 hours and pushes results to
 # Supabase. Also runnable on demand from the Actions tab.
 on:
-  schedule:
-    - cron: '0 */4 * * *'
-  workflow_dispatch:
+   workflow_dispatch:
 
 concurrency:
   group: ingest
