@@ -101,34 +101,79 @@ def load_sources() -> tuple[list[str], list[str]]:
 
 
 # --- 2. Collectors -----------------------------------------------------------
+def _bluesky_login(pds: str, identifier: str, password: str) -> str | None:
+    """Create a session with an app password; returns an access JWT or None."""
+    try:
+        r = requests.post(
+            f"{pds}/xrpc/com.atproto.server.createSession",
+            json={"identifier": identifier, "password": password},
+            timeout=REQUEST_TIMEOUT,
+        )
+        r.raise_for_status()
+        return r.json().get("accessJwt")
+    except Exception as exc:  # noqa: BLE001
+        print(f"  ! bluesky login failed: {exc}", file=sys.stderr)
+        return None
+
+
 def collect_from_bluesky(terms: list[str], per_term: int = 25) -> list[MediaItem]:
-    """Bluesky public AT Protocol search (no auth required for reads)."""
+    """
+    Bluesky post search. searchPosts now requires an authenticated session, so
+    we log in with an app password (BLUESKY_IDENTIFIER / BLUESKY_APP_PASSWORD)
+    and call the AppView with a bearer token. Without credentials we skip
+    Bluesky (RSS still runs).
+    """
+    identifier = os.environ.get("BLUESKY_IDENTIFIER", "")
+    password = os.environ.get("BLUESKY_APP_PASSWORD", "")
+    pds = os.environ.get("BLUESKY_PDS", "https://bsky.social").rstrip("/")
+
+    if not (identifier and password):
+        print("  (no Bluesky credentials) skipping Bluesky; set "
+              "BLUESKY_IDENTIFIER and BLUESKY_APP_PASSWORD to enable")
+        return []
+
+    token = _bluesky_login(pds, identifier, password)
+    if not token:
+        return []
+
+    headers = {"Authorization": f"Bearer {token}", "User-Agent": NOMINATIM_UA}
+    # Prefer the PDS host (it proxies app.bsky queries to the AppView), then the
+    # AppView directly, so we work across account types.
+    hosts = [pds, "https://api.bsky.app"]
+
     items: list[MediaItem] = []
     for term in terms:
-        try:
-            resp = requests.get(
-                "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts",
-                params={"q": term, "limit": per_term},
-                headers={"User-Agent": NOMINATIM_UA},
-                timeout=REQUEST_TIMEOUT,
-            )
-            resp.raise_for_status()
-            for post in resp.json().get("posts", []):
-                embed = post.get("embed") or {}
-                images = embed.get("images") or []
-                if not images:
-                    continue
-                media = images[0].get("fullsize") or images[0].get("thumb")
-                if not media:
-                    continue
-                author = post.get("author", {})
-                handle = author.get("handle", "")
-                rkey = (post.get("uri", "").rsplit("/", 1)[-1])
-                web = f"https://bsky.app/profile/{handle}/post/{rkey}" if handle and rkey else post.get("uri", "")
-                text = (post.get("record", {}) or {}).get("text", "")
-                items.append(MediaItem(web, media, text, "bluesky"))
-        except Exception as exc:  # noqa: BLE001
-            print(f"  ! bluesky '{term}' failed: {exc}", file=sys.stderr)
+        posts = None
+        for host in hosts:
+            try:
+                resp = requests.get(
+                    f"{host}/xrpc/app.bsky.feed.searchPosts",
+                    params={"q": term, "limit": per_term},
+                    headers=headers,
+                    timeout=REQUEST_TIMEOUT,
+                )
+                resp.raise_for_status()
+                posts = resp.json().get("posts", [])
+                break
+            except Exception as exc:  # noqa: BLE001
+                last = exc
+        if posts is None:
+            print(f"  ! bluesky '{term}' failed: {last}", file=sys.stderr)
+            continue
+        for post in posts:
+            embed = post.get("embed") or {}
+            images = embed.get("images") or []
+            if not images:
+                continue
+            media = images[0].get("fullsize") or images[0].get("thumb")
+            if not media:
+                continue
+            author = post.get("author", {})
+            handle = author.get("handle", "")
+            rkey = post.get("uri", "").rsplit("/", 1)[-1]
+            web = f"https://bsky.app/profile/{handle}/post/{rkey}" if handle and rkey else post.get("uri", "")
+            text = (post.get("record", {}) or {}).get("text", "")
+            items.append(MediaItem(web, media, text, "bluesky"))
     return items
 
 
