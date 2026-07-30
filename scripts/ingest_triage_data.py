@@ -61,6 +61,7 @@ LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "mock").lower()
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 NOMINATIM_UA = os.environ.get("NOMINATIM_UA", "vert-kumamoto-recon/1.0 (contact: set NOMINATIM_UA)")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "")  # optional explicit override
+GEMINI_MIN_INTERVAL = float(os.environ.get("GEMINI_MIN_INTERVAL", "6"))  # seconds between calls (free-tier pace)
 
 # Fallback sources if the Supabase config table can't be read.
 DEFAULT_BLUESKY = ["熊本地震", "Kumamoto earthquake"]
@@ -304,6 +305,7 @@ def _triage_openai(item: MediaItem) -> dict[str, Any]:
 
 _GEMINI_CANDIDATES = None
 _GEMINI_IDX = 0
+_GEMINI_LAST_TS = 0.0
 
 
 def _list_gemini_models() -> list[dict]:
@@ -358,6 +360,26 @@ def _gemini_candidates() -> list[str]:
     return _GEMINI_CANDIDATES
 
 
+def _gemini_pace() -> None:
+    """Keep at least GEMINI_MIN_INTERVAL seconds between Gemini calls so a batch
+    stays under the free-tier per-minute limit."""
+    global _GEMINI_LAST_TS
+    wait = GEMINI_MIN_INTERVAL - (time.monotonic() - _GEMINI_LAST_TS)
+    if wait > 0:
+        time.sleep(wait)
+    _GEMINI_LAST_TS = time.monotonic()
+
+
+def _retry_after(resp, attempt: int) -> float:
+    ra = resp.headers.get("Retry-After")
+    if ra:
+        try:
+            return min(float(ra), 60.0)
+        except ValueError:
+            pass
+    return min(2.0 * (2 ** attempt), 30.0)   # 2s, 4s, 8s ...
+
+
 def _triage_gemini(item: MediaItem) -> dict[str, Any]:
     import base64
     global _GEMINI_IDX
@@ -380,15 +402,26 @@ def _triage_gemini(item: MediaItem) -> dict[str, Any]:
         model = cands[_GEMINI_IDX]
         endpoint = ("https://generativelanguage.googleapis.com/v1beta/models/"
                     f"{model}:generateContent?key={LLM_API_KEY}")
-        resp = requests.post(endpoint, headers={"Content-Type": "application/json"},
-                             json=payload, timeout=REQUEST_TIMEOUT)
-        if resp.status_code == 404:
-            print(f"  i model '{model}' returned 404; trying next candidate", file=sys.stderr)
-            _GEMINI_IDX += 1
-            last_exc = requests.HTTPError(f"404 for {model}")
-            continue
-        resp.raise_for_status()
-        return _parse_json(resp.json()["candidates"][0]["content"]["parts"][0]["text"]) | {"ai_model": model}
+        moved_on = False
+        for attempt in range(3):            # initial try + 2 retries on 429
+            _gemini_pace()
+            resp = requests.post(endpoint, headers={"Content-Type": "application/json"},
+                                 json=payload, timeout=REQUEST_TIMEOUT)
+            if resp.status_code == 404:
+                print(f"  i model '{model}' returned 404; trying next candidate", file=sys.stderr)
+                last_exc = requests.HTTPError(f"404 for {model}")
+                moved_on = True
+                break
+            if resp.status_code == 429:     # rate limited: back off, then retry
+                wait = _retry_after(resp, attempt)
+                print(f"  i rate limited on '{model}'; waiting {wait}s (attempt {attempt + 1})", file=sys.stderr)
+                last_exc = requests.HTTPError(f"429 for {model}")
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return _parse_json(resp.json()["candidates"][0]["content"]["parts"][0]["text"]) | {"ai_model": model}
+        # 404, or 3 rate-limited attempts: fall through to the next candidate model
+        _GEMINI_IDX += 1
 
     raise last_exc or RuntimeError("no usable Gemini model")
 
