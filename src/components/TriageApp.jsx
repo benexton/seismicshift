@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import LoginGate from './LoginGate.jsx';
-import EventDetails from './EventDetails.jsx';
+import Instructions from './Instructions.jsx';
 import ScraperConfig from './ScraperConfig.jsx';
 import ManualInput from './ManualInput.jsx';
 import TriageMap from './TriageMap.jsx';
@@ -8,10 +8,10 @@ import TriagedSites from './TriagedSites.jsx';
 import ReportGenerator from './ReportGenerator.jsx';
 
 // Composition root. One client:only island: the Supabase Auth session gates all
-// tabs and Leaflet needs window. Full-height flex shell (no fixed height calc)
-// so the layout fills the viewport with no white strip.
+// tabs and Leaflet needs window. Full-height flex shell so the layout fills the
+// viewport. Opens on Instructions so a new volunteer is oriented first.
 const TABS = [
-  ['event', 'Event details'],
+  ['instructions', 'Instructions'],
   ['scraper', 'Scraper keywords'],
   ['manual', 'Manual input'],
   ['triage', 'Triage queue'],
@@ -20,7 +20,7 @@ const TABS = [
 ];
 
 export default function TriageApp() {
-  const [tab, setTab] = useState('triage');
+  const [tab, setTab] = useState('instructions');
 
   return (
     <LoginGate>
@@ -41,12 +41,12 @@ export default function TriageApp() {
             </div>
 
             <div className="tab-body">
-              {tab === 'event' && <EventDetails reviewer={reviewer} />}
+              {tab === 'instructions' && <Instructions onGoTo={setTab} />}
               {tab === 'scraper' && <ScraperConfig />}
               {tab === 'manual' && <ManualInput reviewer={reviewer} />}
               {tab === 'triage' && <TriageMap reviewer={reviewer} />}
               {tab === 'triaged' && <TriagedSites reviewer={reviewer} />}
-              {tab === 'report' && <ReportGenerator />}
+              {tab === 'report' && <ReportGenerator reviewer={reviewer} />}
             </div>
           </div>
         );

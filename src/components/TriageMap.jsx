@@ -70,6 +70,11 @@ export default function TriageMap({ reviewer }) {
     setSelected(null);
   }
 
+  function handleSavedDraft(id, patch) {
+    setQueue((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    setSelected(null);
+  }
+
   function renderMarker(r, pos, key) {
     return (
       <Fragment key={key}>
@@ -87,6 +92,7 @@ export default function TriageMap({ reviewer }) {
           }}
           eventHandlers={{ click: () => setSelected(r) }}>
           <Tooltip direction="top">
+              {r.site_id != null && `#${r.site_id} · `}
             {DAMAGE_LABEL[r.damage_score]?.split(' - ')[0] ?? '?'} · {OBSERVATION_LABEL[r.observation_type] ?? 'building'} · {SOURCE_LABEL[r.source_type] ?? 'other'}
             {r._dupes?.length > 0 && ' · possible duplicate'}
           </Tooltip>
@@ -145,6 +151,7 @@ export default function TriageMap({ reviewer }) {
           reviewer={reviewer}
           onClose={() => setSelected(null)}
           onResolved={handleResolved}
+          onSavedDraft={handleSavedDraft}
         />
       )}
     </div>

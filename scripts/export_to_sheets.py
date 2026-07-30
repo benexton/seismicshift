@@ -37,7 +37,7 @@ SA_JSON = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
 
 # Columns exported, in order. (Never the raw geom; lat/long are the generated cols.)
 COLUMNS = [
-    "id", "created_at", "source_type", "observation_type", "status",
+    "site_id", "id", "created_at", "source_type", "observation_type", "status",
     "region", "latitude", "longitude", "location_precision",
     "damage_score", "code_era", "failure_mechanism", "observed_retrofits",
     "engineer_notes", "submitted_by", "reviewed_by", "reviewed_at",

@@ -71,7 +71,7 @@ export default function SiteDetailModal({ record, reviewer, onClose }) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="head">
-          <h2>{record.region ?? 'Unspecified region'}</h2>
+          <h2>{record.site_id != null ? `#${record.site_id} · ` : ''}{record.region ?? 'Unspecified region'}</h2>
           <button className="x" onClick={onClose} aria-label="Close">×</button>
         </div>
 

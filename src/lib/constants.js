@@ -84,3 +84,22 @@ export const OBSERVATION_LABEL = {
 
 // ---- Location precision ----------------------------------------------------
 export const PRECISION_OPTIONS = ['exact', 'approximate'];
+
+// ---- Manual-entry building/site attributes ---------------------------------
+export const LOCATION_CONFIDENCE = ['high', 'medium', 'low'];
+
+export const BUILDING_TYPES = [
+  'commercial', 'government', 'hospital', 'industrial', 'mixed use',
+  'religious', 'community', 'residential', 'school', 'other',
+];
+
+export const PRIMARY_MATERIALS = [
+  'reinforced concrete', 'steel', 'unreinforced masonry', 'reinforced masonry',
+  'confined masonry', 'timber', 'other',
+];
+
+export const HEIGHT_CLASSES = [
+  { value: 'low-rise', label: 'Low-rise (1-3 storeys)' },
+  { value: 'mid-rise', label: 'Mid-rise (4-7 storeys)' },
+  { value: 'high-rise', label: 'High-rise (8+ storeys)' },
+];

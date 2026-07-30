@@ -1,27 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
-import { supabase, RECORD_COLUMNS, EVENT_META_ID, EVENT_META_MAP, metaRowToCamel } from '../lib/supabase.js';
+import {
+  supabase, RECORD_COLUMNS, EVENT_META_ID, EVENT_META_MAP,
+  metaRowToCamel, camelToMetaRow,
+} from '../lib/supabase.js';
 import { buildReport } from '../lib/report.js';
 
-// Fallback used only if the event_meta row has not been created yet.
-const DEFAULT_META = {
-  eventName: '2026 Kumamoto Earthquake', version: '1.0', magnitude: 'Mw 7.0',
-  depth: '10', locationName: 'Kumamoto Prefecture, Kyushu, Japan',
-  locationLatLong: '32.79N, 130.74E', eventDatetime: '[to confirm]',
-  faulting: '[to confirm]', maxMMI: '[to confirm]', tsunami: 'No',
-  contributors: '[VERT volunteer names and affiliations]',
-};
+const EMPTY = Object.fromEntries(EVENT_META_MAP.map(([, key]) => [key, '']));
 
 /**
- * Team-lead view: pulls all 'Approved' records plus the shared event metadata,
- * synthesises statistics, injects them into the NZSEE LFE Markdown template,
- * previews the result, and offers a client-side .md download. Event facts are
- * edited in the Event details tab, not here.
+ * Report generator, now also the single home for the event metadata. The
+ * metadata form reads and writes the one event_meta row (Save), and the same
+ * values feed the LFE draft below. Approved records supply the statistics.
  */
-export default function ReportGenerator() {
+export default function ReportGenerator({ reviewer }) {
   const [records, setRecords] = useState([]);
-  const [meta, setMeta] = useState(DEFAULT_META);
+  const [meta, setMeta] = useState(EMPTY);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState(null);
   const [err, setErr] = useState('');
 
   useEffect(() => {
@@ -40,6 +37,17 @@ export default function ReportGenerator() {
   const markdown = useMemo(() => buildReport(records, meta), [records, meta]);
   const html = useMemo(() => marked.parse(markdown), [markdown]);
 
+  const set = (key) => (e) => setMeta((m) => ({ ...m, [key]: e.target.value }));
+
+  async function saveMeta(e) {
+    e.preventDefault();
+    setSaving(true); setStatus(null);
+    const row = { ...camelToMetaRow(meta), updated_by: reviewer, updated_at: new Date().toISOString() };
+    const { error } = await supabase.from('event_meta').upsert(row, { onConflict: 'id' });
+    setSaving(false);
+    setStatus(error ? { kind: 'err', msg: `Save failed: ${error.message}` } : { kind: 'ok', msg: 'Event details saved.' });
+  }
+
   function download() {
     const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -47,9 +55,7 @@ export default function ReportGenerator() {
     const stamp = new Date().toISOString().slice(0, 10);
     a.href = url;
     a.download = `VERT_${(meta.eventName || 'event').replace(/\s+/g, '_')}_draft_${stamp}.md`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
   }
 
@@ -64,22 +70,30 @@ export default function ReportGenerator() {
       </p>
 
       <div className="card">
-        <h2 style={{ marginTop: 0, fontSize: 17 }}>Event metadata</h2>
-        <p className="muted small">Edit these in the Event details tab. Shown here for reference.</p>
-        <div className="report-meta readonly">
-          {EVENT_META_MAP.map(([, key, label]) => (
-            <div key={key}>
-              <label>{label}</label>
-              <div className="ro-value">{meta[key] || '-'}</div>
+        <h2 style={{ marginTop: 0, fontSize: 17 }}>Event details</h2>
+        <p className="muted small">The key facts for this earthquake. Saved once here and used in the report header.</p>
+        <form onSubmit={saveMeta}>
+          <div className="report-meta">
+            {EVENT_META_MAP.filter(([col]) => col !== 'contributors').map(([, key, label]) => (
+              <div key={key}>
+                <label htmlFor={key}>{label}</label>
+                <input id={key} type="text" value={meta[key] ?? ''} onChange={set(key)} />
+              </div>
+            ))}
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label htmlFor="contributors">Contributors</label>
+              <input id="contributors" type="text" value={meta.contributors ?? ''} onChange={set('contributors')} />
             </div>
-          ))}
-        </div>
+          </div>
+          <div className="report-actions">
+            <button className="btn" type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save event details'}</button>
+            {status && <span className={`status-line ${status.kind}`}>{status.msg}</span>}
+          </div>
+        </form>
       </div>
 
       <div className="report-actions">
-        <button className="btn" onClick={download} disabled={loading}>
-          Download draft report (.md)
-        </button>
+        <button className="btn" onClick={download} disabled={loading}>Download draft report (.md)</button>
         <span className="muted">Rendered entirely client-side, no server processing.</span>
       </div>
 

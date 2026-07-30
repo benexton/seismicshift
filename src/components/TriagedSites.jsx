@@ -66,6 +66,7 @@ export default function TriagedSites({ reviewer }) {
         }}
         eventHandlers={{ click: () => setSelected(r) }}>
         <Tooltip direction="top">
+              {r.site_id != null && `#${r.site_id} · `}
           {DAMAGE_LABEL[r.damage_score]?.split(' - ')[0] ?? '?'} · {OBSERVATION_LABEL[r.observation_type] ?? 'building'} · {SOURCE_LABEL[r.source_type] ?? 'other'}
         </Tooltip>
       </CircleMarker>

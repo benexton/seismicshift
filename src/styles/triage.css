@@ -224,3 +224,26 @@ body {
   border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
   cursor: pointer;
 }
+
+/* ---- v5: instructions, links, attributes, reject confirm ------------------ */
+.instructions h2 { font-size: 17px; margin: 22px 0 6px; }
+.instructions p { line-height: 1.6; margin: 8px 0; }
+.link-btn {
+  background: none; border: none; color: var(--brand); font: inherit;
+  padding: 0; cursor: pointer; text-decoration: underline; font-weight: 600;
+}
+.link-btn:hover { color: var(--brand-dark); }
+
+.link-add { display: flex; gap: 6px; }
+.link-add input { flex: 1; }
+.link-row {
+  display: flex; align-items: center; gap: 8px; justify-content: space-between;
+  margin-top: 6px; padding: 5px 8px; background: #f9fafb;
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.link-row span { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.attr-block { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; }
+
+.modal .foot.confirm { background: #fff1f2; }
+.modal .foot .confirm-text { font-size: 13px; color: #9f1239; align-self: center; }
