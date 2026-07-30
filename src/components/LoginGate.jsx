@@ -82,6 +82,6 @@ export default function LoginGate({ children }) {
     );
   }
 
-  // Authenticated — hand session + signOut down to the app.
+  // Authenticated - hand session + signOut down to the app.
   return children({ session, signOut });
 }
