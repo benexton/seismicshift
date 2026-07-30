@@ -1,0 +1,34 @@
+name: Ingest triage data
+
+# Runs the scraper + AI triage pipeline every 4 hours and pushes results to
+# Supabase. Also runnable on demand from the Actions tab.
+on:
+  schedule:
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Run ingestion pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}        # 'openai' | 'gemini' | 'mock'
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: python scripts/ingest_triage_data.py

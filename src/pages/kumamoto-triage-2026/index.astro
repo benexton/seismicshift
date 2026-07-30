@@ -1,0 +1,15 @@
+---
+import TriageLayout from '../../layouts/TriageLayout.astro';
+import TriageApp from '../../components/TriageApp.jsx';
+---
+
+<!--
+  Entire app is one client:only React island:
+   1. Supabase Auth session state gates the map/report UI, and
+   2. Leaflet touches `window` and can't be server-rendered in Astro's static build.
+  `client:only="react"` skips SSR for this tree. `trailingSlash: 'always'` in
+  astro.config.mjs means this resolves at /kumamoto-triage-2026/.
+-->
+<TriageLayout title="VERT Kumamoto 2026 — Triage">
+  <TriageApp client:only="react" />
+</TriageLayout>
