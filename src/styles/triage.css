@@ -265,3 +265,9 @@ body {
 .attach-block-wrap { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
 .attach-block-wrap .field { margin-bottom: 8px; }
 .attach-block-wrap label { display: block; font-weight: 600; font-size: 12px; margin-bottom: 3px; }
+
+/* ---- v9: live presence (who is working on what) --------------------------- */
+.presence-banner {
+  margin: 0 20px; padding: 8px 12px; background: #f5f3ff; border: 1px solid #ddd6fe;
+  border-radius: 10px; font-size: 13px; color: #5b21b6;
+}
