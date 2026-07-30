@@ -5,8 +5,9 @@ import { supabase, MEDIA_BUCKET } from '../lib/supabase.js';
 import {
   CLASSIFICATION_SCORES, DAMAGE_LABEL, CODE_ERAS, RETROFIT_OPTIONS,
   OBSERVATION_TYPES, OBSERVATION_LABEL,
-  LOCATION_CONFIDENCE, BUILDING_TYPES, PRIMARY_MATERIALS, HEIGHT_CLASSES,
+  LOCATION_CONFIDENCE, BUILDING_TYPES, PRIMARY_MATERIALS, HEIGHT_CLASSES, cap,
 } from '../lib/constants.js';
+import { uploadImage } from '../lib/media.js';
 
 const GSI_PHOTO = 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg';
 const GSI_ATTRIB =
@@ -19,13 +20,6 @@ function LocationPicker({ pos, setPos }) {
     <CircleMarker center={pos} radius={9}
       pathOptions={{ color: '#fff', weight: 2, fillColor: '#1570ef', fillOpacity: 0.9 }} />
   ) : null;
-}
-
-async function uploadImage(file) {
-  const path = `${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`;
-  const up = await supabase.storage.from(MEDIA_BUCKET).upload(path, file);
-  if (up.error) throw up.error;
-  return supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
 /**
@@ -51,7 +45,7 @@ export default function ManualInput({ reviewer }) {
   const [sourceUrl, setSourceUrl] = useState('');
   const [links, setLinks] = useState([]);
   const [linkDraft, setLinkDraft] = useState('');
-  const [photo, setPhoto] = useState(null);
+  const [images, setImages] = useState([]);
   const [streetview, setStreetview] = useState(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
@@ -70,7 +64,9 @@ export default function ManualInput({ reviewer }) {
     setBusy(true);
     setStatus(null);
     try {
-      const mediaUrl = photo ? await uploadImage(photo) : null;
+      const imageUrls = [];
+      for (const f of images) imageUrls.push(await uploadImage(f));
+      const mediaUrl = imageUrls[0] ?? null;
       const streetviewUrl = streetview ? await uploadImage(streetview) : null;
 
       const { data: newId, error } = await supabase.rpc('submit_observation', {
@@ -95,15 +91,18 @@ export default function ManualInput({ reviewer }) {
       });
       if (error) throw error;
 
-      if (links.length && newId) {
-        const rows = links.map((l) => ({ record_id: newId, source_url: l, added_by: reviewer }));
-        const att = await supabase.from('record_attachments').insert(rows);
+      const attachRows = [
+        ...imageUrls.slice(1).map((u) => ({ record_id: newId, media_url: u, added_by: reviewer })),
+        ...links.map((l) => ({ record_id: newId, source_url: l, added_by: reviewer })),
+      ];
+      if (attachRows.length && newId) {
+        const att = await supabase.from('record_attachments').insert(attachRows);
         if (att.error) throw att.error;
       }
 
       setStatus({ kind: 'ok', msg: 'Submitted to the triage queue for verification.' });
       setPos(null); setRegion(''); setAddress(''); setBuildingName(''); setMechanism('');
-      setNotes(''); setSourceUrl(''); setLinks([]); setPhoto(null); setStreetview(null);
+      setNotes(''); setSourceUrl(''); setLinks([]); setImages([]); setStreetview(null);
     } catch (ex) {
       setStatus({ kind: 'err', msg: `Submit failed: ${ex.message ?? ex}` });
     } finally {
@@ -149,7 +148,7 @@ export default function ManualInput({ reviewer }) {
             <div className="field">
               <label>Location confidence</label>
               <select value={locConfidence} onChange={(e) => setLocConfidence(e.target.value)}>
-                {LOCATION_CONFIDENCE.map((c) => <option key={c} value={c}>{c}</option>)}
+                {LOCATION_CONFIDENCE.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
               </select>
             </div>
             <div className="field">
@@ -183,13 +182,13 @@ export default function ManualInput({ reviewer }) {
                 <div className="field">
                   <label>Building type</label>
                   <select value={buildingType} onChange={(e) => setBuildingType(e.target.value)}>
-                    {BUILDING_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                    {BUILDING_TYPES.map((t) => <option key={t} value={t}>{cap(t)}</option>)}
                   </select>
                 </div>
                 <div className="field">
                   <label>Primary material</label>
                   <select value={material} onChange={(e) => setMaterial(e.target.value)}>
-                    {PRIMARY_MATERIALS.map((m) => <option key={m} value={m}>{m}</option>)}
+                    {PRIMARY_MATERIALS.map((m) => <option key={m} value={m}>{cap(m)}</option>)}
                   </select>
                 </div>
                 <div className="field">
@@ -212,7 +211,7 @@ export default function ManualInput({ reviewer }) {
               <div className="field">
                 <label>Seismic-code era</label>
                 <select value={codeEra} onChange={(e) => setCodeEra(e.target.value)}>
-                  {CODE_ERAS.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {CODE_ERAS.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
                 </select>
               </div>
             )}
@@ -227,14 +226,15 @@ export default function ManualInput({ reviewer }) {
               <div className="field">
                 <label>Observed retrofits</label>
                 <select value={retrofit} onChange={(e) => setRetrofit(e.target.value)}>
-                  {RETROFIT_OPTIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  {RETROFIT_OPTIONS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}
                 </select>
               </div>
             )}
 
             <div className="field">
-              <label>Photo</label>
-              <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} />
+              <label>Photos</label>
+              <input type="file" accept="image/*" multiple onChange={(e) => setImages(Array.from(e.target.files ?? []))} />
+              {images.length > 0 && <span className="muted small">{images.length} image(s) selected. The first is the primary photo.</span>}
             </div>
 
             <div className="field">
