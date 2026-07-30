@@ -247,3 +247,21 @@ body {
 
 .modal .foot.confirm { background: #fff1f2; }
 .modal .foot .confirm-text { font-size: 13px; color: #9f1239; align-self: center; }
+
+/* ---- v8: merge tool, name editor, attachment block ------------------------ */
+.merge-body { padding: 14px 20px; }
+.merge-pick { margin: 10px 0; }
+.cand-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.merge-compare { margin-top: 12px; }
+.merge-table { border-collapse: collapse; width: 100%; font-size: 13px; margin-top: 8px; }
+.merge-table th, .merge-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; vertical-align: top; }
+.merge-table th { background: #f4f6f8; }
+.merge-table td.chosen { background: #eefbf3; }
+.merge-table label { display: block; cursor: pointer; font-weight: 400; }
+
+.name-edit { display: flex; align-items: center; gap: 6px; padding: 4px 8px; }
+.name-edit input { padding: 5px 8px; border: 1px solid #7a8ba3; border-radius: 6px; font-size: 13px; }
+
+.attach-block-wrap { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
+.attach-block-wrap .field { margin-bottom: 8px; }
+.attach-block-wrap label { display: block; font-weight: 600; font-size: 12px; margin-bottom: 3px; }

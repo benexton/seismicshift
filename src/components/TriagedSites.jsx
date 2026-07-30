@@ -105,7 +105,12 @@ export default function TriagedSites({ reviewer }) {
       </div>
 
       {selected && (
-        <SiteDetailModal record={selected} reviewer={reviewer} onClose={() => setSelected(null)} />
+        <SiteDetailModal
+          record={selected}
+          reviewer={reviewer}
+          onClose={() => setSelected(null)}
+          onSaved={(id, patch) => setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))}
+        />
       )}
     </div>
   );

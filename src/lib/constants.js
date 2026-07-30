@@ -103,3 +103,7 @@ export const HEIGHT_CLASSES = [
   { value: 'mid-rise', label: 'Mid-rise (4-7 storeys)' },
   { value: 'high-rise', label: 'High-rise (8+ storeys)' },
 ];
+
+// Sentence-case a value for display (keeps stored values lowercase).
+export const cap = (s) =>
+  s === null || s === undefined || s === '' ? s : String(s).charAt(0).toUpperCase() + String(s).slice(1);

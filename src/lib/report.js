@@ -57,9 +57,10 @@ function mdCountTable(header, counts) {
   const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
   if (entries.length === 0) return '_No data._\n';
   const total = entries.reduce((s, [, n]) => s + n, 0);
+  const share = (n) => (total > 0 ? ((n / total) * 100).toFixed(1) : '0.0');
   let out = `| ${header} | Count | Share |\n| --- | ---: | ---: |\n`;
-  for (const [k, n] of entries) out += `| ${k} | ${n} | ${((n / total) * 100).toFixed(1)}% |\n`;
-  out += `| **Total** | **${total}** | **100%** |\n`;
+  for (const [k, n] of entries) out += `| ${k} | ${n} | ${share(n)}% |\n`;
+  out += `| **Total** | **${total}** | **${total > 0 ? '100' : '0'}%** |\n`;
   return out;
 }
 
@@ -71,8 +72,8 @@ function damageScoreTable(records) {
   const counts = {};
   for (const s of DAMAGE_SCORES) counts[DAMAGE_LABEL[s]] = 0;
   for (const r of records) {
-    if (r.damage_score !== null && r.damage_score !== undefined) {
-      counts[DAMAGE_LABEL[r.damage_score]] += 1;
+    if (DAMAGE_SCORES.includes(Number(r.damage_score))) {
+      counts[DAMAGE_LABEL[Number(r.damage_score)]] += 1;
     }
   }
   return mdCountTable('Damage score', counts);

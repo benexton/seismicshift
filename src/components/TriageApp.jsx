@@ -7,9 +7,6 @@ import TriageMap from './TriageMap.jsx';
 import TriagedSites from './TriagedSites.jsx';
 import ReportGenerator from './ReportGenerator.jsx';
 
-// Composition root. One client:only island: the Supabase Auth session gates all
-// tabs and Leaflet needs window. Full-height flex shell so the layout fills the
-// viewport. Opens on Instructions so a new volunteer is oriented first.
 const TABS = [
   ['instructions', 'Instructions'],
   ['scraper', 'Scraper keywords'],
@@ -19,38 +16,57 @@ const TABS = [
   ['report', 'Report generator'],
 ];
 
-export default function TriageApp() {
+// The authenticated workspace. Mounted with a key of the user id so a new login
+// always starts fresh on the Instructions tab.
+function Workspace({ reviewer, signOut, updateName }) {
   const [tab, setTab] = useState('instructions');
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(reviewer);
+
+  async function saveName() {
+    await updateName(nameDraft);
+    setEditingName(false);
+  }
 
   return (
-    <LoginGate>
-      {({ session, signOut }) => {
-        const reviewer = session.user?.email ?? session.user?.id ?? 'unknown';
-        return (
-          <div className="triage-shell">
-            <div className="tabs">
-              {TABS.map(([id, label]) => (
-                <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
-                  {label}
-                </button>
-              ))}
-              <span className="tab-spacer" />
-              <button className="signout" onClick={signOut} title={reviewer}>
-                Sign out ({reviewer})
-              </button>
-            </div>
+    <div className="triage-shell">
+      <div className="tabs">
+        {TABS.map(([id, label]) => (
+          <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>
+        ))}
+        <span className="tab-spacer" />
+        {editingName ? (
+          <span className="name-edit">
+            <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveName(); }} autoFocus />
+            <button className="mini" onClick={saveName}>Save</button>
+          </span>
+        ) : (
+          <button className="signout" onClick={() => { setNameDraft(reviewer); setEditingName(true); }} title="Edit display name">
+            {reviewer} (edit)
+          </button>
+        )}
+        <button className="signout" onClick={signOut}>Sign out</button>
+      </div>
 
-            <div className="tab-body">
-              {tab === 'instructions' && <Instructions onGoTo={setTab} />}
-              {tab === 'scraper' && <ScraperConfig />}
-              {tab === 'manual' && <ManualInput reviewer={reviewer} />}
-              {tab === 'triage' && <TriageMap reviewer={reviewer} />}
-              {tab === 'triaged' && <TriagedSites reviewer={reviewer} />}
-              {tab === 'report' && <ReportGenerator reviewer={reviewer} />}
-            </div>
-          </div>
-        );
-      }}
+      <div className="tab-body">
+        {tab === 'instructions' && <Instructions onGoTo={setTab} />}
+        {tab === 'scraper' && <ScraperConfig />}
+        {tab === 'manual' && <ManualInput reviewer={reviewer} />}
+        {tab === 'triage' && <TriageMap reviewer={reviewer} />}
+        {tab === 'triaged' && <TriagedSites reviewer={reviewer} />}
+        {tab === 'report' && <ReportGenerator reviewer={reviewer} />}
+      </div>
+    </div>
+  );
+}
+
+export default function TriageApp() {
+  return (
+    <LoginGate>
+      {({ session, signOut, reviewer, updateName }) => (
+        <Workspace key={session.user?.id} reviewer={reviewer} signOut={signOut} updateName={updateName} />
+      )}
     </LoginGate>
   );
 }

@@ -1,33 +1,24 @@
 import { useEffect, useState } from 'react';
-import { supabase, MEDIA_BUCKET } from '../lib/supabase.js';
-import { DAMAGE_COLOR, DAMAGE_LABEL, SOURCE_LABEL, OBSERVATION_LABEL } from '../lib/constants.js';
+import { supabase } from '../lib/supabase.js';
+import {
+  DAMAGE_LABEL, DAMAGE_COLOR, SOURCE_LABEL, OBSERVATION_LABEL, cap,
+} from '../lib/constants.js';
+import RecordFields, { fieldsPatch } from './RecordFields.jsx';
+import AttachmentAdder from './AttachmentAdder.jsx';
 
 /**
- * Detail view for an already-triaged site. Shows the primary record plus every
- * attachment (extra photos, source links, notes) added by hand or folded in
- * from a merged duplicate, and lets an engineer add more.
+ * Detail view for a triaged (Approved) site. Same editing as the review panel:
+ * all attribute fields, coordinates, notes, and attachments (add multiple
+ * images, links, notes). Changes save in place.
  */
-export default function SiteDetailModal({ record, reviewer, onClose }) {
-  const [attachments, setAttachments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [note, setNote] = useState('');
-  const [sourceUrl, setSourceUrl] = useState('');
-  const [file, setFile] = useState(null);
+export default function SiteDetailModal({ record, reviewer, onClose, onSaved }) {
+  const [v, setV] = useState({ ...record });
+  const [notes, setNotes] = useState(record.engineer_notes ?? '');
+  const [lat, setLat] = useState(record.latitude ?? '');
+  const [lng, setLng] = useState(record.longitude ?? '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-
-  async function loadAttachments() {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('record_attachments')
-      .select('id, media_url, source_url, note, added_by, created_at')
-      .eq('record_id', record.id)
-      .order('created_at', { ascending: true });
-    setLoading(false);
-    if (error) return setErr(error.message);
-    setAttachments(data ?? []);
-  }
-  useEffect(() => { loadAttachments(); }, [record.id]);
+  const [status, setStatus] = useState(null);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -35,34 +26,23 @@ export default function SiteDetailModal({ record, reviewer, onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  async function add(e) {
-    e.preventDefault();
-    if (!file && !sourceUrl.trim() && !note.trim()) return;
-    setBusy(true);
-    setErr('');
+  const set = (key) => (e) => setV((m) => ({ ...m, [key]: e.target.value }));
+  const movedLocation = Number(lat) !== record.latitude || Number(lng) !== record.longitude;
+
+  async function save() {
+    setBusy(true); setErr(''); setStatus(null);
     try {
-      let mediaUrl = null;
-      if (file) {
-        const path = `${record.id}/${Date.now()}_${file.name.replace(/[^\w.\-]/g, '_')}`;
-        const up = await supabase.storage.from(MEDIA_BUCKET).upload(path, file);
-        if (up.error) throw up.error;
-        mediaUrl = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
+      if (movedLocation && lat !== '' && lng !== '') {
+        const geo = await supabase.rpc('move_observation', { p_id: record.id, p_lng: Number(lng), p_lat: Number(lat) });
+        if (geo.error && !/function/i.test(geo.error.message)) throw geo.error;
       }
-      const { error } = await supabase.from('record_attachments').insert({
-        record_id: record.id,
-        media_url: mediaUrl,
-        source_url: sourceUrl.trim() || null,
-        note: note.trim() || null,
-        added_by: reviewer,
-      });
+      const p = { ...fieldsPatch(v), engineer_notes: notes || null, location_precision: movedLocation ? 'exact' : record.location_precision };
+      const { error } = await supabase.from('triage_records').update(p).eq('id', record.id);
       if (error) throw error;
-      setNote(''); setSourceUrl(''); setFile(null);
-      loadAttachments();
-    } catch (ex) {
-      setErr(`Add failed: ${ex.message ?? ex}`);
-    } finally {
       setBusy(false);
-    }
+      setStatus({ kind: 'ok', msg: 'Saved.' });
+      onSaved?.(record.id, { ...p, ...(movedLocation ? { latitude: Number(lat), longitude: Number(lng) } : {}) });
+    } catch (ex) { setBusy(false); setErr(`Save failed: ${ex.message ?? ex}`); }
   }
 
   const aiColor = DAMAGE_COLOR[record.damage_score] ?? '#9e9e9e';
@@ -77,7 +57,7 @@ export default function SiteDetailModal({ record, reviewer, onClose }) {
 
         <div className="body">
           <div>
-            <span className="ai-badge" style={{ background: aiColor }}>D{record.damage_score ?? '-'}</span>{' '}
+            <span className="ai-badge" style={{ background: aiColor }}>{DAMAGE_LABEL[record.damage_score]?.split(' - ')[0] ?? '-'}</span>{' '}
             <span className="obs-badge">{OBSERVATION_LABEL[record.observation_type] ?? 'Building'}</span>{' '}
             <span className="obs-badge">{SOURCE_LABEL[record.source_type] ?? 'Other'}</span>
 
@@ -86,63 +66,35 @@ export default function SiteDetailModal({ record, reviewer, onClose }) {
                 <img className="media" src={record.media_url} alt="Primary" loading="lazy" />
               </a>
             )}
-            <p className="kv"><b>Damage:</b> {DAMAGE_LABEL[record.damage_score] ?? '-'}</p>
-            <p className="kv"><b>Mechanism:</b> {record.failure_mechanism ?? '-'}</p>
-            {record.code_era && <p className="kv"><b>Code era:</b> {record.code_era}</p>}
-            {record.engineer_notes && <p className="kv"><b>Notes:</b> {record.engineer_notes}</p>}
+            {record.streetview_url && (
+              <p className="kv"><b>Street View:</b> <a href={record.streetview_url} target="_blank" rel="noreferrer">screenshot</a></p>
+            )}
             <p className="kv"><b>Verified by:</b> {record.reviewed_by ?? '-'}</p>
+            {record.source_url && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
+
+            <AttachmentAdder recordId={record.id} reviewer={reviewer} />
           </div>
 
           <div>
-            <h3 style={{ marginTop: 0, fontSize: 15 }}>
-              Additional information ({attachments.length})
-            </h3>
-            {loading ? (
-              <p className="muted">Loading...</p>
-            ) : attachments.length === 0 ? (
-              <p className="muted small">Nothing added yet.</p>
-            ) : (
-              <div className="attach-list">
-                {attachments.map((a) => (
-                  <div key={a.id} className="attach">
-                    {a.media_url && (
-                      <a href={a.media_url} target="_blank" rel="noreferrer">
-                        <img src={a.media_url} alt="Attachment" loading="lazy" />
-                      </a>
-                    )}
-                    {a.source_url && (
-                      <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>
-                    )}
-                    {a.note && <p className="note">{a.note}</p>}
-                    <span className="by">added by {a.added_by ?? 'unknown'}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <form onSubmit={add} className="attach-form">
-              <h3 style={{ fontSize: 14, marginBottom: 6 }}>Add to this site</h3>
-              <div className="field">
-                <label>Photo</label>
-                <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-              </div>
-              <div className="field">
-                <label>Source link</label>
-                <input type="text" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://..." />
-              </div>
-              <div className="field">
-                <label>Note</label>
-                <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Extra observation, context, correction..." />
-              </div>
-              <button className="btn" type="submit" disabled={busy}>{busy ? 'Adding...' : 'Add information'}</button>
-              {err && <p className="status-line err">{err}</p>}
-            </form>
+            <RecordFields v={v} set={set} />
+            <div className="field latlng">
+              <div><label>Latitude</label><input type="number" step="0.00001" value={lat} onChange={(e) => setLat(e.target.value)} /></div>
+              <div><label>Longitude</label><input type="number" step="0.00001" value={lng} onChange={(e) => setLng(e.target.value)} /></div>
+            </div>
+            <div className="field">
+              <label>Engineer notes</label>
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
           </div>
         </div>
 
+        {err && <p className="status-line err">{err}</p>}
+
         <div className="foot">
+          <button className="btn secondary" onClick={onClose} disabled={busy}>Close</button>
           <span className="grow" />
-          <button className="btn secondary" onClick={onClose}>Close</button>
+          {status && <span className={`status-line ${status.kind}`} style={{ alignSelf: 'center' }}>{status.msg}</span>}
+          <button className="btn" onClick={save} disabled={busy}>{busy ? 'Saving...' : 'Save changes'}</button>
         </div>
       </div>
     </div>
