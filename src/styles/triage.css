@@ -215,3 +215,12 @@ body {
   padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px;
   background: #f9fafb; font-size: 13px; min-height: 34px;
 }
+
+/* ---- Cluster count badge --------------------------------------------------- */
+.cluster-badge {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 13px;
+  border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+  cursor: pointer;
+}

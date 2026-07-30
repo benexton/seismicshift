@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leafl
 import 'leaflet/dist/leaflet.css';
 import { supabase, MEDIA_BUCKET } from '../lib/supabase.js';
 import {
-  DAMAGE_SCORES, DAMAGE_LABEL, CODE_ERAS, RETROFIT_OPTIONS,
+  CLASSIFICATION_SCORES, DAMAGE_LABEL, CODE_ERAS, RETROFIT_OPTIONS,
   OBSERVATION_TYPES, OBSERVATION_LABEL,
 } from '../lib/constants.js';
 
@@ -44,7 +44,9 @@ export default function ManualInput({ reviewer }) {
 
   async function submit(e) {
     e.preventDefault();
-    if (!pos) return setStatus({ kind: 'err', msg: 'Click the map to set a location first.' });
+    if (!pos || pos[0] == null || pos[1] == null || Number.isNaN(pos[0]) || Number.isNaN(pos[1])) {
+      return setStatus({ kind: 'err', msg: 'Set a location: click the map or enter both latitude and longitude.' });
+    }
     setBusy(true);
     setStatus(null);
     try {
@@ -101,8 +103,26 @@ export default function ManualInput({ reviewer }) {
               </MapContainer>
             </div>
             <p className="muted small">
-              {pos ? `Selected: ${pos[0].toFixed(5)}, ${pos[1].toFixed(5)}` : 'No location set yet.'}
+              {pos ? 'Pin set. You can fine-tune the numbers below.' : 'Click the map, or type coordinates below.'}
             </p>
+            <div className="field latlng">
+              <div>
+                <label>Latitude</label>
+                <input type="number" step="0.00001" value={pos ? pos[0] : ''}
+                  onChange={(e) => {
+                    const lat = e.target.value === '' ? null : Number(e.target.value);
+                    setPos((p) => [lat, p ? p[1] : 130.74]);
+                  }} />
+              </div>
+              <div>
+                <label>Longitude</label>
+                <input type="number" step="0.00001" value={pos ? pos[1] : ''}
+                  onChange={(e) => {
+                    const lng = e.target.value === '' ? null : Number(e.target.value);
+                    setPos((p) => [p ? p[0] : 32.79, lng]);
+                  }} />
+              </div>
+            </div>
           </div>
 
           <form onSubmit={submit} className="manual-form">
@@ -122,9 +142,9 @@ export default function ManualInput({ reviewer }) {
             </div>
 
             <div className="field">
-              <label>Damage / severity</label>
+              <label>Damage / classification</label>
               <select value={damage} onChange={(e) => setDamage(e.target.value)}>
-                {DAMAGE_SCORES.map((s) => <option key={s} value={s}>{DAMAGE_LABEL[s]}</option>)}
+                {CLASSIFICATION_SCORES.map((s) => <option key={s} value={s}>{DAMAGE_LABEL[s]}</option>)}
               </select>
             </div>
 
