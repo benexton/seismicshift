@@ -59,6 +59,7 @@ SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "mock").lower()
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 NOMINATIM_UA = os.environ.get("NOMINATIM_UA", "vert-kumamoto-recon/1.0 (contact: set NOMINATIM_UA)")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 # Fallback sources if the Supabase config table can't be read.
 DEFAULT_BLUESKY = ["熊本地震", "Kumamoto earthquake"]
@@ -295,7 +296,7 @@ def _triage_gemini(item: MediaItem) -> dict[str, Any]:
     img.raise_for_status()
     b64 = base64.b64encode(img.content).decode()
     endpoint = ("https://generativelanguage.googleapis.com/v1beta/models/"
-                f"gemini-1.5-pro:generateContent?key={LLM_API_KEY}")
+                f"{GEMINI_MODEL}:generateContent?key={LLM_API_KEY}")
     resp = requests.post(
         endpoint, headers={"Content-Type": "application/json"},
         json={
@@ -309,7 +310,7 @@ def _triage_gemini(item: MediaItem) -> dict[str, Any]:
         timeout=REQUEST_TIMEOUT,
     )
     resp.raise_for_status()
-    return _parse_json(resp.json()["candidates"][0]["content"]["parts"][0]["text"]) | {"ai_model": "gemini-1.5-pro"}
+    return _parse_json(resp.json()["candidates"][0]["content"]["parts"][0]["text"]) | {"ai_model": GEMINI_MODEL}
 
 
 _MOCK_PLACES = ["Mashiki, Kumamoto", "Kumamoto City", "Minamiaso, Kumamoto", "Aso, Kumamoto"]
