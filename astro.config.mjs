@@ -8,7 +8,10 @@ export default defineConfig({
   trailingSlash: 'always',
   integrations: [
     react(),
-    sitemap(),
+    // Keep the internal triage tool out of the public sitemap.
+    sitemap({
+      filter: (page) => !page.includes('/kumamoto-triage-2026/'),
+    }),
   ],
   vite: {
     plugins: [tailwindcss()],

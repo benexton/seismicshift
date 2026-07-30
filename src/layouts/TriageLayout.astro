@@ -1,0 +1,25 @@
+---
+// Minimal, self-contained layout for the internal VERT triage tool.
+// Deliberately does NOT use BaseLayout: this is an auth-gated engineering tool,
+// so it skips the marketing nav/footer, Google Analytics, Turnstile, and site
+// fonts, and marks itself noindex so it stays out of search + the sitemap.
+import '../styles/triage.css';
+
+interface Props {
+  title?: string;
+}
+const { title = 'VERT Kumamoto 2026 — Triage' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
