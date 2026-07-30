@@ -22,10 +22,11 @@ export const MEDIA_BUCKET = 'observation-media';
 // Columns the client reads (never the raw PostGIS geom; we read the generated
 // longitude/latitude columns instead).
 export const RECORD_COLUMNS =
-  'id, created_at, source_url, media_url, region, longitude, latitude, ' +
+  'id, site_id, created_at, source_url, media_url, region, longitude, latitude, ' +
   'damage_score, code_era, failure_mechanism, observed_retrofits, ai_confidence, ' +
   'ai_model, status, engineer_notes, reviewed_by, reviewed_at, ' +
-  'source_type, observation_type, location_precision, submitted_by, phash, merged_into';
+  'source_type, observation_type, location_precision, submitted_by, phash, merged_into, ' +
+  'building_name, address, location_confidence, streetview_url, building_type, primary_material, height_class';
 
 // event_meta is a single row (id = 1). Map between snake_case columns and the
 // camelCase keys the report template expects.

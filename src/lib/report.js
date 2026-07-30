@@ -125,10 +125,10 @@ function categoryNarrative(records) {
 
 function inventoryTable(records) {
   let out =
-    '| ID | Source | Type | Region | Score | Mechanism | Reviewer |\n' +
+    '| Site | Source | Type | Region | Score | Mechanism | Reviewer |\n' +
     '| --- | --- | --- | --- | :---: | --- | --- |\n';
   for (const r of records) {
-    out += `| ${String(r.id).slice(0, 8)} | ${SOURCE_LABEL[r.source_type] ?? r.source_type ?? '-'} `;
+    out += `| ${r.site_id ?? '-'} | ${SOURCE_LABEL[r.source_type] ?? r.source_type ?? '-'} `;
     out += `| ${OBSERVATION_LABEL[r.observation_type] ?? r.observation_type ?? '-'} `;
     out += `| ${r.region ?? '-'} | D${r.damage_score ?? '-'} | ${r.failure_mechanism ?? '-'} | ${r.reviewed_by ?? '-'} |\n`;
   }
@@ -178,14 +178,14 @@ export function buildReport(records, meta) {
   return `# Learning from Earthquakes - Significant Event Report
 ## ${meta.eventName} - Version ${meta.version}
 
-**Report issued:** ${now}
-**Magnitude (Mw):** ${meta.magnitude}
-**Depth (km):** ${meta.depth}
-**Location (geographical):** ${meta.locationName}
-**Location (lat/long):** ${meta.locationLatLong}
-**Time and date:** ${meta.eventDatetime}
-**Faulting mechanism:** ${meta.faulting}
-**Maximum Modified Mercalli Intensity:** ${meta.maxMMI}
+**Report issued:** ${now}  
+**Magnitude (Mw):** ${meta.magnitude}  
+**Depth (km):** ${meta.depth}  
+**Location (geographical):** ${meta.locationName}  
+**Location (lat/long):** ${meta.locationLatLong}  
+**Time and date:** ${meta.eventDatetime}  
+**Faulting mechanism:** ${meta.faulting}  
+**Maximum Modified Mercalli Intensity:** ${meta.maxMMI}  
 **Tsunami alert issued:** ${meta.tsunami}
 
 ![Figure 1 - epicentre location and shaking intensity](media/figure1_shakemap.png)

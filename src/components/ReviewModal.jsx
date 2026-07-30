@@ -6,12 +6,11 @@ import {
 } from '../lib/constants.js';
 
 /**
- * Review a single record: shows imagery, provenance (where the data came from),
- * and the AI tags; lets the engineer override classification, correct the
- * coordinates (useful for coarse geocoded items), then Approve or Reject. Both
- * set status and remove the pin from the queue.
+ * Review a single queue record: imagery, provenance, AI tags and manual
+ * attributes; lets the engineer override classification and coordinates, then
+ * Save draft (keep in queue), Reject (with confirmation), or Approve.
  */
-export default function ReviewModal({ record, reviewer, onClose, onResolved }) {
+export default function ReviewModal({ record, reviewer, onClose, onResolved, onSavedDraft }) {
   const [obsType, setObsType] = useState(record.observation_type ?? 'building');
   const [damageScore, setDamageScore] = useState(record.damage_score ?? 0);
   const [codeEra, setCodeEra] = useState(record.code_era ?? 'unknown');
@@ -22,6 +21,7 @@ export default function ReviewModal({ record, reviewer, onClose, onResolved }) {
   const [lng, setLng] = useState(record.longitude ?? '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [confirmReject, setConfirmReject] = useState(false);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && onClose();
@@ -30,78 +30,104 @@ export default function ReviewModal({ record, reviewer, onClose, onResolved }) {
   }, [onClose]);
 
   const isBuilding = obsType === 'building';
-  const movedLocation =
-    Number(lat) !== record.latitude || Number(lng) !== record.longitude;
+  const movedLocation = Number(lat) !== record.latitude || Number(lng) !== record.longitude;
+
+  function edits() {
+    return {
+      observation_type: obsType,
+      damage_score: Number(damageScore),
+      code_era: isBuilding ? codeEra : null,
+      failure_mechanism: mechanism || null,
+      observed_retrofits: isBuilding ? retrofit : null,
+      engineer_notes: notes || null,
+    };
+  }
+
+  async function persistLocationIfMoved() {
+    if (movedLocation && lat !== '' && lng !== '') {
+      const geo = await supabase.rpc('move_observation', { p_id: record.id, p_lng: Number(lng), p_lat: Number(lat) });
+      if (geo.error && !/function/i.test(geo.error.message)) throw geo.error;
+    }
+  }
 
   async function merge(targetId) {
-    setBusy(true);
-    setErr('');
-    const { error } = await supabase.rpc('merge_records', {
-      p_source: record.id, p_target: targetId, p_reviewer: reviewer,
-    });
+    setBusy(true); setErr('');
+    const { error } = await supabase.rpc('merge_records', { p_source: record.id, p_target: targetId, p_reviewer: reviewer });
     setBusy(false);
     if (error) return setErr(`Merge failed: ${error.message}`);
     onResolved(record.id, 'Merged');
   }
 
-  async function resolve(newStatus) {
-    setBusy(true);
-    setErr('');
-    // If the verifier corrected the coordinates, update geometry too.
-    if (movedLocation && lat !== '' && lng !== '') {
-      const geo = await supabase.rpc('move_observation', {
-        p_id: record.id, p_lng: Number(lng), p_lat: Number(lat),
+  async function saveDraft() {
+    setBusy(true); setErr('');
+    try {
+      await persistLocationIfMoved();
+      const patch = { ...edits(), location_precision: movedLocation ? 'exact' : record.location_precision };
+      const { error } = await supabase.from('triage_records').update(patch).eq('id', record.id);
+      if (error) throw error;
+      setBusy(false);
+      onSavedDraft?.(record.id, {
+        ...patch,
+        ...(movedLocation ? { latitude: Number(lat), longitude: Number(lng) } : {}),
       });
-      // move_observation is optional; ignore "function not found" gracefully
-      if (geo.error && !/function/i.test(geo.error.message)) {
-        setBusy(false);
-        return setErr(`Location update failed: ${geo.error.message}`);
-      }
+      onClose();
+    } catch (ex) {
+      setBusy(false);
+      setErr(`Save failed: ${ex.message ?? ex}`);
     }
-    const { error } = await supabase
-      .from('triage_records')
-      .update({
-        observation_type: obsType,
-        damage_score: Number(damageScore),
-        code_era: isBuilding ? codeEra : null,
-        failure_mechanism: mechanism || null,
-        observed_retrofits: isBuilding ? retrofit : null,
-        engineer_notes: notes || null,
-        location_precision: movedLocation ? 'exact' : record.location_precision,
-        status: newStatus,
-        reviewed_by: reviewer,
-        reviewed_at: new Date().toISOString(),
-      })
-      .eq('id', record.id);
-    setBusy(false);
-    if (error) return setErr(`Update failed: ${error.message}`);
-    onResolved(record.id, newStatus);
+  }
+
+  async function resolve(newStatus) {
+    setBusy(true); setErr('');
+    try {
+      await persistLocationIfMoved();
+      const { error } = await supabase
+        .from('triage_records')
+        .update({
+          ...edits(),
+          location_precision: movedLocation ? 'exact' : record.location_precision,
+          status: newStatus,
+          reviewed_by: reviewer,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', record.id);
+      if (error) throw error;
+      setBusy(false);
+      onResolved(record.id, newStatus);
+    } catch (ex) {
+      setBusy(false);
+      setErr(`Update failed: ${ex.message ?? ex}`);
+    }
   }
 
   const aiColor = DAMAGE_COLOR[record.damage_score] ?? '#9e9e9e';
   const srcColor = SOURCE_COLOR[record.source_type] ?? '#9e9e9e';
 
+  const attrs = [
+    ['Building', record.building_name],
+    ['Address', record.address],
+    ['Type', record.building_type],
+    ['Material', record.primary_material],
+    ['Height', record.height_class],
+    ['Location confidence', record.location_confidence],
+  ].filter(([, v]) => v);
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="head">
-          <h2>{record.region ?? 'Unspecified region'}</h2>
+          <h2>{record.site_id != null ? `#${record.site_id} · ` : ''}{record.region ?? 'Unspecified region'}</h2>
           <button className="x" onClick={onClose} aria-label="Close">×</button>
         </div>
 
         {record._dupes?.length > 0 && (
           <div className="dup-banner">
             <b>Possible match to {record._dupes.length} triaged site(s).</b>{' '}
-            Merging adds this photo and source to the existing site instead of
-            creating a second dot for the same place.
+            Merging adds this photo and source to the existing site instead of creating a second dot.
             {record._dupes.slice(0, 3).map((d) => (
               <div key={d.id} className="dup-row">
-                <span>
-                  {d.region ?? 'site'} · D{d.damage_score ?? '-'} · {d._reasons.join(', ')}
-                </span>
-                <button className="mini" onClick={() => merge(d.id)} disabled={busy}>
-                  Merge into this
-                </button>
+                <span>{d.region ?? 'site'} · D{d.damage_score ?? '-'} · {d._reasons.join(', ')}</span>
+                <button className="mini" onClick={() => merge(d.id)} disabled={busy}>Merge into this</button>
               </div>
             ))}
           </div>
@@ -113,9 +139,7 @@ export default function ReviewModal({ record, reviewer, onClose, onResolved }) {
               {SOURCE_LABEL[record.source_type] ?? 'Other'}
             </span>
             <span className="obs-badge">{OBSERVATION_LABEL[record.observation_type] ?? 'Building'}</span>
-            {record.location_precision === 'approximate' && (
-              <span className="approx-badge">approx. location</span>
-            )}
+            {record.location_precision === 'approximate' && <span className="approx-badge">approx. location</span>}
 
             {record.media_url ? (
               <a href={record.source_url ?? record.media_url} target="_blank" rel="noreferrer">
@@ -125,19 +149,31 @@ export default function ReviewModal({ record, reviewer, onClose, onResolved }) {
               <p className="muted">No media.</p>
             )}
 
+            {record.streetview_url && (
+              <p className="kv">
+                <b>Street View:</b>{' '}
+                <a href={record.streetview_url} target="_blank" rel="noreferrer">screenshot</a>
+              </p>
+            )}
+
+            {attrs.length > 0 && (
+              <div className="attr-block">
+                {attrs.map(([k, v]) => <p key={k} className="kv"><b>{k}:</b> {v}</p>)}
+              </div>
+            )}
+
             <p className="kv">
               <b>AI damage:</b>{' '}
-              <span className="ai-badge" style={{ background: aiColor }}>D{record.damage_score ?? '-'}</span>{' '}
+              <span className="ai-badge" style={{ background: aiColor }}>
+                {DAMAGE_LABEL[record.damage_score]?.split(' - ')[0] ?? '-'}
+              </span>{' '}
               {record.ai_confidence != null && `(${Math.round(record.ai_confidence * 100)}%)`}
             </p>
-            <p className="kv"><b>AI code era:</b> {record.code_era ?? '-'}</p>
             <p className="kv"><b>AI mechanism:</b> {record.failure_mechanism ?? '-'}</p>
-            <p className="kv"><b>AI retrofits:</b> {record.observed_retrofits ?? '-'}</p>
             <p className="kv"><b>Model:</b> {record.ai_model ?? '-'}</p>
             {record.submitted_by && <p className="kv"><b>Submitted by:</b> {record.submitted_by}</p>}
             {record.source_url && (
-              <p className="kv"><b>Source:</b>{' '}
-                <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>
+              <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>
             )}
           </div>
 
@@ -195,14 +231,26 @@ export default function ReviewModal({ record, reviewer, onClose, onResolved }) {
 
         {err && <p className="status-line err">{err}</p>}
 
-        <div className="foot">
-          <button className="btn secondary" onClick={onClose} disabled={busy}>Cancel</button>
-          <span className="grow" />
-          <button className="btn-reject" onClick={() => resolve('Rejected')} disabled={busy}>Reject</button>
-          <button className="btn-approve" onClick={() => resolve('Approved')} disabled={busy}>
-            {busy ? 'Saving...' : 'Approve'}
-          </button>
-        </div>
+        {confirmReject ? (
+          <div className="foot confirm">
+            <span className="confirm-text">Reject this record? Rejected records are hard to recover.</span>
+            <span className="grow" />
+            <button className="btn secondary" onClick={() => setConfirmReject(false)} disabled={busy}>Keep it</button>
+            <button className="btn-reject" onClick={() => resolve('Rejected')} disabled={busy}>
+              {busy ? 'Rejecting...' : 'Yes, reject'}
+            </button>
+          </div>
+        ) : (
+          <div className="foot">
+            <button className="btn secondary" onClick={onClose} disabled={busy}>Cancel</button>
+            <span className="grow" />
+            <button className="btn secondary" onClick={saveDraft} disabled={busy}>Save draft</button>
+            <button className="btn-reject" onClick={() => setConfirmReject(true)} disabled={busy}>Reject</button>
+            <button className="btn-approve" onClick={() => resolve('Approved')} disabled={busy}>
+              {busy ? 'Saving...' : 'Approve'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
