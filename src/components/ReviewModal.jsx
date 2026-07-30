@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import {
-  DAMAGE_SCORES, DAMAGE_LABEL, DAMAGE_COLOR, CODE_ERAS, RETROFIT_OPTIONS,
+  CLASSIFICATION_SCORES, DAMAGE_LABEL, DAMAGE_COLOR, CODE_ERAS, RETROFIT_OPTIONS,
   OBSERVATION_TYPES, OBSERVATION_LABEL, SOURCE_LABEL, SOURCE_COLOR,
 } from '../lib/constants.js';
 
@@ -149,9 +149,9 @@ export default function ReviewModal({ record, reviewer, onClose, onResolved }) {
               </select>
             </div>
             <div className="field">
-              <label>Damage / severity (override)</label>
+              <label>Damage / classification (override)</label>
               <select value={damageScore} onChange={(e) => setDamageScore(e.target.value)}>
-                {DAMAGE_SCORES.map((s) => <option key={s} value={s}>{DAMAGE_LABEL[s]}</option>)}
+                {CLASSIFICATION_SCORES.map((s) => <option key={s} value={s}>{DAMAGE_LABEL[s]}</option>)}
               </select>
             </div>
             {isBuilding && (

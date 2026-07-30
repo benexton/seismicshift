@@ -18,6 +18,9 @@ import {
 // Re-export so existing imports from './report.js' keep working.
 export {
   DAMAGE_SCORES,
+  CLASSIFICATION_SCORES,
+  GREAT_PERFORMANCE,
+  isDamageScore,
   DAMAGE_LABEL,
   DAMAGE_COLOR,
   CODE_ERAS,
@@ -77,7 +80,7 @@ function damageScoreTable(records) {
 
 function regionNarrative(name, records) {
   const n = records.length;
-  const heavy = records.filter((r) => r.damage_score >= 3).length;
+  const heavy = records.filter((r) => r.damage_score === 3 || r.damage_score === 4).length;
   const heavyPct = n ? Math.round((heavy / n) * 100) : 0;
   const eras = tally(records.map((r) => r.code_era));
   const mechs = tally(records.map((r) => r.failure_mechanism));
@@ -141,6 +144,7 @@ export function buildReport(records, meta) {
   const landslides = approved.filter((r) => r.observation_type === 'landslide');
   const lifelines = approved.filter((r) => r.observation_type === 'lifeline');
   const tsunami = approved.filter((r) => r.observation_type === 'tsunami');
+  const greatPerformers = approved.filter((r) => r.damage_score === 5);
 
   const byRegion = groupBy(buildings, (r) => r.region);
   const buildingRegionSections = [...byRegion.entries()]
@@ -148,7 +152,7 @@ export function buildReport(records, meta) {
     .map(([name, recs]) => regionNarrative(name, recs))
     .join('\n');
 
-  const totalHeavy = buildings.filter((r) => r.damage_score >= 3).length;
+  const totalHeavy = buildings.filter((r) => r.damage_score === 3 || r.damage_score === 4).length;
 
   const groundSection =
     geotech.length || landslides.length
@@ -162,6 +166,14 @@ export function buildReport(records, meta) {
     : `### Lifelines and Infrastructure\n\n_[Reviewer: no lifeline observations approved yet. Summarise impacts to roads, bridges, water, power, and telecommunications here.]_\n`;
 
   const tsunamiSection = tsunami.length ? `### Tsunami Effects\n\n${categoryNarrative(tsunami)}\n` : '';
+
+  const performanceSection = greatPerformers.length
+    ? `## Notable Good Performance\n\n${greatPerformers.length} structure(s) or asset(s) were noted for performing notably well. ` +
+      `This includes cases where modern design, base isolation, or retrofit measures appear to have limited damage. ` +
+      `Documenting good performance is as valuable as documenting failure.\n\n` +
+      mdCountTable('Type', tally(greatPerformers.map((r) => OBSERVATION_LABEL[r.observation_type] ?? r.observation_type))) +
+      `\n_[Reviewer: describe the design or retrofit features credited with the good performance.]_\n`
+    : '';
 
   return `# Learning from Earthquakes - Significant Event Report
 ## ${meta.eventName} - Version ${meta.version}
@@ -258,6 +270,7 @@ ${groundSection}
 
 ${lifelineSection}
 ${tsunamiSection}
+${performanceSection}
 ## Data Provenance and Acknowledgements
 
 Observations were sourced from crowdsourced media (Bluesky, news/RSS) and direct volunteer entry, triaged by an automated pipeline (perceptual-hash deduplication, multimodal LLM assessment, and geocoding of place names), then verified by named VERT volunteers. Per-record source links are retained in the underlying database.

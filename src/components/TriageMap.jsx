@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase, RECORD_COLUMNS } from '../lib/supabase.js';
 import {
-  DAMAGE_COLOR, DAMAGE_LABEL, DAMAGE_SCORES,
+  DAMAGE_COLOR, DAMAGE_LABEL, CLASSIFICATION_SCORES,
   SOURCE_COLOR, SOURCE_LABEL, OBSERVATION_LABEL,
 } from '../lib/constants.js';
 import { findDuplicates } from '../lib/dedupe.js';
+import ClusterGroup from './ClusterGroup.jsx';
 import ReviewModal from './ReviewModal.jsx';
 
-// GSI (Geospatial Information Authority of Japan) raster basemaps. Attribution
-// to the tiles is required by GSI's terms of use.
 const BASEMAPS = {
   photo: { label: 'GSI Aerial (seamless photo)', url: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg' },
   pale:  { label: 'GSI Pale', url: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png' },
@@ -35,10 +34,10 @@ function FitToData({ records }) {
 
 /**
  * Triage map. Loads 'Unverified' records (the queue) plus 'Approved' sites (for
- * duplicate matching). Each queue dot is damage-coloured with a provenance
- * ring; records that look like duplicates of an existing site get a dashed red
- * halo and can be merged from the review panel. Approving/rejecting/merging
- * clears the dot.
+ * duplicate matching). Dots are classification-coloured (D0-D4 damage, or the
+ * distinct great-performance colour) with a provenance ring; likely duplicates
+ * get a dashed red halo. Records sharing a coordinate cluster into a count
+ * badge that fans out on click. Approving/rejecting/merging clears the dot.
  */
 export default function TriageMap({ reviewer }) {
   const [queue, setQueue] = useState([]);
@@ -61,7 +60,6 @@ export default function TriageMap({ reviewer }) {
   }
   useEffect(() => { load(); }, []);
 
-  // Annotate each queue record with any duplicate candidates among approved.
   const records = useMemo(
     () => queue.map((r) => ({ ...r, _dupes: findDuplicates(r, approved) })),
     [queue, approved]
@@ -72,6 +70,31 @@ export default function TriageMap({ reviewer }) {
     setSelected(null);
   }
 
+  function renderMarker(r, pos, key) {
+    return (
+      <Fragment key={key}>
+        {r._dupes?.length > 0 && (
+          <CircleMarker center={pos} radius={15}
+            pathOptions={{ color: '#e11d48', weight: 2, dashArray: '4 4', fill: false }}
+            interactive={false} />
+        )}
+        <CircleMarker center={pos} radius={9}
+          pathOptions={{
+            color: SOURCE_COLOR[r.source_type] ?? '#ffffff',
+            weight: 3,
+            fillColor: DAMAGE_COLOR[r.damage_score] ?? '#9e9e9e',
+            fillOpacity: 0.9,
+          }}
+          eventHandlers={{ click: () => setSelected(r) }}>
+          <Tooltip direction="top">
+            {DAMAGE_LABEL[r.damage_score]?.split(' - ')[0] ?? '?'} · {OBSERVATION_LABEL[r.observation_type] ?? 'building'} · {SOURCE_LABEL[r.source_type] ?? 'other'}
+            {r._dupes?.length > 0 && ' · possible duplicate'}
+          </Tooltip>
+        </CircleMarker>
+      </Fragment>
+    );
+  }
+
   const base = BASEMAPS[basemap];
   const dupCount = records.filter((r) => r._dupes.length).length;
 
@@ -80,34 +103,7 @@ export default function TriageMap({ reviewer }) {
       <MapContainer center={CENTER} zoom={ZOOM} className="triage-map" scrollWheelZoom>
         <TileLayer url={base.url} attribution={GSI_ATTRIBUTION} maxZoom={18} />
         <FitToData records={records} />
-        {records.map((r) => (
-          <span key={r.id}>
-            {r._dupes.length > 0 && (
-              <CircleMarker
-                center={[r.latitude, r.longitude]}
-                radius={15}
-                pathOptions={{ color: '#e11d48', weight: 2, dashArray: '4 4', fill: false }}
-                interactive={false}
-              />
-            )}
-            <CircleMarker
-              center={[r.latitude, r.longitude]}
-              radius={9}
-              pathOptions={{
-                color: SOURCE_COLOR[r.source_type] ?? '#ffffff',
-                weight: 3,
-                fillColor: DAMAGE_COLOR[r.damage_score] ?? '#9e9e9e',
-                fillOpacity: 0.9,
-              }}
-              eventHandlers={{ click: () => setSelected(r) }}
-            >
-              <Tooltip direction="top">
-                D{r.damage_score ?? '-'} · {OBSERVATION_LABEL[r.observation_type] ?? 'building'} · {SOURCE_LABEL[r.source_type] ?? 'other'}
-                {r._dupes.length > 0 && ' · possible duplicate'}
-              </Tooltip>
-            </CircleMarker>
-          </span>
-        ))}
+        <ClusterGroup records={records} renderMarker={renderMarker} />
       </MapContainer>
 
       <div className="map-controls">
@@ -123,8 +119,8 @@ export default function TriageMap({ reviewer }) {
       </div>
 
       <div className="map-legend">
-        <div className="legend-title">Damage (fill)</div>
-        {DAMAGE_SCORES.map((s) => (
+        <div className="legend-title">Classification (fill)</div>
+        {CLASSIFICATION_SCORES.map((s) => (
           <div className="row" key={s}>
             <span className="dot" style={{ background: DAMAGE_COLOR[s] }} />
             {DAMAGE_LABEL[s]}
@@ -139,7 +135,7 @@ export default function TriageMap({ reviewer }) {
         ))}
         <div className="row" style={{ marginTop: 4 }}>
           <span className="dot ring" style={{ borderColor: '#e11d48', borderStyle: 'dashed' }} />
-          possible duplicate
+          Possible duplicate
         </div>
       </div>
 

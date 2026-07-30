@@ -3,9 +3,10 @@ import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-le
 import 'leaflet/dist/leaflet.css';
 import { supabase, RECORD_COLUMNS } from '../lib/supabase.js';
 import {
-  DAMAGE_COLOR, DAMAGE_LABEL, DAMAGE_SCORES,
+  DAMAGE_COLOR, DAMAGE_LABEL, CLASSIFICATION_SCORES,
   SOURCE_COLOR, SOURCE_LABEL, OBSERVATION_LABEL,
 } from '../lib/constants.js';
+import ClusterGroup from './ClusterGroup.jsx';
 import SiteDetailModal from './SiteDetailModal.jsx';
 
 const BASEMAPS = {
@@ -30,9 +31,9 @@ function FitToData({ records }) {
 }
 
 /**
- * Map of already-triaged (Approved) sites. This is the living record: click a
- * site to review it and add extra photos, sources, or notes. Same look as the
- * triage queue, but a different dataset and a view/add flow instead of approve.
+ * Map of already-triaged (Approved) sites. Click a site to review it and add
+ * extra photos, sources, or notes. Same clustering and classification colours
+ * as the triage queue.
  */
 export default function TriagedSites({ reviewer }) {
   const [records, setRecords] = useState([]);
@@ -54,6 +55,23 @@ export default function TriagedSites({ reviewer }) {
   }
   useEffect(() => { load(); }, []);
 
+  function renderMarker(r, pos, key) {
+    return (
+      <CircleMarker key={key} center={pos} radius={9}
+        pathOptions={{
+          color: SOURCE_COLOR[r.source_type] ?? '#ffffff',
+          weight: 3,
+          fillColor: DAMAGE_COLOR[r.damage_score] ?? '#9e9e9e',
+          fillOpacity: 0.9,
+        }}
+        eventHandlers={{ click: () => setSelected(r) }}>
+        <Tooltip direction="top">
+          {DAMAGE_LABEL[r.damage_score]?.split(' - ')[0] ?? '?'} · {OBSERVATION_LABEL[r.observation_type] ?? 'building'} · {SOURCE_LABEL[r.source_type] ?? 'other'}
+        </Tooltip>
+      </CircleMarker>
+    );
+  }
+
   const base = BASEMAPS[basemap];
 
   return (
@@ -61,24 +79,7 @@ export default function TriagedSites({ reviewer }) {
       <MapContainer center={CENTER} zoom={ZOOM} className="triage-map" scrollWheelZoom>
         <TileLayer url={base.url} attribution={GSI_ATTRIBUTION} maxZoom={18} />
         <FitToData records={records} />
-        {records.map((r) => (
-          <CircleMarker
-            key={r.id}
-            center={[r.latitude, r.longitude]}
-            radius={9}
-            pathOptions={{
-              color: SOURCE_COLOR[r.source_type] ?? '#ffffff',
-              weight: 3,
-              fillColor: DAMAGE_COLOR[r.damage_score] ?? '#9e9e9e',
-              fillOpacity: 0.9,
-            }}
-            eventHandlers={{ click: () => setSelected(r) }}
-          >
-            <Tooltip direction="top">
-              D{r.damage_score ?? '-'} · {OBSERVATION_LABEL[r.observation_type] ?? 'building'} · {SOURCE_LABEL[r.source_type] ?? 'other'}
-            </Tooltip>
-          </CircleMarker>
-        ))}
+        <ClusterGroup records={records} renderMarker={renderMarker} />
       </MapContainer>
 
       <div className="map-controls">
@@ -93,8 +94,8 @@ export default function TriagedSites({ reviewer }) {
       </div>
 
       <div className="map-legend">
-        <div className="legend-title">Damage (fill)</div>
-        {DAMAGE_SCORES.map((s) => (
+        <div className="legend-title">Classification (fill)</div>
+        {CLASSIFICATION_SCORES.map((s) => (
           <div className="row" key={s}>
             <span className="dot" style={{ background: DAMAGE_COLOR[s] }} />
             {DAMAGE_LABEL[s]}
