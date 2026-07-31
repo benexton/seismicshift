@@ -50,8 +50,8 @@ export default function TriageMap({ reviewer, othersByRecord, setActiveRecord })
   async function load() {
     setLoading(true);
     const [q, a] = await Promise.all([
-      supabase.from('triage_records').select(RECORD_COLUMNS).eq('status', 'Unverified').order('created_at', { ascending: false }),
-      supabase.from('triage_records').select(RECORD_COLUMNS).eq('status', 'Approved'),
+      supabase.from('triage_records').select(RECORD_COLUMNS).eq('status', 'Unverified').is('merged_into', null).order('created_at', { ascending: false }),
+      supabase.from('triage_records').select(RECORD_COLUMNS).eq('status', 'Approved').is('merged_into', null),
     ]);
     setLoading(false);
     if (q.error) return setErr(q.error.message);

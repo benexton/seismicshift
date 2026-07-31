@@ -24,7 +24,7 @@ export default function ReportGenerator({ reviewer }) {
   useEffect(() => {
     (async () => {
       const [recs, ev] = await Promise.all([
-        supabase.from('triage_records').select(RECORD_COLUMNS).eq('status', 'Approved').order('region', { ascending: true }),
+        supabase.from('triage_records').select(RECORD_COLUMNS).eq('status', 'Approved').is('merged_into', null).order('region', { ascending: true }),
         supabase.from('event_meta').select('*').eq('id', EVENT_META_ID).maybeSingle(),
       ]);
       setLoading(false);

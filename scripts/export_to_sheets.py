@@ -91,11 +91,11 @@ def main() -> int:
     sh = gspread.authorize(creds).open_by_key(GSHEET_ID)
 
     print("Exporting manual observations...")
-    manual = fetch({"source_type": "eq.human", "order": "created_at.desc"})
+    manual = fetch({"source_type": "eq.human", "merged_into": "is.null", "order": "created_at.desc"})
     write_tab(sh, "Manual observations", manual)
 
     print("Exporting verified sites...")
-    verified = fetch({"status": "eq.Approved", "order": "created_at.desc"})
+    verified = fetch({"status": "eq.Approved", "merged_into": "is.null", "order": "created_at.desc"})
     write_tab(sh, "Verified sites", verified)
 
     print("Done.")
