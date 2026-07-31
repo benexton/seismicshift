@@ -39,7 +39,7 @@ function RecordLine({ prefix, rec }) {
       {rec.region ? ` · ${rec.region}` : ''} · {DAMAGE_LABEL[rec.damage_score]?.split(' - ')[0] ?? '-'}
       {' '}<span className="obs-badge">{statusLabel(rec.status)}</span>
       {' '}<span className="src-badge2">from {provenanceLabel(rec)}</span>
-      {rec.status === 'Approved' && rec.reviewed_by ? <span className="muted"> · approved by {rec.reviewed_by}</span> : null}
+      {rec.status === 'Approved' && rec.reviewed_by ? <span className="muted"> · verified by {rec.reviewed_by}</span> : null}
     </div>
   );
 }
@@ -141,6 +141,12 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
   const toggle = (k) => setKeep((m) => ({ ...m, [k]: !m[k] }));
 
   async function confirmMerge() {
+    if (source.status && source.status !== 'Unverified') {
+      return setErr('Only an unverified queue item can be merged into another record. A verified site cannot be merged away.');
+    }
+    if (target && target.status !== 'Unverified' && target.status !== 'Approved') {
+      return setErr('You can only merge into a queue item or a triaged site.');
+    }
     setBusy(true); setErr('');
     try {
       // 1. remove any un-ticked existing attachments on the target (needs v8)

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import {
-  DAMAGE_LABEL, DAMAGE_COLOR, OBSERVATION_LABEL, SOURCE_LABEL, SOURCE_COLOR, cap,
+  DAMAGE_LABEL, DAMAGE_COLOR, OBSERVATION_LABEL, SOURCE_LABEL, SOURCE_COLOR, provenanceLabel, cap,
 } from '../lib/constants.js';
 import RecordFields, { fieldsPatch } from './RecordFields.jsx';
 import AttachmentAdder from './AttachmentAdder.jsx';
