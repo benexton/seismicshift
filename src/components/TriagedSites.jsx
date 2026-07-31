@@ -48,6 +48,7 @@ export default function TriagedSites({ reviewer, othersByRecord, setActiveRecord
       .from('triage_records')
       .select(RECORD_COLUMNS)
       .eq('status', 'Approved')
+      .is('merged_into', null)
       .order('created_at', { ascending: false });
     setLoading(false);
     if (error) return setErr(error.message);
