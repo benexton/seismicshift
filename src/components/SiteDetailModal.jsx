@@ -5,6 +5,7 @@ import {
 } from '../lib/constants.js';
 import RecordFields, { fieldsPatch } from './RecordFields.jsx';
 import AttachmentAdder from './AttachmentAdder.jsx';
+import { coordError } from '../lib/coords.js';
 
 /**
  * Detail view for a triaged (Approved) site. Same editing as the review panel:
@@ -30,6 +31,8 @@ export default function SiteDetailModal({ record, reviewer, others = [], onClose
   const movedLocation = Number(lat) !== record.latitude || Number(lng) !== record.longitude;
 
   async function save() {
+    const cErr = coordError(lat, lng);
+    if (cErr) { setErr(cErr); return; }
     setBusy(true); setErr(''); setStatus(null);
     try {
       if (movedLocation && lat !== '' && lng !== '') {

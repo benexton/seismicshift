@@ -8,6 +8,7 @@ import {
   LOCATION_CONFIDENCE, BUILDING_TYPES, PRIMARY_MATERIALS, HEIGHT_CLASSES, cap,
 } from '../lib/constants.js';
 import { uploadImage } from '../lib/media.js';
+import { coordError, isFarFromEvent } from '../lib/coords.js';
 
 const GSI_PHOTO = 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg';
 const GSI_ATTRIB =
@@ -49,17 +50,21 @@ export default function ManualInput({ reviewer }) {
   const [streetview, setStreetview] = useState(null);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
+  const [farConfirm, setFarConfirm] = useState(false);
 
   const isBuilding = obsType === 'building';
 
-  function setLat(v) { const n = v === '' ? null : Number(v); setPos((p) => [n, p ? p[1] : 130.74]); }
-  function setLng(v) { const n = v === '' ? null : Number(v); setPos((p) => [p ? p[0] : 32.79, n]); }
+  function setLat(v) { setFarConfirm(false); const n = v === '' ? null : Number(v); setPos((p) => [n, p ? p[1] : 130.74]); }
+  function setLng(v) { setFarConfirm(false); const n = v === '' ? null : Number(v); setPos((p) => [p ? p[0] : 32.79, n]); }
   function addLink() { const v = linkDraft.trim(); if (v) { setLinks((l) => [...l, v]); setLinkDraft(''); } }
 
   async function submit(e) {
     e.preventDefault();
-    if (!pos || pos[0] == null || pos[1] == null || Number.isNaN(pos[0]) || Number.isNaN(pos[1])) {
-      return setStatus({ kind: 'err', msg: 'Set a location: click the map or enter both latitude and longitude.' });
+    const cErr = coordError(pos?.[0], pos?.[1]);
+    if (cErr) return setStatus({ kind: 'err', msg: cErr });
+    if (isFarFromEvent(pos[0], pos[1]) && !farConfirm) {
+      setFarConfirm(true);
+      return setStatus({ kind: 'err', msg: `This point looks far from Kumamoto (${Number(pos[0]).toFixed(4)}, ${Number(pos[1]).toFixed(4)}). If that is correct, click Submit again to confirm.` });
     }
     setBusy(true);
     setStatus(null);
@@ -102,7 +107,7 @@ export default function ManualInput({ reviewer }) {
 
       setStatus({ kind: 'ok', msg: 'Submitted to the triage queue for verification.' });
       setPos(null); setRegion(''); setAddress(''); setBuildingName(''); setMechanism('');
-      setNotes(''); setSourceUrl(''); setLinks([]); setImages([]); setStreetview(null);
+      setNotes(''); setSourceUrl(''); setLinks([]); setImages([]); setStreetview(null); setFarConfirm(false);
     } catch (ex) {
       setStatus({ kind: 'err', msg: `Submit failed: ${ex.message ?? ex}` });
     } finally {

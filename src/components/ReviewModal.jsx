@@ -6,6 +6,7 @@ import {
 import RecordFields, { fieldsPatch } from './RecordFields.jsx';
 import AttachmentAdder from './AttachmentAdder.jsx';
 import MergeModal from './MergeModal.jsx';
+import { coordError } from '../lib/coords.js';
 
 /**
  * Review a queue record: imagery, provenance, all editable attributes, and
@@ -31,6 +32,12 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
   const set = (key) => (e) => setV((m) => ({ ...m, [key]: e.target.value }));
   const movedLocation = Number(lat) !== record.latitude || Number(lng) !== record.longitude;
 
+  function coordGuard() {
+    const e = coordError(lat, lng);
+    if (e) { setErr(e); return false; }
+    return true;
+  }
+
   async function persistLocationIfMoved() {
     if (movedLocation && lat !== '' && lng !== '') {
       const geo = await supabase.rpc('move_observation', { p_id: record.id, p_lng: Number(lng), p_lat: Number(lat) });
@@ -47,6 +54,7 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
   }
 
   async function saveDraft() {
+    if (!coordGuard()) return;
     setBusy(true); setErr('');
     try {
       await persistLocationIfMoved();
@@ -60,6 +68,7 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
   }
 
   async function resolve(newStatus) {
+    if (newStatus === 'Approved' && !coordGuard()) return;
     setBusy(true); setErr('');
     try {
       await persistLocationIfMoved();
