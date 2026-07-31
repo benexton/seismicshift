@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase, RECORD_COLUMNS } from '../lib/supabase.js';
 import {
-  DAMAGE_LABEL, OBSERVATION_LABEL, HEIGHT_CLASSES, cap,
+  DAMAGE_LABEL, OBSERVATION_LABEL, HEIGHT_CLASSES, SOURCE_LABEL, cap,
 } from '../lib/constants.js';
 
-// Fields compared when reconciling two records.
+// Metadata fields reconciled one-or-the-other.
 const FIELDS = [
   ['Classification', 'damage_score'],
   ['Observation type', 'observation_type'],
@@ -31,20 +31,59 @@ function display(key, value) {
 const norm = (x) => (x === null || x === undefined ? '' : String(x));
 const statusLabel = (s) => (s === 'Approved' ? 'Triaged site' : s === 'Unverified' ? 'In triage queue' : s || '');
 
+// One-line provenance / status / approver summary for a record.
+function RecordLine({ prefix, rec }) {
+  return (
+    <div className="merge-summary">
+      <b>{prefix} Site #{rec.site_id}</b>
+      {rec.region ? ` · ${rec.region}` : ''} · {DAMAGE_LABEL[rec.damage_score]?.split(' - ')[0] ?? '-'}
+      {' '}<span className="obs-badge">{statusLabel(rec.status)}</span>
+      {' '}<span className="src-badge2">from {SOURCE_LABEL[rec.source_type] ?? 'Other'}</span>
+      {rec.status === 'Approved' && rec.reviewed_by ? <span className="muted"> · approved by {rec.reviewed_by}</span> : null}
+    </div>
+  );
+}
+
 /**
- * Merge the source record into a chosen target. The target can be another queue
- * item or an already-triaged site (any record, by Site number or from the
- * detected matches). Clashing fields are shown side by side to pick which value
- * the kept record keeps. The merge runs entirely client-side: the target gains
- * the source's photo, links, and attachments, and the source is marked with
- * merged_into so it leaves the queue but stays in the database (reversible).
+ * Merge the source record into a chosen target (another queue item or a triaged
+ * site). Metadata clashes are picked one-or-the-other; media, screenshots, and
+ * links are multi-keep (tick as many as you want). Runs client-side; the source
+ * is marked merged_into (hidden but preserved, reversible).
  */
 export default function MergeModal({ source, reviewer, candidates = [], onClose, onMerged }) {
   const [siteInput, setSiteInput] = useState('');
   const [target, setTarget] = useState(null);
   const [choices, setChoices] = useState({});
+  const [srcAtts, setSrcAtts] = useState([]);
+  const [keepExtra, setKeepExtra] = useState({});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+
+  // the source's own attachments (extra images/links/notes to optionally carry)
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('record_attachments')
+        .select('id, media_url, source_url, note').eq('record_id', source.id);
+      setSrcAtts(data ?? []);
+    })();
+  }, [source.id]);
+
+  const extras = useMemo(() => {
+    const list = [];
+    if (source.media_url) list.push({ key: 'm', type: 'image', url: source.media_url, label: 'Primary photo' });
+    if (source.streetview_url) list.push({ key: 'sv', type: 'streetview', url: source.streetview_url, label: 'Street View screenshot' });
+    if (source.source_url) list.push({ key: 'l', type: 'link', url: source.source_url, label: 'Primary source link' });
+    for (const a of srcAtts) {
+      if (a.media_url) list.push({ key: `a${a.id}m`, type: 'image', url: a.media_url, note: a.note, label: 'Attached image' });
+      if (a.source_url) list.push({ key: `a${a.id}l`, type: 'link', url: a.source_url, note: a.note, label: 'Attached link' });
+      if (!a.media_url && !a.source_url && a.note) list.push({ key: `a${a.id}n`, type: 'note', note: a.note, label: 'Attached note' });
+    }
+    return list;
+  }, [source, srcAtts]);
+
+  useEffect(() => {
+    setKeepExtra(Object.fromEntries(extras.map((e) => [e.key, true])));
+  }, [extras]);
 
   async function loadTarget(siteId) {
     setErr(''); setTarget(null);
@@ -67,7 +106,7 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
   async function confirmMerge() {
     setBusy(true); setErr('');
     try {
-      // 1. apply the chosen values to the target
+      // 1. metadata choices onto the target
       const patch = {};
       for (const [, key] of clashes) if (choices[key] === 'source') patch[key] = source[key];
       if ('damage_score' in patch) patch.damage_score = Number(patch.damage_score);
@@ -75,24 +114,20 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
         const up = await supabase.from('triage_records').update(patch).eq('id', target.id);
         if (up.error) throw up.error;
       }
-      // 2. fold the source's own photo / source link onto the target
-      if (source.media_url || source.source_url) {
-        const ins = await supabase.from('record_attachments').insert({
-          record_id: target.id, media_url: source.media_url ?? null, source_url: source.source_url ?? null,
-          note: `Merged from Site #${source.site_id}`, added_by: reviewer,
-        });
+      // 2. carry across the ticked media / screenshots / links as attachments
+      const rows = [];
+      for (const ex of extras) {
+        if (!keepExtra[ex.key]) continue;
+        const base = { record_id: target.id, added_by: reviewer, note: ex.note ?? null };
+        if (ex.type === 'link') rows.push({ ...base, source_url: ex.url, note: ex.note ?? `Merged from Site #${source.site_id}` });
+        else if (ex.type === 'note') rows.push({ ...base, note: ex.note });
+        else rows.push({ ...base, media_url: ex.url, note: ex.note ?? (ex.type === 'streetview' ? `Street View (merged from #${source.site_id})` : `Merged from Site #${source.site_id}`) });
+      }
+      if (rows.length) {
+        const ins = await supabase.from('record_attachments').insert(rows);
         if (ins.error) throw ins.error;
       }
-      // 3. copy the source's existing attachments onto the target
-      const { data: atts, error: aerr } = await supabase.from('record_attachments')
-        .select('media_url, source_url, note').eq('record_id', source.id);
-      if (aerr) throw aerr;
-      if (atts && atts.length) {
-        const copies = atts.map((a) => ({ record_id: target.id, media_url: a.media_url, source_url: a.source_url, note: a.note, added_by: reviewer }));
-        const cins = await supabase.from('record_attachments').insert(copies);
-        if (cins.error) throw cins.error;
-      }
-      // 4. mark the source merged (kept in the database, hidden from views)
+      // 3. mark the source merged (kept in the database, hidden from views)
       const mk = await supabase.from('triage_records')
         .update({ merged_into: target.id, reviewed_by: reviewer, reviewed_at: new Date().toISOString() })
         .eq('id', source.id);
@@ -105,6 +140,9 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
     }
   }
 
+  const toggleExtra = (k) => setKeepExtra((m) => ({ ...m, [k]: !m[k] }));
+  const keptCount = extras.filter((e) => keepExtra[e.key]).length;
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
@@ -114,15 +152,13 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
         </div>
 
         <div className="merge-body">
-          <div className="merge-summary">
-            <b>Merging from Site #{source.site_id}</b>
-            {source.region ? ` · ${source.region}` : ''} · {DAMAGE_LABEL[source.damage_score]?.split(' - ')[0] ?? '-'}
-          </div>
+          <RecordLine prefix="Merging from" rec={source} />
           <p className="muted small">
             Pick the record to <b>keep</b>. It can be another queue item or an
-            already-triaged site. Site #{source.site_id} folds into it (photo,
-            links, and attachments carry across), then leaves the queue. It stays
-            in the database and can be restored, so nothing is lost.
+            already-triaged site. Choose which values win below; media, screenshots,
+            and links are kept individually (tick as many as you like). The kept
+            record retains everything it already has. Site #{source.site_id} then
+            leaves the queue but stays in the database and can be restored.
           </p>
 
           <div className="merge-pick">
@@ -144,14 +180,10 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
           </div>
 
           {target && (
-            <div className="merge-compare">
-              <p className="kv">
-                <b>Keeping Site #{target.site_id}</b>{target.region ? ` · ${target.region}` : ''}
-                {' '}<span className="obs-badge">{statusLabel(target.status)}</span>
-              </p>
-              {clashes.length === 0 ? (
-                <p className="muted small">No clashing fields. The photo, links, and attachments fold in on merge.</p>
-              ) : (
+            <>
+              <RecordLine prefix="Keeping" rec={target} />
+
+              {clashes.length > 0 && (
                 <table className="merge-table">
                   <thead>
                     <tr><th>Field</th><th>From #{source.site_id}</th><th>Keep #{target.site_id}</th></tr>
@@ -173,7 +205,28 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
                   </tbody>
                 </table>
               )}
-            </div>
+
+              {extras.length > 0 && (
+                <div className="merge-extras">
+                  <div className="ex-head">Media, screenshots and links to carry across from #{source.site_id} ({keptCount} of {extras.length})</div>
+                  {extras.map((ex) => (
+                    <label key={ex.key} className="ex-item">
+                      <input type="checkbox" checked={!!keepExtra[ex.key]} onChange={() => toggleExtra(ex.key)} />
+                      {(ex.type === 'image' || ex.type === 'streetview') && ex.url && (
+                        <img className="ex-thumb" src={ex.url} alt="" loading="lazy" />
+                      )}
+                      <span className="ex-label">
+                        <b>{ex.label}</b>
+                        {ex.type === 'link' && <> · <a href={ex.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{ex.url}</a></>}
+                        {ex.note && ex.type !== 'note' ? <span className="muted"> · {ex.note}</span> : null}
+                        {ex.type === 'note' && <span> · {ex.note}</span>}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              {extras.length === 0 && <p className="muted small">Site #{source.site_id} has no media or links to carry across.</p>}
+            </>
           )}
 
           {err && <p className="status-line err">{err}</p>}
