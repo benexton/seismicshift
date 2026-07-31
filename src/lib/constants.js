@@ -107,3 +107,10 @@ export const HEIGHT_CLASSES = [
 // Sentence-case a value for display (keeps stored values lowercase).
 export const cap = (s) =>
   s === null || s === undefined || s === '' ? s : String(s).charAt(0).toUpperCase() + String(s).slice(1);
+
+// Human-readable provenance including who entered a manual observation, e.g.
+// "Manual entry by Jane Smith", or just "Bluesky" / "News / RSS" for scraped.
+export function provenanceLabel(rec) {
+  const base = SOURCE_LABEL[rec?.source_type] ?? 'Other';
+  return rec?.source_type === 'human' && rec?.submitted_by ? `${base} by ${rec.submitted_by}` : base;
+}
