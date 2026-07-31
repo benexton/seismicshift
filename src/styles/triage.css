@@ -274,3 +274,13 @@ body {
 
 /* merge summary line */
 .merge-summary { background: #f4f6f8; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; margin-bottom: 8px; }
+
+/* merge: provenance badge + multi-keep media list */
+.src-badge2 { display: inline-block; background: #eef2ff; color: #3730a3; font-weight: 600; padding: 2px 8px; border-radius: 999px; font-size: 11px; }
+.merge-extras { margin-top: 12px; border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+.merge-extras .ex-head { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.ex-item { display: flex; align-items: center; gap: 8px; padding: 5px 4px; border-top: 1px solid #f0f0f0; cursor: pointer; font-size: 13px; }
+.ex-item:first-of-type { border-top: none; }
+.ex-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
+.ex-label { overflow: hidden; text-overflow: ellipsis; }
+.ex-label a { word-break: break-all; }
