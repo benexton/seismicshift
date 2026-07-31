@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, RECORD_COLUMNS } from '../lib/supabase.js';
 import {
-  DAMAGE_LABEL, OBSERVATION_LABEL, HEIGHT_CLASSES, SOURCE_LABEL, cap,
+  DAMAGE_LABEL, OBSERVATION_LABEL, HEIGHT_CLASSES, provenanceLabel, cap,
 } from '../lib/constants.js';
 import Zoomable from './Zoomable.jsx';
 
@@ -38,7 +38,7 @@ function RecordLine({ prefix, rec }) {
       <b>{prefix} Site #{rec.site_id}</b>
       {rec.region ? ` · ${rec.region}` : ''} · {DAMAGE_LABEL[rec.damage_score]?.split(' - ')[0] ?? '-'}
       {' '}<span className="obs-badge">{statusLabel(rec.status)}</span>
-      {' '}<span className="src-badge2">from {SOURCE_LABEL[rec.source_type] ?? 'Other'}</span>
+      {' '}<span className="src-badge2">from {provenanceLabel(rec)}</span>
       {rec.status === 'Approved' && rec.reviewed_by ? <span className="muted"> · approved by {rec.reviewed_by}</span> : null}
     </div>
   );
@@ -50,7 +50,7 @@ function ItemRow({ item, checked, onToggle }) {
     <label className="ex-item">
       <input type="checkbox" checked={checked} onChange={onToggle} />
       {(item.kind === 'image' || item.kind === 'streetview') && item.url && (
-        <span onClick={(e) => e.preventDefault()}><Zoomable className="ex-thumb" src={item.url} alt={item.label} /></span>
+        <Zoomable className="ex-thumb" src={item.url} alt={item.label} />
       )}
       <span className="ex-label">
         <b>{item.label}</b>

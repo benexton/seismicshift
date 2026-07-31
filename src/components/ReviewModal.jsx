@@ -155,7 +155,7 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
               <span className="ai-badge" style={{ background: aiColor }}>{DAMAGE_LABEL[record.damage_score]?.split(' - ')[0] ?? '-'}</span>{' '}
               {record.ai_confidence != null && `(${Math.round(record.ai_confidence * 100)}%)`} · {record.ai_model ?? '-'}
             </p>
-            {record.submitted_by && <p className="kv"><b>Submitted by:</b> {record.submitted_by}</p>}
+            <p className="kv"><b>Provenance:</b> {provenanceLabel(record)}</p>
             {record.source_url && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
 
             <AttachmentAdder recordId={record.id} reviewer={reviewer} />

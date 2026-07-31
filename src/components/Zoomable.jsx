@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 /**
- * An image that opens full-size in a lightbox overlay when clicked. Click the
- * overlay (or press Escape) to close. Used for photos and Street View
- * screenshots so reviewers can inspect detail.
+ * An image that opens full-size in a lightbox when clicked. The trigger click
+ * cancels default and stops propagation, so using it inside a <label> never
+ * toggles that label's checkbox, and the overlay renders in a portal on
+ * document.body so it is fully outside any surrounding label. Click the backdrop
+ * or press Escape to close.
  */
 export default function Zoomable({ src, alt = '', className }) {
   const [open, setOpen] = useState(false);
@@ -16,6 +19,7 @@ export default function Zoomable({ src, alt = '', className }) {
   }, [open]);
 
   if (!src) return null;
+
   return (
     <>
       <img
@@ -24,13 +28,15 @@ export default function Zoomable({ src, alt = '', className }) {
         alt={alt}
         loading="lazy"
         style={{ cursor: 'zoom-in' }}
-        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(true); }}
       />
-      {open && (
-        <div className="lightbox" onClick={(e) => { e.stopPropagation(); setOpen(false); }}>
-          <img src={src} alt={alt} />
-          <button className="lightbox-close" aria-label="Close" onClick={(e) => { e.stopPropagation(); setOpen(false); }}>×</button>
-        </div>
+      {open && createPortal(
+        <div className="lightbox" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false); }}>
+          <img src={src} alt={alt} onClick={(e) => e.stopPropagation()} />
+          <button className="lightbox-close" aria-label="Close"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false); }}>×</button>
+        </div>,
+        document.body,
       )}
     </>
   );

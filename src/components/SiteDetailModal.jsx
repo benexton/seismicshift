@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import {
-  DAMAGE_LABEL, DAMAGE_COLOR, SOURCE_LABEL, OBSERVATION_LABEL, cap,
+  DAMAGE_LABEL, DAMAGE_COLOR, SOURCE_LABEL, OBSERVATION_LABEL, provenanceLabel, cap,
 } from '../lib/constants.js';
 import RecordFields, { fieldsPatch } from './RecordFields.jsx';
 import AttachmentAdder from './AttachmentAdder.jsx';
@@ -76,6 +76,7 @@ export default function SiteDetailModal({ record, reviewer, others = [], onClose
             {record.streetview_url && (
               <p className="kv"><b>Street View:</b> <a href={record.streetview_url} target="_blank" rel="noreferrer">screenshot</a></p>
             )}
+            <p className="kv"><b>Provenance:</b> {provenanceLabel(record)}</p>
             <p className="kv"><b>Verified by:</b> {record.reviewed_by ?? '-'}</p>
             {record.source_url && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
 
