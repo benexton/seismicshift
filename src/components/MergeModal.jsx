@@ -3,6 +3,7 @@ import { supabase, RECORD_COLUMNS } from '../lib/supabase.js';
 import {
   DAMAGE_LABEL, OBSERVATION_LABEL, HEIGHT_CLASSES, SOURCE_LABEL, cap,
 } from '../lib/constants.js';
+import Zoomable from './Zoomable.jsx';
 
 // Metadata fields reconciled one-or-the-other.
 const FIELDS = [
@@ -31,7 +32,6 @@ function display(key, value) {
 const norm = (x) => (x === null || x === undefined ? '' : String(x));
 const statusLabel = (s) => (s === 'Approved' ? 'Triaged site' : s === 'Unverified' ? 'In triage queue' : s || '');
 
-// One-line provenance / status / approver summary for a record.
 function RecordLine({ prefix, rec }) {
   return (
     <div className="merge-summary">
@@ -44,22 +44,41 @@ function RecordLine({ prefix, rec }) {
   );
 }
 
+// One selectable media/link/note row.
+function ItemRow({ item, checked, onToggle }) {
+  return (
+    <label className="ex-item">
+      <input type="checkbox" checked={checked} onChange={onToggle} />
+      {(item.kind === 'image' || item.kind === 'streetview') && item.url && (
+        <span onClick={(e) => e.preventDefault()}><Zoomable className="ex-thumb" src={item.url} alt={item.label} /></span>
+      )}
+      <span className="ex-label">
+        <b>{item.label}</b>
+        {item.kind === 'link' && <> · <a href={item.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{item.url}</a></>}
+        {item.kind === 'note' && <> · {item.note}</>}
+        {item.note && item.kind !== 'note' ? <span className="muted"> · {item.note}</span> : null}
+      </span>
+    </label>
+  );
+}
+
 /**
- * Merge the source record into a chosen target (another queue item or a triaged
- * site). Metadata clashes are picked one-or-the-other; media, screenshots, and
- * links are multi-keep (tick as many as you want). Runs client-side; the source
- * is marked merged_into (hidden but preserved, reversible).
+ * Merge the source record into a chosen target (queue item or triaged site).
+ * Metadata clashes are one-or-the-other; media, screenshots, links, and notes
+ * are individually selectable on BOTH sides: tick source items to carry them
+ * across, un-tick target items to remove them from the kept record. Runs
+ * client-side; the source is marked merged_into (hidden but preserved).
  */
 export default function MergeModal({ source, reviewer, candidates = [], onClose, onMerged }) {
   const [siteInput, setSiteInput] = useState('');
   const [target, setTarget] = useState(null);
   const [choices, setChoices] = useState({});
   const [srcAtts, setSrcAtts] = useState([]);
-  const [keepExtra, setKeepExtra] = useState({});
+  const [tgtAtts, setTgtAtts] = useState([]);
+  const [keep, setKeep] = useState({});
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  // the source's own attachments (extra images/links/notes to optionally carry)
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('record_attachments')
@@ -68,25 +87,39 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
     })();
   }, [source.id]);
 
-  const extras = useMemo(() => {
-    const list = [];
-    if (source.media_url) list.push({ key: 'm', type: 'image', url: source.media_url, label: 'Primary photo' });
-    if (source.streetview_url) list.push({ key: 'sv', type: 'streetview', url: source.streetview_url, label: 'Street View screenshot' });
-    if (source.source_url) list.push({ key: 'l', type: 'link', url: source.source_url, label: 'Primary source link' });
+  const items = useMemo(() => {
+    const out = [];
+    const add = (owner, kind, o) => out.push({ owner, kind, ...o, key: `${owner}-${o.k}` });
+    if (source.media_url) add('source', 'image', { k: 'media', url: source.media_url, label: 'Primary photo' });
+    if (source.streetview_url) add('source', 'streetview', { k: 'sv', url: source.streetview_url, label: 'Street View screenshot' });
+    if (source.source_url) add('source', 'link', { k: 'link', url: source.source_url, label: 'Primary source link' });
+    if (source.engineer_notes) add('source', 'note', { k: 'notes', note: source.engineer_notes, label: 'Engineer notes' });
     for (const a of srcAtts) {
-      if (a.media_url) list.push({ key: `a${a.id}m`, type: 'image', url: a.media_url, note: a.note, label: 'Attached image' });
-      if (a.source_url) list.push({ key: `a${a.id}l`, type: 'link', url: a.source_url, note: a.note, label: 'Attached link' });
-      if (!a.media_url && !a.source_url && a.note) list.push({ key: `a${a.id}n`, type: 'note', note: a.note, label: 'Attached note' });
+      if (a.media_url) add('source', 'image', { k: `att${a.id}`, url: a.media_url, note: a.note, label: 'Attached image' });
+      else if (a.source_url) add('source', 'link', { k: `att${a.id}`, url: a.source_url, note: a.note, label: 'Attached link' });
+      else if (a.note) add('source', 'note', { k: `att${a.id}`, note: a.note, label: 'Attached note' });
     }
-    return list;
-  }, [source, srcAtts]);
+    if (target) {
+      if (target.media_url) add('target', 'image', { k: 'media', url: target.media_url, label: 'Primary photo', column: 'media_url' });
+      if (target.streetview_url) add('target', 'streetview', { k: 'sv', url: target.streetview_url, label: 'Street View screenshot', column: 'streetview_url' });
+      if (target.source_url) add('target', 'link', { k: 'link', url: target.source_url, label: 'Primary source link', column: 'source_url' });
+      if (target.engineer_notes) add('target', 'note', { k: 'notes', note: target.engineer_notes, label: 'Engineer notes', column: 'engineer_notes' });
+      for (const a of tgtAtts) {
+        if (a.media_url) add('target', 'image', { k: `att${a.id}`, url: a.media_url, note: a.note, label: 'Attached image', attachmentId: a.id });
+        else if (a.source_url) add('target', 'link', { k: `att${a.id}`, url: a.source_url, note: a.note, label: 'Attached link', attachmentId: a.id });
+        else if (a.note) add('target', 'note', { k: `att${a.id}`, note: a.note, label: 'Attached note', attachmentId: a.id });
+      }
+    }
+    return out;
+  }, [source, srcAtts, target, tgtAtts]);
 
-  useEffect(() => {
-    setKeepExtra(Object.fromEntries(extras.map((e) => [e.key, true])));
-  }, [extras]);
+  useEffect(() => { setKeep(Object.fromEntries(items.map((i) => [i.key, true]))); }, [items]);
+
+  const sourceItems = items.filter((i) => i.owner === 'source');
+  const targetItems = items.filter((i) => i.owner === 'target');
 
   async function loadTarget(siteId) {
-    setErr(''); setTarget(null);
+    setErr(''); setTarget(null); setTgtAtts([]);
     const n = Number(siteId);
     if (!n) return setErr('Enter a Site number to merge into.');
     const { data, error } = await supabase
@@ -96,38 +129,55 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
     if (!data) return setErr(`No active record with Site #${n}. It may not exist or may already have been merged.`);
     if (data.id === source.id) return setErr('That is the same record you are merging from.');
     setTarget(data);
+    const { data: atts } = await supabase.from('record_attachments')
+      .select('id, media_url, source_url, note').eq('record_id', data.id);
+    setTgtAtts(atts ?? []);
     const init = {};
     for (const [, key] of FIELDS) if (norm(source[key]) !== norm(data[key])) init[key] = 'target';
     setChoices(init);
   }
 
   const clashes = target ? FIELDS.filter(([, key]) => norm(source[key]) !== norm(target[key])) : [];
+  const toggle = (k) => setKeep((m) => ({ ...m, [k]: !m[k] }));
 
   async function confirmMerge() {
     setBusy(true); setErr('');
     try {
-      // 1. metadata choices onto the target
+      // 1. remove any un-ticked existing attachments on the target (needs v8)
+      const delIds = targetItems.filter((i) => i.attachmentId && !keep[i.key]).map((i) => i.attachmentId);
+      if (delIds.length) {
+        const del = await supabase.from('record_attachments').delete().in('id', delIds);
+        if (del.error) {
+          setBusy(false);
+          return setErr('Could not remove existing attachments on the kept record. Either re-tick them, or run migration_v8.sql to allow removing attachments. Nothing has been changed.');
+        }
+      }
+
+      // 2. patch the target: metadata choices + cleared (un-ticked) primary columns
       const patch = {};
       for (const [, key] of clashes) if (choices[key] === 'source') patch[key] = source[key];
       if ('damage_score' in patch) patch.damage_score = Number(patch.damage_score);
+      for (const it of targetItems) if (it.column && !keep[it.key]) patch[it.column] = null;
       if (Object.keys(patch).length) {
         const up = await supabase.from('triage_records').update(patch).eq('id', target.id);
         if (up.error) throw up.error;
       }
-      // 2. carry across the ticked media / screenshots / links as attachments
+
+      // 3. carry across the ticked source items as attachments on the target
       const rows = [];
-      for (const ex of extras) {
-        if (!keepExtra[ex.key]) continue;
-        const base = { record_id: target.id, added_by: reviewer, note: ex.note ?? null };
-        if (ex.type === 'link') rows.push({ ...base, source_url: ex.url, note: ex.note ?? `Merged from Site #${source.site_id}` });
-        else if (ex.type === 'note') rows.push({ ...base, note: ex.note });
-        else rows.push({ ...base, media_url: ex.url, note: ex.note ?? (ex.type === 'streetview' ? `Street View (merged from #${source.site_id})` : `Merged from Site #${source.site_id}`) });
+      for (const it of sourceItems) {
+        if (!keep[it.key]) continue;
+        const base = { record_id: target.id, added_by: reviewer };
+        if (it.kind === 'link') rows.push({ ...base, source_url: it.url, note: it.note ?? `Merged from Site #${source.site_id}` });
+        else if (it.kind === 'note') rows.push({ ...base, note: it.note });
+        else rows.push({ ...base, media_url: it.url, note: it.note ?? (it.kind === 'streetview' ? `Street View (merged from #${source.site_id})` : `Merged from Site #${source.site_id}`) });
       }
       if (rows.length) {
         const ins = await supabase.from('record_attachments').insert(rows);
         if (ins.error) throw ins.error;
       }
-      // 3. mark the source merged (kept in the database, hidden from views)
+
+      // 4. mark the source merged (hidden but preserved)
       const mk = await supabase.from('triage_records')
         .update({ merged_into: target.id, reviewed_by: reviewer, reviewed_at: new Date().toISOString() })
         .eq('id', source.id);
@@ -140,12 +190,9 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
     }
   }
 
-  const toggleExtra = (k) => setKeepExtra((m) => ({ ...m, [k]: !m[k] }));
-  const keptCount = extras.filter((e) => keepExtra[e.key]).length;
-
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal wide" onClick={(e) => e.stopPropagation()}>
         <div className="head">
           <h2>Merge Site #{source.site_id}</h2>
           <button className="x" onClick={onClose} aria-label="Close">×</button>
@@ -154,11 +201,11 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
         <div className="merge-body">
           <RecordLine prefix="Merging from" rec={source} />
           <p className="muted small">
-            Pick the record to <b>keep</b>. It can be another queue item or an
-            already-triaged site. Choose which values win below; media, screenshots,
-            and links are kept individually (tick as many as you like). The kept
-            record retains everything it already has. Site #{source.site_id} then
-            leaves the queue but stays in the database and can be restored.
+            Pick the record to <b>keep</b> (a queue item or a triaged site). Choose
+            which field values win below. Media, screenshots, links, and notes are
+            selectable on both sides: tick items from #{source.site_id} to carry them
+            across, un-tick items already on the kept record to remove them.
+            #{source.site_id} then leaves the queue but stays in the database.
           </p>
 
           <div className="merge-pick">
@@ -206,26 +253,18 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
                 </table>
               )}
 
-              {extras.length > 0 && (
-                <div className="merge-extras">
-                  <div className="ex-head">Media, screenshots and links to carry across from #{source.site_id} ({keptCount} of {extras.length})</div>
-                  {extras.map((ex) => (
-                    <label key={ex.key} className="ex-item">
-                      <input type="checkbox" checked={!!keepExtra[ex.key]} onChange={() => toggleExtra(ex.key)} />
-                      {(ex.type === 'image' || ex.type === 'streetview') && ex.url && (
-                        <img className="ex-thumb" src={ex.url} alt="" loading="lazy" />
-                      )}
-                      <span className="ex-label">
-                        <b>{ex.label}</b>
-                        {ex.type === 'link' && <> · <a href={ex.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{ex.url}</a></>}
-                        {ex.note && ex.type !== 'note' ? <span className="muted"> · {ex.note}</span> : null}
-                        {ex.type === 'note' && <span> · {ex.note}</span>}
-                      </span>
-                    </label>
-                  ))}
+              <div className="merge-media">
+                <div className="merge-col">
+                  <div className="ex-head">Carry across from #{source.site_id}</div>
+                  {sourceItems.length === 0 ? <p className="muted small">Nothing to carry across.</p>
+                    : sourceItems.map((it) => <ItemRow key={it.key} item={it} checked={!!keep[it.key]} onToggle={() => toggle(it.key)} />)}
                 </div>
-              )}
-              {extras.length === 0 && <p className="muted small">Site #{source.site_id} has no media or links to carry across.</p>}
+                <div className="merge-col">
+                  <div className="ex-head">Already on #{target.site_id} (un-tick to remove)</div>
+                  {targetItems.length === 0 ? <p className="muted small">No media, links, or notes yet.</p>
+                    : targetItems.map((it) => <ItemRow key={it.key} item={it} checked={!!keep[it.key]} onToggle={() => toggle(it.key)} />)}
+                </div>
+              </div>
             </>
           )}
 

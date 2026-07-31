@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { uploadImage } from '../lib/media.js';
+import Zoomable from './Zoomable.jsx';
 
 /**
  * View a record's attachments and add more: multiple images at once, a source

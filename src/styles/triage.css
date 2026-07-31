@@ -284,3 +284,18 @@ body {
 .ex-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
 .ex-label { overflow: hidden; text-overflow: ellipsis; }
 .ex-label a { word-break: break-all; }
+
+/* ---- v10: wider merge modal, fixed columns, two-side media, lightbox ------- */
+.modal.wide { width: min(940px, 100%); }
+.merge-table { table-layout: fixed; width: 100%; }
+.merge-table th, .merge-table td { vertical-align: top; word-break: break-word; padding: 7px 10px; }
+.merge-table th:nth-child(1), .merge-table td:nth-child(1) { width: 20%; }
+.merge-table th:nth-child(2), .merge-table td:nth-child(2) { width: 40%; }
+.merge-table th:nth-child(3), .merge-table td:nth-child(3) { width: 40%; }
+.merge-media { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.merge-col { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+@media (max-width: 720px) { .merge-media { grid-template-columns: 1fr; } }
+
+.lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 3000; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+.lightbox img { max-width: 92vw; max-height: 92vh; border-radius: 6px; box-shadow: 0 8px 40px rgba(0,0,0,.5); }
+.lightbox-close { position: fixed; top: 16px; right: 22px; background: rgba(255,255,255,0.18); color: #fff; border: none; font-size: 28px; line-height: 1; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; }
