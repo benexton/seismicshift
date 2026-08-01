@@ -8,7 +8,7 @@ import { emptyFilter, filterActive } from '../lib/filter.js';
  * `filter` holds the state, `setFilter` updates it. Filtering happens in the
  * parent over that tab's own records only.
  */
-export default function FilterBar({ filter, setFilter, shown, total }) {
+export default function FilterBar({ filter, setFilter, shown, total, view, setView }) {
   const set = (key) => (e) => setFilter((f) => ({ ...f, [key]: e.target.value }));
   const active = filterActive(filter);
 
@@ -40,6 +40,12 @@ export default function FilterBar({ filter, setFilter, shown, total }) {
 
       {active && <button className="mini" onClick={() => setFilter(emptyFilter)}>Clear</button>}
       <span className="filter-count">{active ? `${shown} of ${total}` : `${total}`}</span>
+      {setView && (
+        <span className="view-toggle">
+          <button className={view === 'map' ? 'active' : ''} onClick={() => setView('map')}>Map</button>
+          <button className={view === 'table' ? 'active' : ''} onClick={() => setView('table')}>Table</button>
+        </span>
+      )}
     </div>
   );
 }

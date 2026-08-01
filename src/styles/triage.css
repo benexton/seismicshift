@@ -113,7 +113,9 @@ body {
 @media (max-width: 720px) { .manual-grid { grid-template-columns: 1fr; } }
 
 /* ---- Triage map ----------------------------------------------------------- */
-.triage-wrap { position: absolute; inset: 0; }
+.triage-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.map-area { position: relative; flex: 1 1 auto; min-height: 0; }
+.record-table-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; background: #fff; }
 .triage-map { height: 100%; width: 100%; }
 .map-controls {
   position: absolute; top: 12px; right: 12px; z-index: 1000;
@@ -301,7 +303,7 @@ body {
 .lightbox-close { position: fixed; top: 16px; right: 22px; background: rgba(255,255,255,0.18); color: #fff; border: none; font-size: 28px; line-height: 1; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; }
 
 /* ---- v11: filter bar, checkbox label, file chip, lightbox actions --------- */
-.filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; background: #fff; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; }
+.filter-bar { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; background: #fff; border: 1px solid var(--border); border-radius: 10px; margin: 8px; }
 .filter-bar select, .filter-bar input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
 .filter-q { flex: 1; min-width: 180px; }
 .filter-count { font-size: 12px; color: #667085; margin-left: auto; font-weight: 600; }
@@ -314,3 +316,16 @@ body {
 
 .lightbox-actions { position: fixed; top: 16px; right: 22px; display: flex; gap: 8px; align-items: center; z-index: 3001; }
 .lightbox-actions .lightbox-close { position: static; top: auto; right: auto; }
+
+/* ---- v12: table view + view toggle ---------------------------------------- */
+.view-toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.view-toggle button { border: none; background: #fff; padding: 6px 12px; font-size: 13px; cursor: pointer; }
+.view-toggle button.active { background: #1570ef; color: #fff; }
+
+.record-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.record-table th { position: sticky; top: 0; background: #334155; color: #fff; text-align: left; padding: 8px 10px; z-index: 1; white-space: nowrap; }
+.record-table td { padding: 7px 10px; border-bottom: 1px solid #eee; vertical-align: top; }
+.record-table tbody tr { cursor: pointer; }
+.record-table tbody tr:hover { background: #f5f8fc; }
+.record-table tr.in-use td:first-child { box-shadow: inset 3px 0 0 #7c3aed; }
+.dmg-chip { display: inline-block; color: #fff; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 6px; }

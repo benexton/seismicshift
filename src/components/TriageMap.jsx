@@ -9,6 +9,7 @@ import {
 import { findDuplicates } from '../lib/dedupe.js';
 import ClusterGroup from './ClusterGroup.jsx';
 import FilterBar from './FilterBar.jsx';
+import RecordTable from './RecordTable.jsx';
 import { emptyFilter, matchesFilter } from '../lib/filter.js';
 import ReviewModal from './ReviewModal.jsx';
 
@@ -46,6 +47,7 @@ export default function TriageMap({ reviewer, othersByRecord, setActiveRecord })
   const [approved, setApproved] = useState([]);
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(emptyFilter);
+  const [view, setView] = useState('map');
   const [basemap, setBasemap] = useState('photo');
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
@@ -120,7 +122,9 @@ export default function TriageMap({ reviewer, othersByRecord, setActiveRecord })
 
   return (
     <div className="triage-wrap">
-      <FilterBar filter={filter} setFilter={setFilter} shown={filtered.length} total={records.length} />
+      <FilterBar filter={filter} setFilter={setFilter} shown={filtered.length} total={records.length} view={view} setView={setView} />
+      {view === 'map' ? (
+      <div className="map-area">
       <MapContainer center={CENTER} zoom={ZOOM} className="triage-map" scrollWheelZoom>
         <TileLayer url={base.url} attribution={GSI_ATTRIBUTION} maxZoom={18} />
         <FitToData records={filtered} />
@@ -163,6 +167,10 @@ export default function TriageMap({ reviewer, othersByRecord, setActiveRecord })
           In use by someone
         </div>
       </div>
+      </div>
+      ) : (
+        <RecordTable records={filtered} mode="queue" othersByRecord={othersByRecord} onOpen={openRecord} />
+      )}
 
       {selected && (
         <ReviewModal
