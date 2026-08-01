@@ -7,7 +7,7 @@ import {
   OBSERVATION_TYPES, OBSERVATION_LABEL,
   LOCATION_CONFIDENCE, BUILDING_TYPES, PRIMARY_MATERIALS, HEIGHT_CLASSES, cap,
 } from '../lib/constants.js';
-import { uploadImage } from '../lib/media.js';
+import { uploadImage, uploadFile } from '../lib/media.js';
 import { coordError, isFarFromEvent } from '../lib/coords.js';
 
 const GSI_PHOTO = 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg';
@@ -47,7 +47,9 @@ export default function ManualInput({ reviewer }) {
   const [links, setLinks] = useState([]);
   const [linkDraft, setLinkDraft] = useState('');
   const [images, setImages] = useState([]);
+  const [docs, setDocs] = useState([]);
   const [streetview, setStreetview] = useState(null);
+  const [nonstructural, setNonstructural] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
   const [farConfirm, setFarConfirm] = useState(false);
@@ -96,18 +98,28 @@ export default function ManualInput({ reviewer }) {
       });
       if (error) throw error;
 
+      const fileRows = [];
+      for (const f of docs) {
+        const url = await uploadFile(f);
+        fileRows.push({ record_id: newId, file_url: url, file_name: f.name, added_by: reviewer });
+      }
       const attachRows = [
         ...imageUrls.slice(1).map((u) => ({ record_id: newId, media_url: u, added_by: reviewer })),
         ...links.map((l) => ({ record_id: newId, source_url: l, added_by: reviewer })),
+        ...fileRows,
       ];
       if (attachRows.length && newId) {
         const att = await supabase.from('record_attachments').insert(attachRows);
         if (att.error) throw att.error;
       }
+      if (nonstructural && newId) {
+        const ns = await supabase.from('triage_records').update({ nonstructural_damage: true }).eq('id', newId);
+        if (ns.error) throw ns.error;
+      }
 
       setStatus({ kind: 'ok', msg: 'Submitted to the triage queue for verification.' });
       setPos(null); setRegion(''); setAddress(''); setBuildingName(''); setMechanism('');
-      setNotes(''); setSourceUrl(''); setLinks([]); setImages([]); setStreetview(null); setFarConfirm(false);
+      setNotes(''); setSourceUrl(''); setLinks([]); setImages([]); setDocs([]); setStreetview(null); setNonstructural(false); setFarConfirm(false);
     } catch (ex) {
       setStatus({ kind: 'err', msg: `Submit failed: ${ex.message ?? ex}` });
     } finally {
@@ -240,6 +252,19 @@ export default function ManualInput({ reviewer }) {
               <label>Photos</label>
               <input type="file" accept="image/*" multiple onChange={(e) => setImages(Array.from(e.target.files ?? []))} />
               {images.length > 0 && <span className="muted small">{images.length} image(s) selected. The first is the primary photo.</span>}
+            </div>
+
+            <div className="field">
+              <label>Files (PDF, docs, etc.)</label>
+              <input type="file" multiple onChange={(e) => setDocs(Array.from(e.target.files ?? []))} />
+              {docs.length > 0 && <span className="muted small">{docs.length} file(s) selected.</span>}
+            </div>
+
+            <div className="field">
+              <label className="check-label">
+                <input type="checkbox" checked={nonstructural} onChange={(e) => setNonstructural(e.target.checked)} />
+                Damage to non-structural elements?
+              </label>
             </div>
 
             <div className="field">

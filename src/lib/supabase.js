@@ -26,7 +26,8 @@ export const RECORD_COLUMNS =
   'damage_score, code_era, failure_mechanism, observed_retrofits, ai_confidence, ' +
   'ai_model, status, engineer_notes, reviewed_by, reviewed_at, ' +
   'source_type, observation_type, location_precision, submitted_by, phash, merged_into, ' +
-  'building_name, address, location_confidence, streetview_url, building_type, primary_material, height_class';
+  'building_name, address, location_confidence, streetview_url, building_type, primary_material, height_class, ' +
+  'nonstructural_damage';
 
 // event_meta is a single row (id = 1). Map between snake_case columns and the
 // camelCase keys the report template expects.

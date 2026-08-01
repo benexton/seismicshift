@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { downloadFile } from '../lib/media.js';
 
 /**
  * An image that opens full-size in a lightbox when clicked. The trigger click
@@ -33,8 +34,11 @@ export default function Zoomable({ src, alt = '', className }) {
       {open && createPortal(
         <div className="lightbox" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false); }}>
           <img src={src} alt={alt} onClick={(e) => e.stopPropagation()} />
-          <button className="lightbox-close" aria-label="Close"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false); }}>×</button>
+          <div className="lightbox-actions" onClick={(e) => e.stopPropagation()}>
+            <button className="mini" onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadFile(src, alt); }}>Download</button>
+            <button className="lightbox-close" aria-label="Close"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(false); }}>×</button>
+          </div>
         </div>,
         document.body,
       )}

@@ -8,6 +8,8 @@ import {
 } from '../lib/constants.js';
 import { findDuplicates } from '../lib/dedupe.js';
 import ClusterGroup from './ClusterGroup.jsx';
+import FilterBar from './FilterBar.jsx';
+import { emptyFilter, matchesFilter } from '../lib/filter.js';
 import ReviewModal from './ReviewModal.jsx';
 
 const BASEMAPS = {
@@ -43,6 +45,7 @@ export default function TriageMap({ reviewer, othersByRecord, setActiveRecord })
   const [queue, setQueue] = useState([]);
   const [approved, setApproved] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [filter, setFilter] = useState(emptyFilter);
   const [basemap, setBasemap] = useState('photo');
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
@@ -64,6 +67,7 @@ export default function TriageMap({ reviewer, othersByRecord, setActiveRecord })
     () => queue.map((r) => ({ ...r, _dupes: findDuplicates(r, approved) })),
     [queue, approved]
   );
+  const filtered = useMemo(() => records.filter((r) => matchesFilter(r, filter)), [records, filter]);
 
   function openRecord(r) { setSelected(r); setActiveRecord?.(r.id); }
   function closeRecord() { setSelected(null); setActiveRecord?.(null); }
@@ -116,10 +120,11 @@ export default function TriageMap({ reviewer, othersByRecord, setActiveRecord })
 
   return (
     <div className="triage-wrap">
+      <FilterBar filter={filter} setFilter={setFilter} shown={filtered.length} total={records.length} />
       <MapContainer center={CENTER} zoom={ZOOM} className="triage-map" scrollWheelZoom>
         <TileLayer url={base.url} attribution={GSI_ATTRIBUTION} maxZoom={18} />
-        <FitToData records={records} />
-        <ClusterGroup records={records} renderMarker={renderMarker} />
+        <FitToData records={filtered} />
+        <ClusterGroup records={filtered} renderMarker={renderMarker} />
       </MapContainer>
 
       <div className="map-controls">
@@ -128,7 +133,7 @@ export default function TriageMap({ reviewer, othersByRecord, setActiveRecord })
           {Object.entries(BASEMAPS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
         <div className="count">
-          {loading ? 'Loading queue...' : `${records.length} unverified in queue`}
+          {loading ? 'Loading queue...' : `${filtered.length} shown`}
           {dupCount > 0 && <span style={{ color: '#e11d48' }}> · {dupCount} possible duplicate(s)</span>}
           {err && <span style={{ color: '#b42318' }}> · {err}</span>}
         </div>

@@ -5,6 +5,7 @@ import {
 } from '../lib/constants.js';
 import RecordFields, { fieldsPatch } from './RecordFields.jsx';
 import AttachmentAdder from './AttachmentAdder.jsx';
+import Zoomable from './Zoomable.jsx';
 import { coordError } from '../lib/coords.js';
 
 /**
@@ -68,11 +69,7 @@ export default function SiteDetailModal({ record, reviewer, others = [], onClose
             <span className="obs-badge">{OBSERVATION_LABEL[record.observation_type] ?? 'Building'}</span>{' '}
             <span className="obs-badge">{SOURCE_LABEL[record.source_type] ?? 'Other'}</span>
 
-            {record.media_url && (
-              <a href={record.source_url ?? record.media_url} target="_blank" rel="noreferrer">
-                <img className="media" src={record.media_url} alt="Primary" loading="lazy" />
-              </a>
-            )}
+            {record.media_url && <Zoomable className="media" src={record.media_url} alt="Primary" />}
             {record.streetview_url && (
               <p className="kv"><b>Street View:</b> <a href={record.streetview_url} target="_blank" rel="noreferrer">screenshot</a></p>
             )}

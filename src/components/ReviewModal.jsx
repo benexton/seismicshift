@@ -6,6 +6,7 @@ import {
 import RecordFields, { fieldsPatch } from './RecordFields.jsx';
 import AttachmentAdder from './AttachmentAdder.jsx';
 import MergeModal from './MergeModal.jsx';
+import Zoomable from './Zoomable.jsx';
 import { coordError } from '../lib/coords.js';
 
 /**
@@ -137,9 +138,7 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
             {record.location_precision === 'approximate' && <span className="approx-badge">approx. location</span>}
 
             {record.media_url ? (
-              <a href={record.source_url ?? record.media_url} target="_blank" rel="noreferrer">
-                <img className="media" src={record.media_url} alt="Source media" loading="lazy" />
-              </a>
+              <Zoomable className="media" src={record.media_url} alt="Source media" />
             ) : <p className="muted">No primary media.</p>}
 
             {record.streetview_url && (
