@@ -163,8 +163,11 @@ def main():
     raw = gemini(prompt).strip()
 
     import re
-    m = re.match(r"^```(?:json)?\s*([\s\S]*?)\s*```$", raw)
-    text = m.group(1).strip() if m else raw
+    fence = re.match(r"^```(?:json)?\s*([\s\S]*?)\s*```$", raw)
+    text = fence.group(1).strip() if fence else raw
+    brace = re.search(r"\{[\s\S]*\}", text)
+    if brace:
+        text = brace.group(0)
     try:
         obj = json.loads(text)
         stored = json.dumps(obj)

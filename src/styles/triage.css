@@ -370,3 +370,22 @@ body {
 .report-meta-form label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 2px; }
 .report-meta-form input { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; }
 .owner-box { border-color: #e6d3d8; background: #fdf7f8; }
+
+/* report author placeholders */
+.report-ph { background: #fcf3d6; border-left: 4px solid #e0a93a; color: #8a6d1b; font-style: italic; font-size: 13px; padding: 8px 12px; margin: 8px 0 14px; border-radius: 0 6px 6px 0; }
+
+/* ---- public read-only viewer -------------------------------------------- */
+.public-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.public-head { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; padding: 12px 18px; background: #fff; border-bottom: 3px solid #8A1538; }
+.public-logo { height: 46px; width: auto; }
+.public-head h1 { font-size: 18px; margin: 0; color: #8A1538; }
+.public-head p { margin: 3px 0 0; font-size: 13px; color: #555; }
+.beta-tag { background: #8A1538; color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; }
+.public-map-area { position: relative; flex: 1 1 auto; min-height: 0; }
+
+.disclaimer-backdrop { position: fixed; inset: 0; background: rgba(20,10,15,0.62); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.disclaimer { background: #fff; max-width: 560px; width: 100%; border-radius: 14px; padding: 24px 26px; box-shadow: 0 20px 60px rgba(0,0,0,.35); max-height: 90vh; overflow: auto; }
+.disclaimer-logo { height: 40px; margin-bottom: 8px; }
+.disclaimer h2 { color: #8A1538; margin: 0 0 10px; font-size: 20px; }
+.disclaimer-body p { font-size: 14px; line-height: 1.55; margin: 0 0 10px; color: #222; }
+.disclaimer-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; gap: 12px; }
