@@ -73,6 +73,8 @@ export default function ReportGenerator({ reviewer }) {
     return c;
   }, [buildings]);
   const totalDmg = Object.values(damageCounts).reduce((a, b) => a + b, 0);
+  const obsCounts = useMemo(() => { const c = {}; for (const r of approved) { const k = OBSERVATION_LABEL[r.observation_type] || 'Other'; c[k] = (c[k] || 0) + 1; } return c; }, [approved]);
+  const nsCount = useMemo(() => approved.filter((r) => r.nonstructural_damage).length, [approved]);
   const regions = useMemo(() => [...new Set(approved.map((r) => r.region).filter(Boolean))], [approved]);
   const parsed = useMemo(() => parseReportSections(conclusions), [conclusions]);
   const sec = parsed?.structured ? parsed.sections : null;
@@ -141,12 +143,9 @@ export default function ReportGenerator({ reviewer }) {
           </p>
         )}
 
-        {sec?.introduction && (
-          <>
-            <h2 className="report-h2">Introduction <span className="ai-tag">AI</span></h2>
-            <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.introduction) }} />
-          </>
-        )}
+        <h2 className="report-h2">Introduction {sec?.introduction && <span className="ai-tag">AI</span>}</h2>
+        {sec?.introduction && <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.introduction) }} />}
+        <div className="report-ph">AUTHOR TO ADD: event background, seismotectonic setting, and any regional or shakemap figures.</div>
 
         <h2 className="report-h2">Summary Statistics</h2>
         <p>{approved.length} verified observation(s), including {buildings.length} building observation(s).</p>
@@ -164,6 +163,14 @@ export default function ReportGenerator({ reviewer }) {
             <tr className="total"><td>Total</td><td>{totalDmg}</td><td>{totalDmg ? '100%' : '0%'}</td></tr>
           </tbody>
         </table>
+
+        <h3 className="report-h3">Observation types</h3>
+        <table className="report-table">
+          <thead><tr><th>Observation type</th><th>Count</th></tr></thead>
+          <tbody>{Object.entries(obsCounts).map(([k, v]) => <tr key={k}><td>{k}</td><td>{v}</td></tr>)}</tbody>
+        </table>
+        <p>Non-structural damage was flagged on {nsCount} of {approved.length} verified observation(s).</p>
+        <div className="report-ph">AUTHOR TO ADD: commentary on the overall damage distribution and any notable concentrations.</div>
 
         <h2 className="report-h2">Observations by Region</h2>
         {regions.length === 0 && <p className="muted">No verified observations yet.</p>}
@@ -183,20 +190,29 @@ export default function ReportGenerator({ reviewer }) {
                   <figcaption>Figure {figNo}. Site #{photo.site_id ?? '-'}, {region}: {DAMAGE_LABEL[photo.damage_score]?.split(' - ')[0] ?? ''}{photo.failure_mechanism ? ` - ${photo.failure_mechanism}` : ''}.</figcaption>
                 </figure>
               )}
+              <div className="report-ph">AUTHOR TO ADD: additional detail, photographs, and references for {region}.</div>
             </div>
           );
         })}
 
-        {sec?.mechanisms && (<><h2 className="report-h2">Observed Failure Mechanisms <span className="ai-tag">AI</span></h2><div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.mechanisms) }} /></>)}
-        {sec?.nonstructural && (<><h2 className="report-h2">Non-structural Damage <span className="ai-tag">AI</span></h2><div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.nonstructural) }} /></>)}
-        {sec?.goodPerformance && (<><h2 className="report-h2">Notable Good Performance <span className="ai-tag">AI</span></h2><div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.goodPerformance) }} /></>)}
+        <h2 className="report-h2">Observed Failure Mechanisms {sec?.mechanisms && <span className="ai-tag">AI</span>}</h2>
+        {sec?.mechanisms && <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.mechanisms) }} />}
+        <div className="report-ph">AUTHOR TO ADD: discussion of dominant failure mechanisms with supporting photographs and references.</div>
 
-        {plainConcl && (
-          <>
-            <h2 className="report-h2">Preliminary Conclusions <span className="ai-tag">AI</span></h2>
-            <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(plainConcl) }} />
-          </>
-        )}
+        <h2 className="report-h2">Non-structural Damage {sec?.nonstructural && <span className="ai-tag">AI</span>}</h2>
+        {sec?.nonstructural && <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.nonstructural) }} />}
+        <div className="report-ph">AUTHOR TO ADD: notes on non-structural damage (partitions, ceilings, facades, services).</div>
+
+        <h2 className="report-h2">Notable Good Performance {sec?.goodPerformance && <span className="ai-tag">AI</span>}</h2>
+        {sec?.goodPerformance && <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.goodPerformance) }} />}
+        <div className="report-ph">AUTHOR TO ADD: examples of good performance, retrofits, or modern code compliance.</div>
+
+        <h2 className="report-h2">Preliminary Conclusions {plainConcl && <span className="ai-tag">AI</span>}</h2>
+        {plainConcl && <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(plainConcl) }} />}
+        <div className="report-ph">AUTHOR TO ADD: confirm conclusions and add limitations, next steps, and acknowledgements.</div>
+
+        <h2 className="report-h2">References</h2>
+        <div className="report-ph">AUTHOR TO ADD: references, e.g. USGS event page, GeoNet, JMA, NZSEE guidance, cited literature.</div>
       </div>
 
     </div>

@@ -95,6 +95,21 @@ function caption(text) {
     children: [new TextRun({ text, italics: true, color: MAROON_LT, size: 18, font: BODY })] });
 }
 
+function placeholder(text) {
+  return new Paragraph({
+    spacing: { before: 40, after: 140 },
+    shading: { type: ShadingType.CLEAR, color: 'auto', fill: 'FCF3D6' },
+    border: { left: { style: BorderStyle.SINGLE, size: 18, color: 'E0A93A' } },
+    children: [new TextRun({ text: `AUTHOR TO ADD: ${text}`, italics: true, color: '8A6D1B', size: 20, font: BODY })],
+  });
+}
+
+function labelCounts(records, keyFn, fallback = 'Unspecified') {
+  const c = {};
+  for (const r of records) { const k = keyFn(r) || fallback; c[k] = (c[k] || 0) + 1; }
+  return c;
+}
+
 /**
  * Build the report as a Word (.docx) Blob, NZSEE-styled, with AI commentary
  * (structured JSON sections or a plain markdown block) woven through the
@@ -124,7 +139,9 @@ export async function buildReportDocxBlob(records, meta, conclusions) {
   if (meta.contributors) { children.push(new Paragraph({ spacing: { before: 160 }, children: [new TextRun({ text: 'Contributors: ', bold: true, size: 20, font: BODY }), new TextRun({ text: meta.contributors, size: 20, font: BODY })] })); }
   children.push(new Paragraph({ children: [new PageBreak()] }));
 
-  if (sec?.introduction) { children.push(heading(2, 'Introduction')); children.push(aiNote()); children.push(...mdParas(sec.introduction)); }
+  children.push(heading(2, 'Introduction'));
+  if (sec?.introduction) { children.push(aiNote()); children.push(...mdParas(sec.introduction)); }
+  children.push(placeholder('event background, seismotectonic setting, and any regional or shakemap figures.'));
 
   children.push(heading(2, 'Summary Statistics'));
   children.push(para(`${approved.length} verified observation(s), including ${buildings.length} building observation(s).`));
@@ -135,8 +152,15 @@ export async function buildReportDocxBlob(records, meta, conclusions) {
   children.push(countTable('Damage score', dmg));
   children.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
 
+  children.push(heading(3, 'Observation types'));
+  children.push(countTable('Observation type', labelCounts(approved, (r) => OBSERVATION_LABEL[r.observation_type], 'Other')));
+  const nsCount = approved.filter((r) => r.nonstructural_damage).length;
+  children.push(para(`Non-structural damage was flagged on ${nsCount} of ${approved.length} verified observation(s).`));
+  children.push(placeholder('commentary on the overall damage distribution and any notable concentrations or exposure.'));
+
   const regions = [...new Set(approved.map((r) => r.region).filter(Boolean))];
   children.push(heading(2, 'Observations by Region'));
+  children.push(countTable('Region', labelCounts(approved, (r) => r.region)));
   let figNo = 1;
   for (const region of regions) {
     const inRegion = approved.filter((r) => r.region === region);
@@ -154,14 +178,33 @@ export async function buildReportDocxBlob(records, meta, conclusions) {
         figNo += 1;
       }
     }
+    children.push(placeholder(`additional detail, representative photographs, and any references for ${region}.`));
   }
 
-  if (sec?.mechanisms) { children.push(heading(2, 'Observed Failure Mechanisms')); children.push(...mdParas(sec.mechanisms)); }
-  if (sec?.nonstructural) { children.push(heading(2, 'Non-structural Damage')); children.push(...mdParas(sec.nonstructural)); }
-  if (sec?.goodPerformance) { children.push(heading(2, 'Notable Good Performance')); children.push(...mdParas(sec.goodPerformance)); }
+  children.push(heading(2, 'Observed Failure Mechanisms'));
+  if (sec?.mechanisms) children.push(...mdParas(sec.mechanisms));
+  children.push(heading(3, 'Primary materials (buildings)'));
+  children.push(countTable('Primary material', labelCounts(buildings, (r) => r.primary_material)));
+  children.push(heading(3, 'Code era (buildings)'));
+  children.push(countTable('Code era', labelCounts(buildings, (r) => r.code_era)));
+  children.push(placeholder('discussion of dominant failure mechanisms with supporting photographs and references.'));
 
+  children.push(heading(2, 'Non-structural Damage'));
+  if (sec?.nonstructural) children.push(...mdParas(sec.nonstructural));
+  children.push(placeholder('notes on non-structural damage patterns (partitions, ceilings, facades, services).'));
+
+  children.push(heading(2, 'Notable Good Performance'));
+  if (sec?.goodPerformance) children.push(...mdParas(sec.goodPerformance));
+  children.push(placeholder('examples of good seismic performance, retrofits, or modern code compliance.'));
+
+  children.push(heading(2, 'Preliminary Conclusions'));
   const conclText = sec ? sec.conclusions : (parsed && !parsed.structured ? parsed.markdown : '');
-  if (conclText) { children.push(heading(2, 'Preliminary Conclusions')); if (!sec) children.push(aiNote()); children.push(...mdParas(conclText)); }
+  if (!sec && conclText) children.push(aiNote());
+  if (conclText) children.push(...mdParas(conclText));
+  children.push(placeholder('confirm conclusions and add limitations, next steps, and acknowledgements.'));
+
+  children.push(heading(2, 'References'));
+  children.push(placeholder('add references, e.g. USGS event page, GeoNet, JMA, NZSEE guidance, and any cited literature.'));
 
   children.push(new Paragraph({ children: [new PageBreak()] }));
   children.push(heading(2, 'Appendix A - Verified Observation Inventory'));
