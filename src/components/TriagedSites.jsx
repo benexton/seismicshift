@@ -77,7 +77,7 @@ export default function TriagedSites({ reviewer, othersByRecord, setActiveRecord
           pathOptions={{ color: '#ffffff', weight: 2, fillColor: DAMAGE_COLOR[r.damage_score] ?? '#9e9e9e', fillOpacity: 0.9 }}
           eventHandlers={{ click: () => openRecord(r) }}>
           <Tooltip direction="top">
-            {solo && r.media_url && <img className="tip-thumb" src={r.media_url} alt="" />}
+            {solo && r.media_url && <img className="tip-thumb" src={r.media_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
             {r.site_id != null && `#${r.site_id} · `}
             {DAMAGE_LABEL[r.damage_score]?.split(' - ')[0] ?? '?'} · {OBSERVATION_LABEL[r.observation_type] ?? 'building'} · {SOURCE_LABEL[r.source_type] ?? 'other'}
             {others.length > 0 && ` · in use by ${others.join(', ')}`}

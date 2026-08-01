@@ -107,7 +107,7 @@ export default function TriageMap({ reviewer, othersByRecord, setActiveRecord })
           }}
           eventHandlers={{ click: () => openRecord(r) }}>
           <Tooltip direction="top">
-              {solo && r.media_url && <img className="tip-thumb" src={r.media_url} alt="" />}
+              {solo && r.media_url && <img className="tip-thumb" src={r.media_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
               {r.site_id != null && `#${r.site_id} · `}
             {DAMAGE_LABEL[r.damage_score]?.split(' - ')[0] ?? '?'} · {OBSERVATION_LABEL[r.observation_type] ?? 'building'} · {SOURCE_LABEL[r.source_type] ?? 'other'}
             {r._dupes?.length > 0 && ' · possible duplicate'}
