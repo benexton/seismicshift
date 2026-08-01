@@ -19,7 +19,10 @@ const TABS = [
 
 // The authenticated workspace. Mounted with a key of the user id so a new login
 // always starts fresh on the Instructions tab.
-function Workspace({ reviewer, userId, signOut, updateName }) {
+const OWNER_EMAIL = 'benexton@gmail.com';
+
+function Workspace({ reviewer, userId, email, signOut, updateName }) {
+  const isOwner = (email || '').toLowerCase() === OWNER_EMAIL;
   const { othersByRecord, setActiveRecord } = usePresence(userId, reviewer);
   const [tab, setTab] = useState('instructions');
   const [editingName, setEditingName] = useState(false);
@@ -57,7 +60,7 @@ function Workspace({ reviewer, userId, signOut, updateName }) {
         {tab === 'manual' && <ManualInput reviewer={reviewer} />}
         {tab === 'triage' && <TriageMap reviewer={reviewer} othersByRecord={othersByRecord} setActiveRecord={setActiveRecord} />}
         {tab === 'triaged' && <TriagedSites reviewer={reviewer} othersByRecord={othersByRecord} setActiveRecord={setActiveRecord} />}
-        {tab === 'report' && <ReportGenerator reviewer={reviewer} />}
+        {tab === 'report' && <ReportGenerator reviewer={reviewer} isOwner={isOwner} />}
       </div>
     </div>
   );
@@ -67,7 +70,7 @@ export default function TriageApp() {
   return (
     <LoginGate>
       {({ session, signOut, reviewer, updateName }) => (
-        <Workspace key={session.user?.id} userId={session.user?.id} reviewer={reviewer} signOut={signOut} updateName={updateName} />
+        <Workspace key={session.user?.id} userId={session.user?.id} email={session.user?.email} reviewer={reviewer} signOut={signOut} updateName={updateName} />
       )}
     </LoginGate>
   );
