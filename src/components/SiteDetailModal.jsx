@@ -21,17 +21,24 @@ export default function SiteDetailModal({ record, reviewer, others = [], onClose
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [status, setStatus] = useState(null);
+  const [attachPending, setAttachPending] = useState(false);
+  const [pendingWarn, setPendingWarn] = useState(false);
 
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose();
+    const onKey = (e) => e.key === 'Escape' && guardedClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  });
+  useEffect(() => { if (!attachPending) setPendingWarn(false); }, [attachPending]);
+
+  function blockedByPending() { if (attachPending) { setPendingWarn(true); return true; } return false; }
+  function guardedClose() { if (!blockedByPending()) onClose(); }
 
   const set = (key) => (e) => setV((m) => ({ ...m, [key]: e.target.value }));
   const movedLocation = Number(lat) !== record.latitude || Number(lng) !== record.longitude;
 
   async function save() {
+    if (blockedByPending()) return;
     const cErr = coordError(lat, lng);
     if (cErr) { setErr(cErr); return; }
     setBusy(true); setErr(''); setStatus(null);
@@ -52,11 +59,11 @@ export default function SiteDetailModal({ record, reviewer, others = [], onClose
   const aiColor = DAMAGE_COLOR[record.damage_score] ?? '#9e9e9e';
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={guardedClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="head">
           <h2>{record.site_id != null ? `#${record.site_id} · ` : ''}{record.region ?? 'Unspecified region'}</h2>
-          <button className="x" onClick={onClose} aria-label="Close">×</button>
+          <button className="x" onClick={guardedClose} aria-label="Close">×</button>
         </div>
 
         {others.length > 0 && (
@@ -77,7 +84,7 @@ export default function SiteDetailModal({ record, reviewer, others = [], onClose
             <p className="kv"><b>Verified by:</b> {record.reviewed_by ?? '-'}</p>
             {record.source_url && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
 
-            <AttachmentAdder recordId={record.id} reviewer={reviewer} />
+            <AttachmentAdder recordId={record.id} reviewer={reviewer} onPendingChange={setAttachPending} />
           </div>
 
           <div>
@@ -94,9 +101,10 @@ export default function SiteDetailModal({ record, reviewer, others = [], onClose
         </div>
 
         {err && <p className="status-line err">{err}</p>}
+        {pendingWarn && <p className="pending-warn">You have unsaved images or files. Click Add to save them, or Discard, before leaving this record.</p>}
 
         <div className="foot">
-          <button className="btn secondary" onClick={onClose} disabled={busy}>Close</button>
+          <button className="btn secondary" onClick={guardedClose} disabled={busy}>Close</button>
           <span className="grow" />
           {status && <span className={`status-line ${status.kind}`} style={{ alignSelf: 'center' }}>{status.msg}</span>}
           <button className="btn" onClick={save} disabled={busy}>{busy ? 'Saving...' : 'Save changes'}</button>
