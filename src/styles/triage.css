@@ -341,7 +341,7 @@ body {
 .check-label { gap: 10px; }
 
 /* map tooltip + table thumbnails */
-.tip-thumb { display: block; width: 160px; max-height: 120px; object-fit: cover; border-radius: 4px; margin-bottom: 4px; }
+.tip-thumb { display: block; width: 160px; height: 108px; object-fit: cover; border-radius: 4px; margin-bottom: 4px; }
 .thumb-th, .thumb-td { width: 52px; }
 .thumb-small { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); display: block; cursor: zoom-in; }
 .thumb-preview { position: fixed; width: 240px; max-height: 240px; object-fit: cover; border-radius: 8px; border: 2px solid #fff; box-shadow: 0 8px 30px rgba(0,0,0,.4); z-index: 4000; pointer-events: none; }
