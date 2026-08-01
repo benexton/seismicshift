@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
-import { uploadImage } from '../lib/media.js';
+import { uploadImage, uploadFile, downloadFile } from '../lib/media.js';
 import Zoomable from './Zoomable.jsx';
 
 /**
- * View a record's attachments and add more: multiple images at once, a source
- * link, or a note. Used by both the triage review panel and the triaged-site
- * detail panel so editing capability is identical in both places.
+ * View a record's attachments and add more: multiple images, files (PDF etc.),
+ * a source link, or a note. Files are stored in Supabase Storage and offered as
+ * downloads. Used by both the review and triaged-site panels.
  */
 export default function AttachmentAdder({ recordId, reviewer }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [images, setImages] = useState([]);
   const [files, setFiles] = useState([]);
   const [link, setLink] = useState('');
   const [note, setNote] = useState('');
@@ -21,7 +22,7 @@ export default function AttachmentAdder({ recordId, reviewer }) {
     setLoading(true);
     const { data, error } = await supabase
       .from('record_attachments')
-      .select('id, media_url, source_url, note, added_by, created_at')
+      .select('id, media_url, source_url, file_url, file_name, note, added_by, created_at')
       .eq('record_id', recordId)
       .order('created_at', { ascending: true });
     setLoading(false);
@@ -46,18 +47,28 @@ export default function AttachmentAdder({ recordId, reviewer }) {
   }
 
   async function addImages() {
-    if (!files.length) return;
+    if (!images.length) return;
     setBusy(true); setErr('');
     try {
       const urls = [];
-      for (const f of files) urls.push(await uploadImage(f, `${recordId}/`));
+      for (const f of images) urls.push(await uploadImage(f, `${recordId}/`));
       await insertRows(urls.map((u) => ({ record_id: recordId, media_url: u, added_by: reviewer })));
+      setImages([]);
+    } catch (ex) { setErr(`Upload failed: ${ex.message ?? ex}`); } finally { setBusy(false); }
+  }
+
+  async function addFiles() {
+    if (!files.length) return;
+    setBusy(true); setErr('');
+    try {
+      const rows = [];
+      for (const f of files) {
+        const url = await uploadFile(f, `${recordId}/`);
+        rows.push({ record_id: recordId, file_url: url, file_name: f.name, added_by: reviewer });
+      }
+      await insertRows(rows);
       setFiles([]);
-    } catch (ex) {
-      setErr(`Upload failed: ${ex.message ?? ex}`);
-    } finally {
-      setBusy(false);
-    }
+    } catch (ex) { setErr(`Upload failed: ${ex.message ?? ex}`); } finally { setBusy(false); }
   }
 
   async function addLink() {
@@ -65,7 +76,6 @@ export default function AttachmentAdder({ recordId, reviewer }) {
     if (!v) return;
     if (await insertRows([{ record_id: recordId, source_url: v, added_by: reviewer }])) setLink('');
   }
-
   async function addNote() {
     const v = note.trim();
     if (!v) return;
@@ -83,10 +93,11 @@ export default function AttachmentAdder({ recordId, reviewer }) {
         <div className="attach-list">
           {items.map((a) => (
             <div key={a.id} className="attach">
-              {a.media_url && (
-                <a href={a.media_url} target="_blank" rel="noreferrer">
-                  <img src={a.media_url} alt="Attachment" loading="lazy" />
-                </a>
+              {a.media_url && <Zoomable src={a.media_url} alt="Attachment" />}
+              {a.file_url && (
+                <button type="button" className="file-chip" onClick={() => downloadFile(a.file_url, a.file_name)}>
+                  <span className="file-ic">FILE</span> {a.file_name || 'download'}
+                </button>
               )}
               {a.source_url && <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>}
               {a.note && <p className="note">{a.note}</p>}
@@ -99,10 +110,19 @@ export default function AttachmentAdder({ recordId, reviewer }) {
       <div className="field">
         <label>Add images</label>
         <div className="link-add">
-          <input type="file" accept="image/*" multiple
-            onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
-          <button type="button" className="mini" onClick={addImages} disabled={busy || !files.length}>
-            Add {files.length > 1 ? `${files.length} images` : 'image'}
+          <input type="file" accept="image/*" multiple onChange={(e) => setImages(Array.from(e.target.files ?? []))} />
+          <button type="button" className="mini" onClick={addImages} disabled={busy || !images.length}>
+            Add {images.length > 1 ? `${images.length} images` : 'image'}
+          </button>
+        </div>
+      </div>
+
+      <div className="field">
+        <label>Add files (PDF, docs, etc.)</label>
+        <div className="link-add">
+          <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+          <button type="button" className="mini" onClick={addFiles} disabled={busy || !files.length}>
+            Add {files.length > 1 ? `${files.length} files` : 'file'}
           </button>
         </div>
       </div>

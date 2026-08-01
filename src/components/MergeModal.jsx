@@ -55,6 +55,7 @@ function ItemRow({ item, checked, onToggle }) {
       <span className="ex-label">
         <b>{item.label}</b>
         {item.kind === 'link' && <> · <a href={item.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{item.url}</a></>}
+        {item.kind === 'file' && <> · {item.fileName || 'file'}</>}
         {item.kind === 'note' && <> · {item.note}</>}
         {item.note && item.kind !== 'note' ? <span className="muted"> · {item.note}</span> : null}
       </span>
@@ -82,7 +83,7 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from('record_attachments')
-        .select('id, media_url, source_url, note').eq('record_id', source.id);
+        .select('id, media_url, source_url, file_url, file_name, note').eq('record_id', source.id);
       setSrcAtts(data ?? []);
     })();
   }, [source.id]);
@@ -96,6 +97,7 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
     if (source.engineer_notes) add('source', 'note', { k: 'notes', note: source.engineer_notes, label: 'Engineer notes' });
     for (const a of srcAtts) {
       if (a.media_url) add('source', 'image', { k: `att${a.id}`, url: a.media_url, note: a.note, label: 'Attached image' });
+      else if (a.file_url) add('source', 'file', { k: `att${a.id}`, url: a.file_url, fileName: a.file_name, note: a.note, label: 'Attached file' });
       else if (a.source_url) add('source', 'link', { k: `att${a.id}`, url: a.source_url, note: a.note, label: 'Attached link' });
       else if (a.note) add('source', 'note', { k: `att${a.id}`, note: a.note, label: 'Attached note' });
     }
@@ -106,6 +108,7 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
       if (target.engineer_notes) add('target', 'note', { k: 'notes', note: target.engineer_notes, label: 'Engineer notes', column: 'engineer_notes' });
       for (const a of tgtAtts) {
         if (a.media_url) add('target', 'image', { k: `att${a.id}`, url: a.media_url, note: a.note, label: 'Attached image', attachmentId: a.id });
+        else if (a.file_url) add('target', 'file', { k: `att${a.id}`, url: a.file_url, fileName: a.file_name, note: a.note, label: 'Attached file', attachmentId: a.id });
         else if (a.source_url) add('target', 'link', { k: `att${a.id}`, url: a.source_url, note: a.note, label: 'Attached link', attachmentId: a.id });
         else if (a.note) add('target', 'note', { k: `att${a.id}`, note: a.note, label: 'Attached note', attachmentId: a.id });
       }
@@ -130,7 +133,7 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
     if (data.id === source.id) return setErr('That is the same record you are merging from.');
     setTarget(data);
     const { data: atts } = await supabase.from('record_attachments')
-      .select('id, media_url, source_url, note').eq('record_id', data.id);
+      .select('id, media_url, source_url, file_url, file_name, note').eq('record_id', data.id);
     setTgtAtts(atts ?? []);
     const init = {};
     for (const [, key] of FIELDS) if (norm(source[key]) !== norm(data[key])) init[key] = 'target';
@@ -175,6 +178,7 @@ export default function MergeModal({ source, reviewer, candidates = [], onClose,
         if (!keep[it.key]) continue;
         const base = { record_id: target.id, added_by: reviewer };
         if (it.kind === 'link') rows.push({ ...base, source_url: it.url, note: it.note ?? `Merged from Site #${source.site_id}` });
+        else if (it.kind === 'file') rows.push({ ...base, file_url: it.url, file_name: it.fileName, note: it.note ?? `Merged from Site #${source.site_id}` });
         else if (it.kind === 'note') rows.push({ ...base, note: it.note });
         else rows.push({ ...base, media_url: it.url, note: it.note ?? (it.kind === 'streetview' ? `Street View (merged from #${source.site_id})` : `Merged from Site #${source.site_id}`) });
       }

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabase, RECORD_COLUMNS } from '../lib/supabase.js';
@@ -7,6 +7,8 @@ import {
   SOURCE_COLOR, SOURCE_LABEL, OBSERVATION_LABEL,
 } from '../lib/constants.js';
 import ClusterGroup from './ClusterGroup.jsx';
+import FilterBar from './FilterBar.jsx';
+import { emptyFilter, matchesFilter } from '../lib/filter.js';
 import SiteDetailModal from './SiteDetailModal.jsx';
 
 const BASEMAPS = {
@@ -38,6 +40,7 @@ function FitToData({ records }) {
 export default function TriagedSites({ reviewer, othersByRecord, setActiveRecord }) {
   const [records, setRecords] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [filter, setFilter] = useState(emptyFilter);
   const [basemap, setBasemap] = useState('photo');
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
@@ -74,6 +77,8 @@ export default function TriagedSites({ reviewer, othersByRecord, setActiveRecord
     );
   }
 
+  const filtered = useMemo(() => records.filter((r) => matchesFilter(r, filter)), [records, filter]);
+
   function openRecord(r) { setSelected(r); setActiveRecord?.(r.id); }
   function closeRecord() { setSelected(null); setActiveRecord?.(null); }
 
@@ -81,10 +86,11 @@ export default function TriagedSites({ reviewer, othersByRecord, setActiveRecord
 
   return (
     <div className="triage-wrap">
+      <FilterBar filter={filter} setFilter={setFilter} shown={filtered.length} total={records.length} />
       <MapContainer center={CENTER} zoom={ZOOM} className="triage-map" scrollWheelZoom>
         <TileLayer url={base.url} attribution={GSI_ATTRIBUTION} maxZoom={18} />
-        <FitToData records={records} />
-        <ClusterGroup records={records} renderMarker={renderMarker} />
+        <FitToData records={filtered} />
+        <ClusterGroup records={filtered} renderMarker={renderMarker} />
       </MapContainer>
 
       <div className="map-controls">
@@ -93,7 +99,7 @@ export default function TriagedSites({ reviewer, othersByRecord, setActiveRecord
           {Object.entries(BASEMAPS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
         <div className="count">
-          {loading ? 'Loading sites...' : `${records.length} triaged site(s)`}
+          {loading ? 'Loading sites...' : `${filtered.length} shown`}
           {err && <span style={{ color: '#b42318' }}> · {err}</span>}
         </div>
       </div>

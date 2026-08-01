@@ -84,6 +84,13 @@ export default function RecordFields({ v, set }) {
           {LOCATION_CONFIDENCE.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
         </select>
       </div>
+      <div className="field">
+        <label className="check-label">
+          <input type="checkbox" checked={!!v.nonstructural_damage}
+            onChange={(e) => set('nonstructural_damage')({ target: { value: e.target.checked } })} />
+          Damage to non-structural elements?
+        </label>
+      </div>
     </>
   );
 }
@@ -111,5 +118,6 @@ export function fieldsPatch(v) {
     height_class: isBuilding ? orNull(v.height_class) : null,
     code_era: isBuilding ? orNull(v.code_era) : null,
     observed_retrofits: isBuilding ? orNull(v.observed_retrofits) : null,
+    nonstructural_damage: !!v.nonstructural_damage,
   };
 }
