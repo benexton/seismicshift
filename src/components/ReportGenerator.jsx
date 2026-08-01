@@ -4,38 +4,44 @@ import {
   supabase, RECORD_COLUMNS, EVENT_META_ID, EVENT_META_MAP,
   metaRowToCamel, camelToMetaRow,
 } from '../lib/supabase.js';
-import { buildReport } from '../lib/report.js';
+import { DAMAGE_SCORES, DAMAGE_LABEL, OBSERVATION_LABEL } from '../lib/constants.js';
+import { buildReportDocxBlob } from '../lib/reportDocx.js';
 
 const EMPTY = Object.fromEntries(EVENT_META_MAP.map(([, key]) => [key, '']));
 
-/**
- * Report generator, now also the single home for the event metadata. The
- * metadata form reads and writes the one event_meta row (Save), and the same
- * values feed the LFE draft below. Approved records supply the statistics.
- */
-export default function ReportGenerator({ reviewer }) {
+// Owner-only regenerate. The email/login gate (isOwner) is the real control;
+// this password is a light second step. Change both to suit.
+const REPORT_PASSWORD = 'vert-regen';
+const ACTIONS_URL = 'https://github.com/benexton/seismicshift/actions/workflows/generate_report.yml';
+
+export default function ReportGenerator({ reviewer, isOwner }) {
   const [records, setRecords] = useState([]);
   const [meta, setMeta] = useState(EMPTY);
+  const [conclusions, setConclusions] = useState('');
+  const [genAt, setGenAt] = useState(null);
+  const [genBy, setGenBy] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
   const [err, setErr] = useState('');
 
-  useEffect(() => {
-    (async () => {
-      const [recs, ev] = await Promise.all([
-        supabase.from('triage_records').select(RECORD_COLUMNS).eq('status', 'Approved').is('merged_into', null).order('region', { ascending: true }),
-        supabase.from('event_meta').select('*').eq('id', EVENT_META_ID).maybeSingle(),
-      ]);
-      setLoading(false);
-      if (recs.error) return setErr(recs.error.message);
-      setRecords(recs.data ?? []);
-      if (ev.data) setMeta(metaRowToCamel(ev.data));
-    })();
-  }, []);
-
-  const markdown = useMemo(() => buildReport(records, meta), [records, meta]);
-  const html = useMemo(() => marked.parse(markdown), [markdown]);
+  async function load() {
+    const [recs, ev] = await Promise.all([
+      supabase.from('triage_records').select(RECORD_COLUMNS).eq('status', 'Approved').is('merged_into', null).order('region', { ascending: true }),
+      supabase.from('event_meta').select('*').eq('id', EVENT_META_ID).maybeSingle(),
+    ]);
+    setLoading(false);
+    if (recs.error) return setErr(recs.error.message);
+    setRecords(recs.data ?? []);
+    if (ev.data) {
+      setMeta(metaRowToCamel(ev.data));
+      setConclusions(ev.data.conclusions_md ?? '');
+      setGenAt(ev.data.report_generated_at ?? null);
+      setGenBy(ev.data.report_generated_by ?? null);
+    }
+  }
+  useEffect(() => { load(); }, []);
 
   const set = (key) => (e) => setMeta((m) => ({ ...m, [key]: e.target.value }));
 
@@ -48,32 +54,54 @@ export default function ReportGenerator({ reviewer }) {
     setStatus(error ? { kind: 'err', msg: `Save failed: ${error.message}` } : { kind: 'ok', msg: 'Event details saved.' });
   }
 
-  function download() {
-    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const stamp = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `VERT_${(meta.eventName || 'event').replace(/\s+/g, '_')}_draft_${stamp}.md`;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
+  async function downloadDocx() {
+    setBusy(true); setStatus(null);
+    try {
+      const blob = await buildReportDocxBlob(records, meta, conclusions);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `VERT_${(meta.eventName || 'event').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.docx`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    } catch (ex) {
+      setStatus({ kind: 'err', msg: `Word export failed: ${ex.message ?? ex}` });
+    } finally { setBusy(false); }
   }
+
+  function regenerate() {
+    const pw = window.prompt('Enter the report regeneration password:');
+    if (pw == null) return;
+    if (pw !== REPORT_PASSWORD) return setStatus({ kind: 'err', msg: 'Incorrect password.' });
+    window.open(ACTIONS_URL, '_blank', 'noopener');
+    setStatus({ kind: 'ok', msg: 'Opened the report job in a new tab. Click "Run workflow" there; when it finishes, use Refresh below to load the new AI conclusions.' });
+  }
+
+  const approved = records;
+  const buildings = useMemo(() => approved.filter((r) => r.observation_type === 'building'), [approved]);
+  const damageCounts = useMemo(() => {
+    const c = {}; for (const s of DAMAGE_SCORES) c[s] = 0;
+    for (const r of buildings) if (DAMAGE_SCORES.includes(Number(r.damage_score))) c[Number(r.damage_score)] += 1;
+    return c;
+  }, [buildings]);
+  const totalDmg = Object.values(damageCounts).reduce((a, b) => a + b, 0);
+  const regions = useMemo(() => [...new Set(approved.map((r) => r.region).filter(Boolean))], [approved]);
+  const conclusionsHtml = useMemo(() => (conclusions ? marked.parse(conclusions) : ''), [conclusions]);
+
+  let figNo = 0;
 
   return (
     <div className="report-wrap">
       <h1>Report generator</h1>
       <p className="muted">
-        {loading
-          ? 'Loading approved records...'
-          : `${records.length} approved observation(s) will be synthesised into the draft.`}
+        {loading ? 'Loading verified observations...' : `${approved.length} verified observation(s) feed this report.`}
         {err && <span style={{ color: '#b42318' }}> · {err}</span>}
       </p>
 
       <div className="card">
         <h2 style={{ marginTop: 0, fontSize: 17 }}>Event details</h2>
-        <p className="muted small">The key facts for this earthquake. Saved once here and used in the report header.</p>
         <form onSubmit={saveMeta}>
-          <div className="report-meta">
+          <div className="report-meta-form">
             {EVENT_META_MAP.filter(([col]) => col !== 'contributors').map(([, key, label]) => (
               <div key={key}>
                 <label htmlFor={key}>{label}</label>
@@ -93,12 +121,84 @@ export default function ReportGenerator({ reviewer }) {
       </div>
 
       <div className="report-actions">
-        <button className="btn" onClick={download} disabled={loading}>Download draft report (.md)</button>
-        <span className="muted">Rendered entirely client-side, no server processing.</span>
+        <button className="btn" onClick={downloadDocx} disabled={loading || busy}>{busy ? 'Building Word file...' : 'Download as Word (.docx)'}</button>
+        <button className="btn secondary" onClick={load} disabled={loading}>Refresh</button>
+        <span className="muted">Generated in your browser from the verified sites.</span>
       </div>
 
-      <h2 style={{ fontSize: 17 }}>Preview</h2>
-      <div className="preview" dangerouslySetInnerHTML={{ __html: html }} />
+      {/* styled preview */}
+      <div className="report-doc">
+        <div className="report-eyebrow">LEARNING FROM EARTHQUAKES</div>
+        <div className="report-title">Significant Event Report</div>
+        <div className="report-sub">VERT {meta.eventName || 'Event'} - Version {meta.version || '1.0'}</div>
+
+        <table className="report-metatable">
+          <tbody>
+            {[
+              ['Magnitude (Mw)', meta.magnitude], ['Depth (km)', meta.depth],
+              ['Location (geographical)', meta.locationName], ['Location (lat/long)', meta.locationLatLong],
+              ['Time and date', meta.eventDatetime], ['Faulting mechanism', meta.faulting],
+              ['Maximum Modified Mercalli Intensity', meta.maxMMI], ['Tsunami alert issued', meta.tsunami],
+            ].map(([k, v]) => (<tr key={k}><th>{k}</th><td>{v || '-'}</td></tr>))}
+          </tbody>
+        </table>
+
+        {conclusions && (
+          <>
+            <h2 className="report-h2">Preliminary Conclusions <span className="ai-tag">AI-assisted draft</span></h2>
+            <p className="report-note">
+              Drafted by AI from the verified observations only{genBy ? `, generated by ${genBy}` : ''}
+              {genAt ? ` on ${new Date(genAt).toLocaleDateString()}` : ''}. Review before use.
+            </p>
+            <div className="report-body" dangerouslySetInnerHTML={{ __html: conclusionsHtml }} />
+          </>
+        )}
+
+        <h2 className="report-h2">Summary Statistics</h2>
+        <p>{approved.length} verified observation(s), including {buildings.length} building observation(s).</p>
+        <table className="report-table">
+          <thead><tr><th>Damage score</th><th>Count</th><th>Share</th></tr></thead>
+          <tbody>
+            {DAMAGE_SCORES.map((s) => (
+              <tr key={s}>
+                <td>{DAMAGE_LABEL[s]}</td>
+                <td>{damageCounts[s]}</td>
+                <td>{totalDmg ? `${((damageCounts[s] / totalDmg) * 100).toFixed(1)}%` : '0%'}</td>
+              </tr>
+            ))}
+            <tr className="total"><td>Total</td><td>{totalDmg}</td><td>{totalDmg ? '100%' : '0%'}</td></tr>
+          </tbody>
+        </table>
+
+        <h2 className="report-h2">Observations by Region</h2>
+        {regions.length === 0 && <p className="muted">No verified observations yet.</p>}
+        {regions.map((region) => {
+          const inRegion = approved.filter((r) => r.region === region);
+          const heavy = inRegion.filter((r) => r.damage_score === 3 || r.damage_score === 4).length;
+          const photo = inRegion.find((r) => r.media_url);
+          if (photo) figNo += 1;
+          return (
+            <div key={region}>
+              <h3 className="report-h3">{region}</h3>
+              <p>{inRegion.length} verified observation(s), of which {heavy} were heavy-to-severe (D3-D4).</p>
+              {photo && (
+                <figure className="report-fig">
+                  <img src={photo.media_url} alt="" />
+                  <figcaption>Figure {figNo}. Site #{photo.site_id ?? '-'}, {region}: {DAMAGE_LABEL[photo.damage_score]?.split(' - ')[0] ?? ''}{photo.failure_mechanism ? ` - ${photo.failure_mechanism}` : ''}.</figcaption>
+                </figure>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {isOwner && (
+        <div className="card owner-box">
+          <h2 style={{ marginTop: 0, fontSize: 15 }}>Owner controls</h2>
+          <p className="muted small">Regenerate the AI conclusions from the current verified sites. Visible only to you.</p>
+          <button className="btn" onClick={regenerate}>Regenerate AI conclusions</button>
+        </div>
+      )}
     </div>
   );
 }
