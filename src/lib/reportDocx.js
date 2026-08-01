@@ -4,8 +4,8 @@ import {
   PageNumber, PageBreak,
 } from 'docx';
 import { DAMAGE_SCORES, DAMAGE_LABEL, OBSERVATION_LABEL } from './constants.js';
+import { parseReportSections } from './reportSections.js';
 
-// NZSEE Learning from Earthquakes palette (maroon/burgundy).
 const MAROON = '8A1538';
 const MAROON_LT = '9E2A3F';
 const GREY = '595959';
@@ -48,6 +48,18 @@ function para(text, opts = {}) {
   return new Paragraph({ alignment: opts.align ?? AlignmentType.JUSTIFIED, spacing: { after: opts.after ?? 140, line: 276 }, children: inline(text, { size: 22, ...opts }) });
 }
 
+function mdParas(text) {
+  const out = [];
+  for (const raw of String(text ?? '').split('\n')) {
+    const t = raw.trim();
+    if (!t) continue;
+    if (/^#{1,3}\s+/.test(t)) out.push(heading(3, t.replace(/^#{1,3}\s+/, '')));
+    else if (/^[-*]\s+/.test(t)) out.push(new Paragraph({ bullet: { level: 0 }, spacing: { after: 60 }, children: inline(t.replace(/^[-*]\s+/, ''), { size: 22 }) }));
+    else out.push(para(t));
+  }
+  return out;
+}
+
 function metaTable(rows) {
   return new Table({ width: { size: TABLE_W, type: WidthType.DXA }, columnWidths: [3400, 5672], borders: allBorders,
     rows: rows.map(([k, v]) => new TableRow({ children: [
@@ -84,17 +96,20 @@ function caption(text) {
 }
 
 /**
- * Build the report as a Word (.docx) Blob, styled like the NZSEE LfE report.
- * Only Approved (verified) records are used. `conclusions` is optional
- * AI-drafted markdown. Figures are pulled from verified sites that have a photo.
+ * Build the report as a Word (.docx) Blob, NZSEE-styled, with AI commentary
+ * (structured JSON sections or a plain markdown block) woven through the
+ * data-driven sections. Verified sites only.
  */
 export async function buildReportDocxBlob(records, meta, conclusions) {
   const approved = records.filter((r) => r.status === 'Approved');
   const buildings = approved.filter((r) => r.observation_type === 'building');
   const now = new Date().toISOString().slice(0, 10);
 
+  const parsed = parseReportSections(conclusions);
+  const sec = parsed?.structured ? parsed.sections : null;
+  const aiNote = () => new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: 'AI-assisted draft from the verified observations only. Review before use.', italics: true, color: GREY, size: 18, font: BODY })] });
+
   const children = [];
-  // cover
   children.push(new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: 'LEARNING FROM EARTHQUAKES', bold: true, color: MAROON_LT, size: 20, font: BODY, characterSpacing: 30 })] }));
   children.push(new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: 'Significant Event Report', bold: true, color: MAROON, size: 48, font: BODY })] }));
   children.push(new Paragraph({ spacing: { after: 160 }, border: { bottom: { style: BorderStyle.SINGLE, size: 18, color: MAROON } },
@@ -109,30 +124,17 @@ export async function buildReportDocxBlob(records, meta, conclusions) {
   if (meta.contributors) { children.push(new Paragraph({ spacing: { before: 160 }, children: [new TextRun({ text: 'Contributors: ', bold: true, size: 20, font: BODY }), new TextRun({ text: meta.contributors, size: 20, font: BODY })] })); }
   children.push(new Paragraph({ children: [new PageBreak()] }));
 
-  // conclusions (AI)
-  if (conclusions && conclusions.trim()) {
-    children.push(heading(2, 'Preliminary Conclusions (AI-assisted draft)'));
-    children.push(new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: 'Drafted by AI from the verified observations only. Review before use.', italics: true, color: GREY, size: 18, font: BODY })] }));
-    for (const line of conclusions.split('\n')) {
-      const t = line.trim();
-      if (!t) continue;
-      if (t.startsWith('# ')) children.push(heading(3, t.slice(2)));
-      else if (t.startsWith('## ')) children.push(heading(3, t.slice(3)));
-      else if (/^[-*]\s/.test(t)) children.push(new Paragraph({ bullet: { level: 0 }, spacing: { after: 60 }, children: inline(t.replace(/^[-*]\s/, ''), { size: 22 }) }));
-      else children.push(para(t));
-    }
-  }
+  if (sec?.introduction) { children.push(heading(2, 'Introduction')); children.push(aiNote()); children.push(...mdParas(sec.introduction)); }
 
-  // summary statistics
   children.push(heading(2, 'Summary Statistics'));
   children.push(para(`${approved.length} verified observation(s), including ${buildings.length} building observation(s).`));
+  if (sec?.overview) children.push(...mdParas(sec.overview));
   const dmg = {};
   for (const s of DAMAGE_SCORES) dmg[DAMAGE_LABEL[s]] = 0;
   for (const r of buildings) if (DAMAGE_SCORES.includes(Number(r.damage_score))) dmg[DAMAGE_LABEL[Number(r.damage_score)]] += 1;
   children.push(countTable('Damage score', dmg));
   children.push(new Paragraph({ spacing: { after: 120 }, children: [] }));
 
-  // region sections with a figure each (where available)
   const regions = [...new Set(approved.map((r) => r.region).filter(Boolean))];
   children.push(heading(2, 'Observations by Region'));
   let figNo = 1;
@@ -141,6 +143,7 @@ export async function buildReportDocxBlob(records, meta, conclusions) {
     const heavy = inRegion.filter((r) => r.damage_score === 3 || r.damage_score === 4).length;
     children.push(heading(3, region));
     children.push(para(`${inRegion.length} verified observation(s) in ${region}, of which ${heavy} were heavy-to-severe (D3-D4).`));
+    if (sec?.regions && sec.regions[region]) children.push(...mdParas(sec.regions[region]));
     const withPhoto = inRegion.find((r) => r.media_url);
     if (withPhoto && figNo <= 12) {
       const img = await fetchImage(withPhoto.media_url);
@@ -153,7 +156,13 @@ export async function buildReportDocxBlob(records, meta, conclusions) {
     }
   }
 
-  // appendix inventory
+  if (sec?.mechanisms) { children.push(heading(2, 'Observed Failure Mechanisms')); children.push(...mdParas(sec.mechanisms)); }
+  if (sec?.nonstructural) { children.push(heading(2, 'Non-structural Damage')); children.push(...mdParas(sec.nonstructural)); }
+  if (sec?.goodPerformance) { children.push(heading(2, 'Notable Good Performance')); children.push(...mdParas(sec.goodPerformance)); }
+
+  const conclText = sec ? sec.conclusions : (parsed && !parsed.structured ? parsed.markdown : '');
+  if (conclText) { children.push(heading(2, 'Preliminary Conclusions')); if (!sec) children.push(aiNote()); children.push(...mdParas(conclText)); }
+
   children.push(new Paragraph({ children: [new PageBreak()] }));
   children.push(heading(2, 'Appendix A - Verified Observation Inventory'));
   const invHead = new TableRow({ tableHeader: true, children: ['Site', 'Region', 'Type', 'Damage', 'Non-struct.', 'Reviewer'].map((h) => new TableCell({

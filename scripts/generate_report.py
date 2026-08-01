@@ -106,6 +106,25 @@ def summarise(records):
     return "\n".join(lines)
 
 
+def region_detail(records):
+    out = []
+    regions = sorted({r.get("region") for r in records if r.get("region")})
+    for reg in regions:
+        rr = [r for r in records if r.get("region") == reg]
+        heavy = sum(1 for r in rr if r.get("damage_score") in (3, 4))
+        dmg = Counter(r.get("damage_score") for r in rr)
+        mats = Counter(r.get("primary_material") for r in rr if r.get("primary_material"))
+        mechs = [r.get("failure_mechanism") for r in rr if r.get("failure_mechanism")][:5]
+        parts = [f"{len(rr)} obs, {heavy} heavy (D3-D4)"]
+        parts.append("damage " + ", ".join(f"{DAMAGE_LABEL.get(k, k)}={v}" for k, v in sorted(dmg.items(), key=lambda x: (x[0] is None, x[0]))))
+        if mats:
+            parts.append("materials " + ", ".join(f"{k}={v}" for k, v in mats.most_common()))
+        if mechs:
+            parts.append("mechanisms/notes: " + "; ".join(mechs))
+        out.append(f"- {reg}: " + "; ".join(parts))
+    return "\n".join(out), regions
+
+
 def main():
     for k, v in {"SUPABASE_URL": SUPABASE_URL, "SUPABASE_SERVICE_ROLE_KEY": SUPABASE_KEY, "LLM_API_KEY": GEMINI_KEY}.items():
         if not v:
@@ -122,27 +141,46 @@ def main():
     if not records:
         print("No verified sites yet; nothing to conclude."); return 0
 
+    regions_txt, region_names = region_detail(records)
     prompt = (
         "You are assisting a NZSEE Learning from Earthquakes virtual reconnaissance team. "
-        "Using ONLY the verified observation summary below, draft a concise 'Preliminary Conclusions' "
-        "section in Markdown for an engineering event report. Draw out patterns and likely links "
-        "(e.g. relationships between damage level and region, code era, material, or mechanism such as "
-        "soft-storey or masonry infill), note notable good performance if present, and end with clear "
-        "caveats about the preliminary, remote nature of the data. Use short paragraphs and bullet points. "
-        "Do not invent specifics beyond the data. Keep it under ~400 words.\n\n"
-        f"VERIFIED OBSERVATION SUMMARY:\n{summarise(records)}"
+        "Return ONLY a JSON object (no markdown code fences, nothing outside the JSON). Each field is "
+        "concise Markdown prose for an engineering event report, written using ONLY the verified data "
+        "provided. Draw out patterns and likely links (relationships between damage and region, code era, "
+        "material, or mechanisms such as soft-storey or masonry infill). Do not invent specifics beyond the "
+        "data. Fields:\n"
+        '  "introduction": 1-2 short paragraphs introducing the virtual reconnaissance and overall picture.\n'
+        '  "overview": commentary on the damage distribution and what stands out.\n'
+        '  "mechanisms": discussion of the observed failure mechanisms and notes.\n'
+        '  "nonstructural": brief note on non-structural damage patterns (empty string if not relevant).\n'
+        '  "goodPerformance": brief note on notable good performance (empty string if none).\n'
+        '  "regions": an object whose keys are EXACTLY these region names: '
+        f'{json.dumps(region_names)}, each value a short commentary paragraph for that region.\n'
+        '  "conclusions": preliminary conclusions and clear caveats about the remote, preliminary nature.\n\n'
+        f"VERIFIED OBSERVATION SUMMARY:\n{summarise(records)}\n\nPER-REGION DETAIL:\n{regions_txt}"
     )
     print("Calling Gemini...")
-    conclusions = gemini(prompt).strip()
+    raw = gemini(prompt).strip()
 
-    print("Writing conclusions to event_meta...")
+    import re
+    m = re.match(r"^```(?:json)?\s*([\s\S]*?)\s*```$", raw)
+    text = m.group(1).strip() if m else raw
+    try:
+        obj = json.loads(text)
+        stored = json.dumps(obj)
+        print("Parsed structured sections:", ", ".join(obj.keys()))
+    except Exception as e:
+        print("Model output was not valid JSON, storing as plain text:", e)
+        stored = raw
+
+    print("Writing report content to event_meta...")
     sb("event_meta", method="POST", body={
         "id": 1,
-        "conclusions_md": conclusions,
+        "conclusions_md": stored,
         "report_generated_at": datetime.datetime.utcnow().isoformat() + "Z",
         "report_generated_by": "AI (VERT report job)",
     })
-    print("Done. Conclusions length:", len(conclusions))
+    print("Done. Content length:", len(stored))
     return 0
 
 
