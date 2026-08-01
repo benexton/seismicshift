@@ -9,12 +9,7 @@ import { buildReportDocxBlob } from '../lib/reportDocx.js';
 
 const EMPTY = Object.fromEntries(EVENT_META_MAP.map(([, key]) => [key, '']));
 
-// Owner-only regenerate. The email/login gate (isOwner) is the real control;
-// this password is a light second step. Change both to suit.
-const REPORT_PASSWORD = 'vert-regen';
-const ACTIONS_URL = 'https://github.com/benexton/seismicshift/actions/workflows/generate_report.yml';
-
-export default function ReportGenerator({ reviewer, isOwner }) {
+export default function ReportGenerator({ reviewer }) {
   const [records, setRecords] = useState([]);
   const [meta, setMeta] = useState(EMPTY);
   const [conclusions, setConclusions] = useState('');
@@ -67,14 +62,6 @@ export default function ReportGenerator({ reviewer, isOwner }) {
     } catch (ex) {
       setStatus({ kind: 'err', msg: `Word export failed: ${ex.message ?? ex}` });
     } finally { setBusy(false); }
-  }
-
-  function regenerate() {
-    const pw = window.prompt('Enter the report regeneration password:');
-    if (pw == null) return;
-    if (pw !== REPORT_PASSWORD) return setStatus({ kind: 'err', msg: 'Incorrect password.' });
-    window.open(ACTIONS_URL, '_blank', 'noopener');
-    setStatus({ kind: 'ok', msg: 'Opened the report job in a new tab. Click "Run workflow" there; when it finishes, use Refresh below to load the new AI conclusions.' });
   }
 
   const approved = records;
@@ -192,13 +179,6 @@ export default function ReportGenerator({ reviewer, isOwner }) {
         })}
       </div>
 
-      {isOwner && (
-        <div className="card owner-box">
-          <h2 style={{ marginTop: 0, fontSize: 15 }}>Owner controls</h2>
-          <p className="muted small">Regenerate the AI conclusions from the current verified sites. Visible only to you.</p>
-          <button className="btn" onClick={regenerate}>Regenerate AI conclusions</button>
-        </div>
-      )}
     </div>
   );
 }
