@@ -1,17 +1,23 @@
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { DAMAGE_LABEL, DAMAGE_COLOR, OBSERVATION_LABEL, provenanceLabel } from '../lib/constants.js';
 
 /**
- * Table view of the (filtered) records for a tab, with key metadata. Clicking a
- * row opens the same review / detail panel as the map. `mode` picks the final
- * column (submitter for the queue, verifier for triaged sites).
+ * Table view of the (filtered) records for a tab, with key metadata and a
+ * thumbnail that enlarges on hover. Clicking a row opens the same panel as the
+ * map. `mode` picks the final column (submitter for the queue, verifier for
+ * triaged sites).
  */
 export default function RecordTable({ records, mode, othersByRecord, onOpen }) {
   const personHeader = mode === 'triaged' ? 'Verified by' : 'Submitted by';
+  const [preview, setPreview] = useState(null);
+
   return (
     <div className="record-table-wrap">
       <table className="record-table">
         <thead>
           <tr>
+            <th className="thumb-th"></th>
             <th>Site</th><th>Region</th><th>Damage</th><th>Type</th>
             <th>Non-struct.</th><th>Source</th><th>{personHeader}</th>
           </tr>
@@ -21,6 +27,14 @@ export default function RecordTable({ records, mode, othersByRecord, onOpen }) {
             const others = othersByRecord?.get(r.id) ?? [];
             return (
               <tr key={r.id} className={others.length ? 'in-use' : ''} onClick={() => onOpen(r)}>
+                <td className="thumb-td">
+                  {r.media_url && (
+                    <img className="thumb-small" src={r.media_url} alt=""
+                      onMouseEnter={(e) => setPreview({ src: r.media_url, x: e.clientX, y: e.clientY })}
+                      onMouseMove={(e) => setPreview((p) => (p ? { ...p, x: e.clientX, y: e.clientY } : p))}
+                      onMouseLeave={() => setPreview(null)} />
+                  )}
+                </td>
                 <td>#{r.site_id ?? '-'}</td>
                 <td>{r.region ?? '-'}</td>
                 <td>
@@ -39,10 +53,16 @@ export default function RecordTable({ records, mode, othersByRecord, onOpen }) {
             );
           })}
           {records.length === 0 && (
-            <tr><td colSpan={7} className="muted" style={{ textAlign: 'center', padding: 20 }}>No records match.</td></tr>
+            <tr><td colSpan={8} className="muted" style={{ textAlign: 'center', padding: 20 }}>No records match.</td></tr>
           )}
         </tbody>
       </table>
+
+      {preview && createPortal(
+        <img className="thumb-preview" src={preview.src} alt=""
+          style={{ left: Math.min(preview.x + 16, window.innerWidth - 260), top: Math.min(preview.y + 16, window.innerHeight - 260) }} />,
+        document.body,
+      )}
     </div>
   );
 }

@@ -45,7 +45,7 @@ export default function ClusterGroup({ records, renderMarker }) {
   const out = [];
   for (const g of groups) {
     if (g.items.length === 1) {
-      out.push(renderMarker(g.items[0], g.center, `${g.key}-solo`));
+      out.push(renderMarker(g.items[0], g.center, `${g.key}-solo`, true));
       continue;
     }
     if (expanded !== g.key) {
@@ -69,7 +69,7 @@ export default function ClusterGroup({ records, renderMarker }) {
         const a = (2 * Math.PI * i) / g.items.length - Math.PI / 2;
         const pt = L.point(c.x + FAN_RADIUS_PX * Math.cos(a), c.y + FAN_RADIUS_PX * Math.sin(a));
         const ll = map.layerPointToLatLng(pt);
-        out.push(renderMarker(it, [ll.lat, ll.lng], `${g.key}-${i}`));
+        out.push(renderMarker(it, [ll.lat, ll.lng], `${g.key}-${i}`, false));
       });
     }
   }

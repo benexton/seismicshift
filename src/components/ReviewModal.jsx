@@ -23,12 +23,18 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
   const [err, setErr] = useState('');
   const [confirmReject, setConfirmReject] = useState(false);
   const [merging, setMerging] = useState(false);
+  const [attachPending, setAttachPending] = useState(false);
+  const [pendingWarn, setPendingWarn] = useState(false);
 
   useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose();
+    const onKey = (e) => e.key === 'Escape' && guardedClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  });
+  useEffect(() => { if (!attachPending) setPendingWarn(false); }, [attachPending]);
+
+  function blockedByPending() { if (attachPending) { setPendingWarn(true); return true; } return false; }
+  function guardedClose() { if (!blockedByPending()) onClose(); }
 
   const set = (key) => (e) => setV((m) => ({ ...m, [key]: e.target.value }));
   const movedLocation = Number(lat) !== record.latitude || Number(lng) !== record.longitude;
@@ -55,6 +61,7 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
   }
 
   async function saveDraft() {
+    if (blockedByPending()) return;
     if (!coordGuard()) return;
     setBusy(true); setErr('');
     try {
@@ -69,6 +76,7 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
   }
 
   async function resolve(newStatus) {
+    if (blockedByPending()) return;
     if (newStatus === 'Approved' && !coordGuard()) return;
     setBusy(true); setErr('');
     try {
@@ -107,11 +115,11 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
+    <div className="modal-backdrop" onClick={guardedClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="head">
           <h2>{record.site_id != null ? `#${record.site_id} · ` : ''}{record.region ?? 'Unspecified region'}</h2>
-          <button className="x" onClick={onClose} aria-label="Close">×</button>
+          <button className="x" onClick={guardedClose} aria-label="Close">×</button>
         </div>
 
         {others.length > 0 && (
@@ -124,7 +132,7 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
             Use Merge to fold this into an existing site instead of keeping a duplicate.
             <div className="dup-row">
               <span>{record._dupes.slice(0, 3).map((d) => `#${d.site_id} (${d._reasons.join(', ')})`).join('   ')}</span>
-              <button className="mini" onClick={() => setMerging(true)}>Merge...</button>
+              <button className="mini" onClick={() => { if (!blockedByPending()) setMerging(true); }}>Merge...</button>
             </div>
           </div>
         )}
@@ -157,7 +165,7 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
             <p className="kv"><b>Provenance:</b> {provenanceLabel(record)}</p>
             {record.source_url && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
 
-            <AttachmentAdder recordId={record.id} reviewer={reviewer} />
+            <AttachmentAdder recordId={record.id} reviewer={reviewer} onPendingChange={setAttachPending} />
           </div>
 
           <div>
@@ -175,6 +183,7 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
         </div>
 
         {err && <p className="status-line err">{err}</p>}
+        {pendingWarn && <p className="pending-warn">You have unsaved images or files. Click Add to save them, or Discard, before leaving this record.</p>}
 
         {confirmReject ? (
           <div className="foot confirm">
@@ -185,11 +194,11 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
           </div>
         ) : (
           <div className="foot">
-            <button className="btn secondary" onClick={onClose} disabled={busy}>Cancel</button>
-            <button className="btn secondary" onClick={() => setMerging(true)} disabled={busy}>Merge...</button>
+            <button className="btn secondary" onClick={guardedClose} disabled={busy}>Cancel</button>
+            <button className="btn secondary" onClick={() => { if (!blockedByPending()) setMerging(true); }} disabled={busy}>Merge...</button>
             <span className="grow" />
             <button className="btn secondary" onClick={saveDraft} disabled={busy}>Save draft</button>
-            <button className="btn-reject" onClick={() => setConfirmReject(true)} disabled={busy}>Reject</button>
+            <button className="btn-reject" onClick={() => { if (!blockedByPending()) setConfirmReject(true); }} disabled={busy}>Reject</button>
             <button className="btn-approve" onClick={() => resolve('Approved')} disabled={busy}>{busy ? 'Saving...' : 'Approve'}</button>
           </div>
         )}

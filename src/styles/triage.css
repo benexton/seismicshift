@@ -329,3 +329,19 @@ body {
 .record-table tbody tr:hover { background: #f5f8fc; }
 .record-table tr.in-use td:first-child { box-shadow: inset 3px 0 0 #7c3aed; }
 .dmg-chip { display: inline-block; color: #fff; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 6px; }
+
+/* ---- v13: spacing, delete confirm, unsaved warning, thumbnails ------------ */
+.attach { display: flex; flex-direction: column; gap: 6px; }
+.attach-main { display: flex; flex-direction: column; gap: 4px; }
+.attach-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px dashed #e5e7eb; padding-top: 6px; }
+.del-confirm { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #9f1239; }
+.mini.danger { color: #b42318; border-color: #f2c2bd; }
+.unsaved-hint { display: block; font-size: 11px; color: #92400e; margin-top: 4px; }
+.pending-warn { margin: 0 20px; padding: 8px 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; color: #991b1b; font-size: 13px; font-weight: 600; }
+.check-label { gap: 10px; }
+
+/* map tooltip + table thumbnails */
+.tip-thumb { display: block; width: 160px; max-height: 120px; object-fit: cover; border-radius: 4px; margin-bottom: 4px; }
+.thumb-th, .thumb-td { width: 52px; }
+.thumb-small { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); display: block; cursor: zoom-in; }
+.thumb-preview { position: fixed; width: 240px; max-height: 240px; object-fit: cover; border-radius: 8px; border: 2px solid #fff; box-shadow: 0 8px 30px rgba(0,0,0,.4); z-index: 4000; pointer-events: none; }
