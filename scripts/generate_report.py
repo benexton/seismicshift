@@ -31,34 +31,57 @@ def sb(path, params=None, method="GET", body=None):
     else:
         headers["Prefer"] = "resolution=merge-duplicates,return=minimal"
         r = requests.post(url, headers=headers, params=params, data=json.dumps(body), timeout=60)
-    r.raise_for_status()
+    if not r.ok:
+        raise SystemExit(f"Supabase {method} {path} failed [{r.status_code}]: {r.text[:400]}")
     return r.json() if (method == "GET" and r.text) else None
 
 
-def resolve_model():
+def candidate_models():
     if PREFERRED_MODEL:
-        return PREFERRED_MODEL
+        return [PREFERRED_MODEL]
+    models = []
     try:
         data = requests.get(f"{GEMINI_BASE}/models", params={"key": GEMINI_KEY}, timeout=60).json()
         names = [m["name"].split("/")[-1] for m in data.get("models", [])
                  if "generateContent" in m.get("supportedGenerationMethods", [])]
-        flash = [n for n in names if "flash" in n and "latest" not in n]
-        return sorted(flash)[-1] if flash else (names[0] if names else "gemini-2.5-flash")
-    except Exception:
-        return "gemini-2.5-flash"
+        flash = sorted([n for n in names if "flash" in n], reverse=True)
+        models = flash + [n for n in names if n not in flash]
+    except Exception as e:
+        print("Could not list models:", e)
+    # de-dupe while preserving order, plus sensible fallbacks
+    for fb in ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"]:
+        if fb not in models:
+            models.append(fb)
+    return models
 
 
 def gemini(prompt):
-    model = resolve_model()
-    r = requests.post(
-        f"{GEMINI_BASE}/models/{model}:generateContent",
-        params={"key": GEMINI_KEY},
-        data=json.dumps({"contents": [{"parts": [{"text": prompt}]}]}),
-        headers={"Content-Type": "application/json"}, timeout=120,
-    )
-    r.raise_for_status()
-    out = r.json()
-    return out["candidates"][0]["content"]["parts"][0]["text"]
+    last = ""
+    for model in candidate_models():
+        r = requests.post(
+            f"{GEMINI_BASE}/models/{model}:generateContent",
+            params={"key": GEMINI_KEY},
+            data=json.dumps({"contents": [{"parts": [{"text": prompt}]}]}),
+            headers={"Content-Type": "application/json"}, timeout=120,
+        )
+        if not r.ok:
+            last = f"{model} -> [{r.status_code}] {r.text[:200]}"
+            print("Model failed:", last)
+            continue
+        out = r.json()
+        try:
+            cands = out.get("candidates") or []
+            parts = cands[0]["content"]["parts"]
+            text = "".join(p.get("text", "") for p in parts).strip()
+            if text:
+                print("Used model:", model)
+                return text
+            last = f"{model} -> empty text; finishReason={cands[0].get('finishReason')}"
+            print("Model returned no text:", last)
+        except Exception as e:
+            last = f"{model} -> unexpected response shape: {e}; body={json.dumps(out)[:200]}"
+            print(last)
+    raise SystemExit(f"Gemini produced no usable text. Last: {last}")
 
 
 def summarise(records):
@@ -87,6 +110,12 @@ def main():
     for k, v in {"SUPABASE_URL": SUPABASE_URL, "SUPABASE_SERVICE_ROLE_KEY": SUPABASE_KEY, "LLM_API_KEY": GEMINI_KEY}.items():
         if not v:
             print(f"Missing env: {k}", file=sys.stderr); return 1
+
+    # preflight: the v10 columns must exist
+    try:
+        sb("event_meta", {"select": "conclusions_md", "limit": "1"})
+    except SystemExit as e:
+        raise SystemExit(f"{e}\nThe conclusions column is missing. Run supabase/migration_v10.sql first.")
 
     cols = "site_id,region,observation_type,damage_score,nonstructural_damage,code_era,primary_material,failure_mechanism"
     records = sb("triage_records", {"select": cols, "status": "eq.Approved", "merged_into": "is.null"})
