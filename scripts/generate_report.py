@@ -148,7 +148,7 @@ def main():
         "concise Markdown prose for an engineering event report, written using ONLY the verified data "
         "provided. Draw out patterns and likely links (relationships between damage and region, code era, "
         "material, or mechanisms such as soft-storey or masonry infill). Do not invent specifics beyond the "
-        "data. Fields:\n"
+        "data. Write ALL prose in clear English (even where the underlying observations, region names, or notes are in Japanese; you may keep place names as-is but write your commentary in English). Fields:\n"
         '  "introduction": 1-2 short paragraphs introducing the virtual reconnaissance and overall picture.\n'
         '  "overview": commentary on the damage distribution and what stands out.\n'
         '  "mechanisms": discussion of the observed failure mechanisms and notes.\n'

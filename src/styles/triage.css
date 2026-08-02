@@ -389,3 +389,16 @@ body {
 .disclaimer h2 { color: #8A1538; margin: 0 0 10px; font-size: 20px; }
 .disclaimer-body p { font-size: 14px; line-height: 1.55; margin: 0 0 10px; color: #222; }
 .disclaimer-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; gap: 12px; }
+
+/* ---- public detail card formatting -------------------------------------- */
+.pub-detail .pub-media { display: block; width: 100%; max-height: 340px; object-fit: contain; background: #f4f6f8; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 14px; }
+.pub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }
+@media (max-width: 560px) { .pub-grid { grid-template-columns: 1fr; } }
+.pub-kv { display: flex; flex-direction: column; gap: 1px; padding: 7px 0; border-bottom: 1px solid #f1eef0; }
+.pub-k { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: #9E2A3F; }
+.pub-v { font-size: 14px; color: #222; }
+.pub-notes { margin-top: 14px; }
+.pub-notes p { margin: 2px 0 0; font-size: 14px; line-height: 1.5; }
+.pub-links { display: flex; gap: 16px; margin-top: 14px; }
+.pub-links a { font-size: 13px; font-weight: 600; }
+.pub-sub { font-size: 14px; color: #8A1538; margin: 16px 0 6px; }

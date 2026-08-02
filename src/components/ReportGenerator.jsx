@@ -4,7 +4,7 @@ import {
   supabase, RECORD_COLUMNS, EVENT_META_ID, EVENT_META_MAP,
   metaRowToCamel, camelToMetaRow,
 } from '../lib/supabase.js';
-import { DAMAGE_SCORES, DAMAGE_LABEL, OBSERVATION_LABEL } from '../lib/constants.js';
+import { DAMAGE_SCORES, DAMAGE_LABEL, OBSERVATION_LABEL, fmtDate } from '../lib/constants.js';
 import { buildReportDocxBlob } from '../lib/reportDocx.js';
 import { parseReportSections } from '../lib/reportSections.js';
 
@@ -139,7 +139,7 @@ export default function ReportGenerator({ reviewer }) {
         {conclusions && (
           <p className="report-note">
             AI-assisted commentary throughout, drafted from the verified observations only{genBy ? `, by ${genBy}` : ''}
-            {genAt ? ` on ${new Date(genAt).toLocaleDateString()}` : ''}. Review before use.
+            {genAt ? ` on ${fmtDate(genAt)}` : ''}. Review before use.
           </p>
         )}
 

@@ -8,7 +8,7 @@ import { emptyFilter, filterActive } from '../lib/filter.js';
  * `filter` holds the state, `setFilter` updates it. Filtering happens in the
  * parent over that tab's own records only.
  */
-export default function FilterBar({ filter, setFilter, shown, total, view, setView }) {
+export default function FilterBar({ filter, setFilter, shown, total, view, setView, hideSource }) {
   const set = (key) => (e) => setFilter((f) => ({ ...f, [key]: e.target.value }));
   const active = filterActive(filter);
 
@@ -27,10 +27,12 @@ export default function FilterBar({ filter, setFilter, shown, total, view, setVi
         {OBSERVATION_TYPES.map((t) => <option key={t} value={t}>{OBSERVATION_LABEL[t]}</option>)}
       </select>
 
-      <select value={filter.source} onChange={set('source')} title="Source">
-        <option value="">Any source</option>
-        {Object.entries(SOURCE_LABEL).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-      </select>
+      {!hideSource && (
+        <select value={filter.source} onChange={set('source')} title="Source">
+          <option value="">Any source</option>
+          {Object.entries(SOURCE_LABEL).map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+        </select>
+      )}
 
       <select value={filter.nonstructural} onChange={set('nonstructural')} title="Non-structural damage">
         <option value="">Non-structural: any</option>

@@ -19,7 +19,7 @@ BUCKET = "observation-media"
 OBJECT_PATH = "public/kumamoto-2026-public.json"
 
 REC_COLS = ("id,site_id,region,latitude,longitude,damage_score,observation_type,"
-            "building_name,building_type,primary_material,height_class,code_era,"
+            "building_name,building_type,primary_material,height_class,code_era,address,location_confidence,"
             "failure_mechanism,nonstructural_damage,engineer_notes,media_url,streetview_url,source_url")
 
 
@@ -59,6 +59,7 @@ def main():
             "lat": r.get("latitude"), "lng": r.get("longitude"),
             "damage_score": r.get("damage_score"), "observation_type": r.get("observation_type"),
             "building_name": r.get("building_name"), "building_type": r.get("building_type"),
+            "address": r.get("address"), "location_confidence": r.get("location_confidence"),
             "primary_material": r.get("primary_material"), "height_class": r.get("height_class"),
             "code_era": r.get("code_era"), "failure_mechanism": r.get("failure_mechanism"),
             "nonstructural_damage": r.get("nonstructural_damage"), "engineer_notes": r.get("engineer_notes"),

@@ -9,6 +9,7 @@ import { DAMAGE_LABEL, DAMAGE_COLOR, OBSERVATION_LABEL, provenanceLabel } from '
  * triaged sites).
  */
 export default function RecordTable({ records, mode, othersByRecord, onOpen }) {
+  const isPublic = mode === 'public';
   const personHeader = mode === 'triaged' ? 'Verified by' : 'Submitted by';
   const [preview, setPreview] = useState(null);
 
@@ -19,7 +20,8 @@ export default function RecordTable({ records, mode, othersByRecord, onOpen }) {
           <tr>
             <th className="thumb-th"></th>
             <th>Site</th><th>Region</th><th>Damage</th><th>Type</th>
-            <th>Non-struct.</th><th>Source</th><th>{personHeader}</th>
+            <th>Non-struct.</th>
+            {!isPublic && <><th>Source</th><th>{personHeader}</th></>}
           </tr>
         </thead>
         <tbody>
@@ -44,16 +46,18 @@ export default function RecordTable({ records, mode, othersByRecord, onOpen }) {
                 </td>
                 <td>{OBSERVATION_LABEL[r.observation_type] ?? '-'}</td>
                 <td>{r.nonstructural_damage ? 'Yes' : ''}</td>
-                <td>{provenanceLabel(r)}</td>
-                <td>
-                  {mode === 'triaged' ? (r.reviewed_by ?? '-') : (r.submitted_by ?? '-')}
-                  {others.length ? <span className="muted"> · in use by {others.join(', ')}</span> : null}
-                </td>
+                {!isPublic && <td>{provenanceLabel(r)}</td>}
+                {!isPublic && (
+                  <td>
+                    {mode === 'triaged' ? (r.reviewed_by ?? '-') : (r.submitted_by ?? '-')}
+                    {others.length ? <span className="muted"> · in use by {others.join(', ')}</span> : null}
+                  </td>
+                )}
               </tr>
             );
           })}
           {records.length === 0 && (
-            <tr><td colSpan={8} className="muted" style={{ textAlign: 'center', padding: 20 }}>No records match.</td></tr>
+            <tr><td colSpan={isPublic ? 6 : 8} className="muted" style={{ textAlign: 'center', padding: 20 }}>No records match.</td></tr>
           )}
         </tbody>
       </table>
