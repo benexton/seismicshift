@@ -3,9 +3,10 @@ import TriageLayout from '../../layouts/TriageLayout.astro';
 import PublicView from '../../components/PublicView.jsx';
 // Public, read-only viewer of the verified sites. Reads a sanitized static
 // snapshot (published by the export_public Action) - no login, no DB writes.
-// Resolves at /kumamoto-2026-public/ (trailingSlash: 'always').
+// Google Analytics is enabled here only (not on the internal tool) so this tab
+// appears in your existing property as /kumamoto-2026-public/.
 ---
 
-<TriageLayout title="VERT 2026 Kumamoto - Verified Sites (Beta)">
+<TriageLayout title="VERT 2026 Kumamoto - Verified Sites (Beta)" gaId="G-ME4SZWK0H4">
   <PublicView client:only="react" />
 </TriageLayout>
