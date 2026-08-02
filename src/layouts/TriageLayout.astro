@@ -1,14 +1,15 @@
 ---
-// Minimal, self-contained layout for the internal VERT triage tool.
-// Deliberately does NOT use BaseLayout: this is an auth-gated engineering tool,
-// so it skips the marketing nav/footer, Google Analytics, Turnstile, and site
-// fonts, and marks itself noindex so it stays out of search + the sitemap.
+// Minimal, self-contained layout for the VERT tool. Does NOT use BaseLayout.
+// Google Analytics is added ONLY when a gaId prop is passed (the public page
+// does; the internal auth-gated tool does not), so the volunteer tool stays
+// untracked. noindex keeps it out of search + the sitemap.
 import '../styles/triage.css';
 
 interface Props {
   title?: string;
+  gaId?: string;
 }
-const { title = 'VERT Kumamoto 2026 - Triage' } = Astro.props;
+const { title = 'VERT Kumamoto 2026 - Triage', gaId } = Astro.props;
 ---
 
 <!doctype html>
@@ -18,6 +19,17 @@ const { title = 'VERT Kumamoto 2026 - Triage' } = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex,nofollow" />
     <title>{title}</title>
+    {gaId && (
+      <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}></script>
+    )}
+    {gaId && (
+      <script is:inline set:html={`
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '${gaId}');
+      `}></script>
+    )}
   </head>
   <body>
     <slot />
