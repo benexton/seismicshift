@@ -5,6 +5,7 @@ import {
 } from 'docx';
 import { DAMAGE_SCORES, DAMAGE_LABEL, OBSERVATION_LABEL } from './constants.js';
 import { parseReportSections } from './reportSections.js';
+import { fmtDate } from './constants.js';
 
 const MAROON = '8A1538';
 const MAROON_LT = '9E2A3F';
@@ -118,7 +119,7 @@ function labelCounts(records, keyFn, fallback = 'Unspecified') {
 export async function buildReportDocxBlob(records, meta, conclusions) {
   const approved = records.filter((r) => r.status === 'Approved');
   const buildings = approved.filter((r) => r.observation_type === 'building');
-  const now = new Date().toISOString().slice(0, 10);
+  const now = fmtDate(new Date());
 
   const parsed = parseReportSections(conclusions);
   const sec = parsed?.structured ? parsed.sections : null;

@@ -114,3 +114,13 @@ export function provenanceLabel(rec) {
   const base = SOURCE_LABEL[rec?.source_type] ?? 'Other';
   return rec?.source_type === 'human' && rec?.submitted_by ? `${base} by ${rec.submitted_by}` : base;
 }
+
+// NZ date format dd/mm/yyyy.
+export function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return '';
+  const dd = String(dt.getDate()).padStart(2, '0');
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${dt.getFullYear()}`;
+}
