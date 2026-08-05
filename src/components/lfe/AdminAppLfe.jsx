@@ -694,6 +694,14 @@ function ProvisionUsersPanel({ events }) {
     loadMembers(scope);
   }
 
+  async function changeRole(userId, newRole) {
+    setBusy(true); setErr('');
+    const { error } = await supabaseLfe.from('event_members').update({ role: newRole }).eq('event_id', scope).eq('user_id', userId);
+    setBusy(false);
+    if (error) return setErr(error.message);
+    loadMembers(scope);
+  }
+
   async function removeMember(userId) {
     setBusy(true); setErr('');
     const { error } = isPlatform
@@ -762,7 +770,15 @@ function ProvisionUsersPanel({ events }) {
                   <tr key={m.user_id}>
                     <td>{m.email ?? m.user_id}</td>
                     <td><DisplayNameCell member={m} onSaved={() => loadMembers(scope)} /></td>
-                    {!isPlatform && <td>{m.role}</td>}
+                    {!isPlatform && (
+                      <td>
+                        <select value={m.role} disabled={busy} onChange={(e) => changeRole(m.user_id, e.target.value)}>
+                          <option value="admin">Admin</option>
+                          <option value="triager">Triager</option>
+                          <option value="viewer">Viewer</option>
+                        </select>
+                      </td>
+                    )}
                     <td><button className="mini danger" onClick={() => removeMember(m.user_id)} disabled={busy}>Remove</button></td>
                   </tr>
                 ))}
