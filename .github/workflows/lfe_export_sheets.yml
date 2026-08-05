@@ -1,0 +1,36 @@
+name: LFE - Backup to Google Sheets
+
+# Mirrors each event's Supabase records into its own Google Sheet (created on
+# first run, reused after via events.gsheet_id). Runs daily for every active
+# event, and can be run on demand for one event via event_slug.
+on:
+  workflow_dispatch:
+    inputs:
+      event_slug:
+        description: 'Event slug (blank = every active event)'
+        required: false
+        default: ''
+  schedule:
+    - cron: '0 19 * * *'   # daily at 19:00 UTC (about 7am NZST)
+
+concurrency:
+  group: lfe-export-sheets
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r scripts/requirements-sheets.txt
+      - name: Export to Google Sheets
+        env:
+          LFE_SUPABASE_URL: ${{ secrets.LFE_SUPABASE_URL }}
+          LFE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.LFE_SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: python scripts/lfe/export_to_sheets.py --event-slug "${{ inputs.event_slug }}"
