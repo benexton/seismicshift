@@ -3,15 +3,19 @@
 LFE platform - Google Sheets backup, event-parameterized, one sheet per event.
 
 Adapted from ../export_to_sheets.py (Kumamoto, single-event, untouched): that
-script points at one hardcoded GSHEET_ID; this one creates a spreadsheet the
-first time it runs for a given event (via the Sheets/Drive API) and stores
-the resulting id back on events.gsheet_id, reusing it on every later run.
-Same three tabs as Kumamoto's, scoped to that event's own records.
+script points at one hardcoded GSHEET_ID; this one looks up each event's own
+events.gsheet_id. Same three tabs as Kumamoto's, scoped to that event's own
+records.
 
-The auto-created sheet is shared as "anyone with the link can view" rather
-than with a specific person, since there's no single human owner to assign
-at creation time - the same "accept it for now" tradeoff already made for
-the LFE media bucket this round.
+Each event's sheet must be created manually, the same way Kumamoto's is: a
+human creates a blank Google Sheet under their own real Google account, shares
+it with the service account's email (Editor access), and pastes the
+spreadsheet id into the event's Edit panel in /lfe/admin/ (Manage events). A
+bare Google Cloud service account (not part of a paid Workspace domain) has
+no Drive storage quota of its own, so it cannot create new spreadsheets - it
+can only read/write ones a real account already owns and shared with it. An
+event with no gsheet_id set is skipped (with a warning), not a hard failure,
+so a scheduled all-events run still exports everyone else.
 
 Env: LFE_SUPABASE_URL, LFE_SUPABASE_SERVICE_ROLE_KEY, GOOGLE_SERVICE_ACCOUNT_JSON.
 
@@ -34,7 +38,7 @@ except ImportError:
     print("Install: pip install -r scripts/requirements-sheets.txt", file=sys.stderr)
     raise
 
-from _common import SUPABASE_URL, SUPABASE_KEY, sb_get, sb_patch, resolve_events, require_env
+from _common import SUPABASE_URL, SUPABASE_KEY, sb_get, resolve_events, require_env
 
 SA_JSON = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "")
 
@@ -81,21 +85,24 @@ def attachment_kind(a: dict) -> tuple[str, str]:
     return "note", ""
 
 
-def get_or_create_sheet(gc, event: dict):
-    if event.get("gsheet_id"):
-        return gc.open_by_key(event["gsheet_id"])
-    title = f"LFE - {event.get('name') or event['slug']}"
-    sh = gc.create(title)
-    sh.share(None, perm_type="anyone", role="reader")
-    sb_patch("events", {"id": f"eq.{event['id']}"}, {"gsheet_id": sh.id})
-    print(f"  created new sheet '{title}' ({sh.id})")
-    return sh
+class NoSheetConfigured(Exception):
+    pass
+
+
+def open_sheet(gc, event: dict):
+    if not event.get("gsheet_id"):
+        raise NoSheetConfigured(
+            f"No Google Sheet configured for '{event.get('name') or event['slug']}'. Create a blank Google "
+            "Sheet, share it with the service account's email (Editor access), and paste its id into the "
+            "event's Edit panel in /lfe/admin/ (Manage events)."
+        )
+    return gc.open_by_key(event["gsheet_id"])
 
 
 def export_event(gc, event: dict) -> None:
     event_id = event["id"]
     print(f"=== {event.get('name') or event['slug']} ===")
-    sh = get_or_create_sheet(gc, event)
+    sh = open_sheet(gc, event)
 
     print("Exporting manual observations...")
     manual = sb_get("triage_records", {"select": ",".join(COLUMNS), "event_id": f"eq.{event_id}", "source_type": "eq.human", "merged_into": "is.null", "order": "created_at.desc"})
@@ -128,16 +135,27 @@ def main() -> int:
     ap.add_argument("--event-slug", default=os.environ.get("EVENT_SLUG") or None)
     args = ap.parse_args()
 
+    # spreadsheets only - the sheet always already exists (see open_sheet), so
+    # this never needs drive scope. A bare service account has no Drive
+    # storage quota of its own and cannot create files, only edit ones a real
+    # Google account has created and shared with it.
     creds = Credentials.from_service_account_info(json.loads(SA_JSON), scopes=[
         "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
     ])
     gc = gspread.authorize(creds)
 
+    skipped = []
     for event in resolve_events(args.event_slug):
-        export_event(gc, event)
+        try:
+            export_event(gc, event)
+        except NoSheetConfigured as ex:
+            print(f"  ! {ex}")
+            skipped.append(event.get("slug"))
 
-    print("Done.")
+    if skipped:
+        print(f"Done, with {len(skipped)} event(s) skipped (no sheet configured): {', '.join(skipped)}")
+    else:
+        print("Done.")
     return 0
 
 
