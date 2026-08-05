@@ -10,9 +10,17 @@ function EventList({ reviewer, signOut }) {
 
   useEffect(() => {
     (async () => {
+      const { data: userData } = await supabaseLfe.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) { setLoading(false); return; }
+      // Explicit user_id filter: RLS also lets an event admin see every
+      // other member's row for events they administer (needed for the
+      // admin roster UI), so without this filter an admin of N events
+      // would see each event listed once per admin on it, not once.
       const { data, error } = await supabaseLfe
         .from('event_members')
-        .select('role, events(id, slug, name, country, event_datetime, status)');
+        .select('role, events(id, slug, name, country, event_datetime, status)')
+        .eq('user_id', uid);
       setLoading(false);
       if (error) return setErr(error.message);
       setMemberships((data ?? []).filter((m) => m.events));
