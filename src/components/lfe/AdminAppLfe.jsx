@@ -185,6 +185,10 @@ function CreateEventPanel({ onCreated }) {
   const [lng, setLng] = useState('');
   const [magnitude, setMagnitude] = useState('');
   const [depth, setDepth] = useState('');
+  const [locationName, setLocationName] = useState('');
+  const [faulting, setFaulting] = useState('');
+  const [maxMmi, setMaxMmi] = useState('');
+  const [tsunami, setTsunami] = useState('');
   const [languages, setLanguages] = useState('en');
   const [basemapKey, setBasemapKey] = useState('osm');
   const [zoom, setZoom] = useState(10);
@@ -260,6 +264,12 @@ function CreateEventPanel({ onCreated }) {
       if (coords[0] != null) setLng(String(coords[0]));
       if (coords[1] != null) setLat(String(coords[1]));
       if (p.time) setEventDatetime(new Date(p.time).toISOString().slice(0, 16));
+      if (p.place) setLocationName(p.place);
+      if (p.mmi != null) setMaxMmi(String(p.mmi));
+      // USGS's tsunami flag means "met the automated tsunami-alert
+      // threshold", not "a tsunami was confirmed" - phrased as such so it
+      // isn't mistaken for a confirmed observation.
+      if (p.tsunami != null) setTsunami(p.tsunami ? 'Yes (met USGS automated alert threshold)' : 'No');
 
       const region = regionFromUsgsText(p.place || p.title);
       const info = countryInfoFromRegion(region);
@@ -317,11 +327,15 @@ function CreateEventPanel({ onCreated }) {
       }).select().single();
       if (error) throw error;
 
-      if (magnitude !== '' || depth !== '') {
-        await supabaseLfe.from('event_meta').update({
-          magnitude: magnitude !== '' ? Number(magnitude) : null,
-          depth: depth !== '' ? Number(depth) : null,
-        }).eq('event_id', created.id);
+      const metaPatch = {};
+      if (magnitude !== '') metaPatch.magnitude = Number(magnitude);
+      if (depth !== '') metaPatch.depth = Number(depth);
+      if (locationName.trim()) metaPatch.location_name = locationName.trim();
+      if (faulting.trim()) metaPatch.faulting = faulting.trim();
+      if (maxMmi.trim()) metaPatch.max_mmi = maxMmi.trim();
+      if (tsunami.trim()) metaPatch.tsunami = tsunami.trim();
+      if (Object.keys(metaPatch).length) {
+        await supabaseLfe.from('event_meta').update(metaPatch).eq('event_id', created.id);
       }
 
       let keywordSyncWarning = '';
@@ -334,6 +348,7 @@ function CreateEventPanel({ onCreated }) {
       setStatus({ kind: 'ok', msg: `Event "${created.name}" created (slug: ${created.slug}). It starts in draft - flip it to active on the Manage events tab once it's ready.${keywordSyncWarning}` });
       setName(''); setSlug(''); setSlugEdited(false); setCountry(''); setCountryCode(''); setEventDatetime('');
       setLat(''); setLng(''); setMagnitude(''); setDepth(''); setUsgsInput('');
+      setLocationName(''); setFaulting(''); setMaxMmi(''); setTsunami('');
       setEnglishKeywords(''); setKeywordText({});
       setConfirmSkipTranslation(false);
       onCreated?.();
@@ -357,7 +372,7 @@ function CreateEventPanel({ onCreated }) {
             {usgsBusy ? 'Fetching...' : 'Fetch from USGS'}
           </button>
         </div>
-        <span className="muted small">Optional. Auto-fills name, epicentre, time, magnitude, and depth below - review before saving.</span>
+        <span className="muted small">Optional. Auto-fills name, epicentre, time, magnitude, depth, location, and maximum MMI/tsunami-threshold below - review before saving.</span>
       </div>
 
       <form onSubmit={createEvent}>
@@ -376,6 +391,10 @@ function CreateEventPanel({ onCreated }) {
           <div><label>Epicentre longitude</label><input type="number" step="0.0001" value={lng} onChange={(e) => setLng(e.target.value)} /></div>
           <div><label>Magnitude (Mw)</label><input type="number" step="0.1" value={magnitude} onChange={(e) => setMagnitude(e.target.value)} /></div>
           <div><label>Depth (km)</label><input type="number" step="0.1" value={depth} onChange={(e) => setDepth(e.target.value)} /></div>
+          <div><label>Location (geographical)</label><input type="text" value={locationName} onChange={(e) => setLocationName(e.target.value)} placeholder="e.g. 5km ESE of Catia La Mar, Venezuela" /></div>
+          <div><label>Faulting mechanism</label><input type="text" value={faulting} onChange={(e) => setFaulting(e.target.value)} placeholder="not auto-filled - not reliably available from USGS's basic feed" /></div>
+          <div><label>Maximum MMI</label><input type="text" value={maxMmi} onChange={(e) => setMaxMmi(e.target.value)} /></div>
+          <div><label>Tsunami alert</label><input type="text" value={tsunami} onChange={(e) => setTsunami(e.target.value)} /></div>
           <div><label>Languages (comma-separated codes)</label><input type="text" value={languages} onChange={(e) => onLanguagesChange(e.target.value)} placeholder="en, ja" /></div>
           <div>
             <label>Basemap preset</label>
@@ -427,6 +446,23 @@ function EventKeywordsEditor({ event, onClose, onSaved }) {
   });
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
+  const [otherTerms, setOtherTerms] = useState([]);
+
+  // Terms live in scraper_sources (kind='bluesky') as a flat, language-less
+  // list - a term added there directly (via "Scraper keywords and feeds")
+  // has no obvious language box to show up in here, so without this it's
+  // invisible in this editor. Saving here is additive-only and never
+  // deletes a scraper_sources row, so nothing here is ever actually lost -
+  // but that safety is only reassuring if it's visible, hence surfacing it
+  // explicitly rather than leaving an admin to wonder.
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabaseLfe.from('scraper_sources')
+        .select('value').eq('event_id', event.id).eq('kind', 'bluesky');
+      const known = new Set(languages.flatMap((l) => (event.keyword_sets?.[l] ?? []).map((t) => t.trim().toLowerCase())));
+      setOtherTerms((data ?? []).map((r) => r.value).filter((v) => !known.has(v.trim().toLowerCase())));
+    })();
+  }, [event.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function translate() {
     setBusy(true); setStatus(null);
@@ -477,6 +513,11 @@ function EventKeywordsEditor({ event, onClose, onSaved }) {
             </button>
             <span className="muted small">Requires the translate-keywords Edge Function to be deployed.</span>
           </div>
+          {otherTerms.length > 0 && (
+            <p className="muted small">
+              Also active in the scraper (added directly via "Scraper keywords and feeds", not shown below - saving here won't remove them): {otherTerms.join(', ')}
+            </p>
+          )}
           {languages.map((l) => (
             <div className="field" key={l}>
               <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Keyword seeds ({l})</label>
@@ -504,6 +545,10 @@ function EditEventPanel({ event, onClose, onSaved }) {
   const [lng, setLng] = useState(event.epicentre_lng ?? '');
   const [magnitude, setMagnitude] = useState('');
   const [depth, setDepth] = useState('');
+  const [locationName, setLocationName] = useState('');
+  const [faulting, setFaulting] = useState('');
+  const [maxMmi, setMaxMmi] = useState('');
+  const [tsunami, setTsunami] = useState('');
   const [metaLoaded, setMetaLoaded] = useState(false);
   const [languages, setLanguages] = useState((event.languages?.length ? event.languages : ['en']).join(', '));
   const [basemapKey, setBasemapKey] = useState(Object.keys(event.basemap || {})[0] || 'osm');
@@ -514,10 +559,15 @@ function EditEventPanel({ event, onClose, onSaved }) {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabaseLfe.from('event_meta').select('magnitude, depth').eq('event_id', event.id).maybeSingle();
+      const { data } = await supabaseLfe.from('event_meta')
+        .select('magnitude, depth, location_name, faulting, max_mmi, tsunami').eq('event_id', event.id).maybeSingle();
       if (data) {
         setMagnitude(data.magnitude != null ? String(data.magnitude) : '');
         setDepth(data.depth != null ? String(data.depth) : '');
+        setLocationName(data.location_name ?? '');
+        setFaulting(data.faulting ?? '');
+        setMaxMmi(data.max_mmi ?? '');
+        setTsunami(data.tsunami ?? '');
       }
       setMetaLoaded(true);
     })();
@@ -552,6 +602,10 @@ function EditEventPanel({ event, onClose, onSaved }) {
       const { error: metaError } = await supabaseLfe.from('event_meta').update({
         magnitude: magnitude !== '' ? Number(magnitude) : null,
         depth: depth !== '' ? Number(depth) : null,
+        location_name: locationName.trim() || null,
+        faulting: faulting.trim() || null,
+        max_mmi: maxMmi.trim() || null,
+        tsunami: tsunami.trim() || null,
       }).eq('event_id', event.id);
       if (metaError) throw metaError;
 
@@ -583,6 +637,10 @@ function EditEventPanel({ event, onClose, onSaved }) {
               <div><label>Epicentre longitude</label><input type="number" step="0.0001" value={lng} onChange={(e) => setLng(e.target.value)} /></div>
               <div><label>Magnitude (Mw)</label><input type="number" step="0.1" value={magnitude} onChange={(e) => setMagnitude(e.target.value)} disabled={!metaLoaded} /></div>
               <div><label>Depth (km)</label><input type="number" step="0.1" value={depth} onChange={(e) => setDepth(e.target.value)} disabled={!metaLoaded} /></div>
+              <div><label>Location (geographical)</label><input type="text" value={locationName} onChange={(e) => setLocationName(e.target.value)} disabled={!metaLoaded} /></div>
+              <div><label>Faulting mechanism</label><input type="text" value={faulting} onChange={(e) => setFaulting(e.target.value)} disabled={!metaLoaded} /></div>
+              <div><label>Maximum MMI</label><input type="text" value={maxMmi} onChange={(e) => setMaxMmi(e.target.value)} disabled={!metaLoaded} /></div>
+              <div><label>Tsunami alert</label><input type="text" value={tsunami} onChange={(e) => setTsunami(e.target.value)} disabled={!metaLoaded} /></div>
               <div><label>Languages (comma-separated codes)</label><input type="text" value={languages} onChange={(e) => setLanguages(e.target.value)} placeholder="en, ja" /></div>
               <div>
                 <label>Basemap preset</label>
