@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import { fmtDate } from '../../lib/constants.js';
 import LoginGateLfe from './LoginGateLfe.jsx';
+import LfeNavGroup from './LfeNavGroup.jsx';
 
 function EventList({ reviewer, signOut }) {
   const [memberships, setMemberships] = useState([]);
@@ -30,10 +31,7 @@ function EventList({ reviewer, signOut }) {
   return (
     <div className="triage-shell">
       <div className="tabs">
-        <span className="navgroup">
-          <a className="navlink" href="/lfe/public/">Public view</a>
-          <a className="navlink" href="/lfe/admin/">Admin</a>
-        </span>
+        <LfeNavGroup />
         <span style={{ fontWeight: 600, alignSelf: 'center', margin: '0 6px' }}>LFE</span>
         <span className="tab-spacer" />
         <span className="signout">{reviewer}</span>
