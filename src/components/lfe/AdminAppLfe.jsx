@@ -19,6 +19,39 @@ function usgsIdFromInput(v) {
   return parts[parts.length - 1];
 }
 
+// Bridges the two previously-disconnected keyword concepts: events.keyword_sets
+// (what the admin UI collects/translates at create/edit time) and
+// scraper_sources (what ingest_triage_data.py's load_sources() actually
+// reads - kind='bluesky' rows, no per-language column of its own). Without
+// this, keywords typed in during event creation just sat in keyword_sets
+// doing nothing, and the scraper found zero sources for every new event.
+// Additive only - never touches/removes existing scraper_sources rows, so it
+// won't clobber a row an admin has since disabled or added by hand in the
+// "Scraper keywords and feeds" tab.
+async function syncKeywordsToScraperSources(eventId, keywordSets) {
+  const terms = Object.values(keywordSets || {}).flat().map((t) => (t || '').trim()).filter(Boolean);
+  if (!terms.length) return;
+
+  const { data: existing } = await supabaseLfe.from('scraper_sources')
+    .select('value').eq('event_id', eventId).eq('kind', 'bluesky');
+  const known = new Set((existing ?? []).map((r) => r.value.trim().toLowerCase()));
+
+  const toInsert = [];
+  for (const term of terms) {
+    const key = term.toLowerCase();
+    if (known.has(key)) continue;
+    known.add(key);
+    toInsert.push(term);
+  }
+  if (!toInsert.length) return;
+
+  const { data: u } = await supabaseLfe.auth.getUser();
+  const createdBy = u?.user?.email ?? null;
+  await supabaseLfe.from('scraper_sources').insert(
+    toInsert.map((value) => ({ event_id: eventId, kind: 'bluesky', value, created_by: createdBy }))
+  );
+}
+
 function slugify(name) {
   const base = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   return `${base}-${new Date().getFullYear()}`;
@@ -285,6 +318,12 @@ function CreateEventPanel({ onCreated }) {
         }).eq('event_id', created.id);
       }
 
+      try {
+        await syncKeywordsToScraperSources(created.id, keywordSets);
+      } catch (syncEx) {
+        console.warn('Failed to seed scraper sources from keywords:', syncEx);
+      }
+
       setStatus({ kind: 'ok', msg: `Event "${created.name}" created (slug: ${created.slug}). It starts in draft - flip it to active on the Manage events tab once it's ready.` });
       setName(''); setSlug(''); setSlugEdited(false); setCountry(''); setCountryCode(''); setEventDatetime('');
       setLat(''); setLng(''); setMagnitude(''); setDepth(''); setUsgsInput('');
@@ -408,8 +447,13 @@ function EventKeywordsEditor({ event, onClose, onSaved }) {
     const keyword_sets = {};
     for (const l of languages) keyword_sets[l] = text[l].split(',').map((t) => t.trim()).filter(Boolean);
     const { error } = await supabaseLfe.from('events').update({ keyword_sets }).eq('id', event.id);
+    if (error) { setBusy(false); return setStatus({ kind: 'err', msg: `Save failed: ${error.message}` }); }
+    try {
+      await syncKeywordsToScraperSources(event.id, keyword_sets);
+    } catch (syncEx) {
+      console.warn('Failed to seed scraper sources from keywords:', syncEx);
+    }
     setBusy(false);
-    if (error) return setStatus({ kind: 'err', msg: `Save failed: ${error.message}` });
     onSaved?.();
     onClose?.();
   }
