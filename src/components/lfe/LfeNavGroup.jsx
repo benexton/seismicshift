@@ -11,6 +11,7 @@
 // gets shared with the actual public) never renders this component at all.
 const NAV_LINKS = [
   ['/lfe/', 'Your events'],
+  ['/lfe/codes/', 'Codes & standards'],
   ['/lfe/public-preview/', 'Public view'],
   ['/lfe/admin/', 'Admin'],
 ];

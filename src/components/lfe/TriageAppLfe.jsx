@@ -55,6 +55,7 @@ function Workspace({ reviewer, userId, signOut, updateName }) {
         ))}
         <span className="navgroup trailing">
           <a className="navlink" href="/lfe/">← All events</a>
+          <a className="navlink" href="/lfe/codes/">Codes & standards</a>
           <a className="navlink" href="/lfe/public-preview/">Public view</a>
           <a className="navlink" href="/lfe/admin/">Admin</a>
         </span>
