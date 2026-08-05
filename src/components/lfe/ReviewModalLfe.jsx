@@ -157,6 +157,17 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
             {record.streetview_url && (
               <p className="kv"><b>Street View:</b> <a href={record.streetview_url} target="_blank" rel="noreferrer">screenshot</a></p>
             )}
+            {record.source_text_en && (
+              <div className="caption-block">
+                <p className="kv"><b>Post text{record.source_text_en !== record.source_text ? ' (translated)' : ''}:</b> {record.source_text_en}</p>
+                {record.source_text && record.source_text !== record.source_text_en && (
+                  <details className="muted small">
+                    <summary>Show original</summary>
+                    {record.source_text}
+                  </details>
+                )}
+              </div>
+            )}
             {attrs.length > 0 && (
               <div className="attr-block">
                 {attrs.map(([k, x]) => <p key={k} className="kv"><b>{k}:</b> {x}</p>)}

@@ -13,10 +13,15 @@ Pipeline order (keeps LLM spend low - dedup BEFORE the model):
     3. Collect           - fetch posts/articles with images.
     4. pHash dedup        - drop near-duplicate images (Hamming 0-5).
     5. AI triage          - reads image + text, returns damage, one or more
-                            observation types, a best-guess place name, and -
-                            when a specific place can be recognised from a
-                            landmark, street sign, storefront signage, or
-                            address text - a direct coordinate guess.
+                            observation types, a best-guess place name, an
+                            English translation of the caption (auto-
+                            translation at ingest - the same call already
+                            being made, not a second one, so a triager who
+                            doesn't read the event's language can still work
+                            the queue), and - when a specific place can be
+                            recognised from a landmark, street sign,
+                            storefront signage, or address text - a direct
+                            coordinate guess.
     6. Geocode            - place name -> lat/lng via Nominatim. If that
                             fails, falls back to the AI's own coordinate
                             guess from step 5, flagged 'ai_estimated' (not
@@ -282,6 +287,9 @@ def triage_prompt(event_name: str, country: str | None) -> str:
         '"location_lng": matching longitude, else null, '
         '"location_confidence": float 0-1, your confidence in location_lat/lng '
         'specifically (0 if you gave neither), '
+        '"caption_en": English translation of the caption, or the caption '
+        'unchanged if it is already in English - preserve meaning over '
+        'literal wording, and keep it reasonably short, '
         '"confidence": float 0-1, overall triage confidence}. If the image is '
         'not earthquake-related, set damage_score 0 and observation_types '
         '["other"].'
@@ -448,6 +456,7 @@ def _triage_mock(item: MediaItem, event_name: str) -> dict[str, Any]:
         "location_lat": None,
         "location_lng": None,
         "location_confidence": 0.0,
+        "caption_en": item.text,
         "confidence": round(0.5 + (seed % 40) / 100.0, 3),
         "ai_model": "mock",
     }
@@ -553,6 +562,15 @@ def _safe_damage_score(raw) -> int:
         return 0
 
 
+_MAX_TEXT_LEN = 4000  # defensive cap - an RSS summary can occasionally run long
+
+
+def _clip_text(text: str | None) -> str | None:
+    if not text:
+        return None
+    return text[:_MAX_TEXT_LEN]
+
+
 def push(item: MediaItem, event_id: str) -> None:
     t = item.triage
     payload = {
@@ -571,6 +589,8 @@ def push(item: MediaItem, event_id: str) -> None:
         "p_observation_types": valid_observation_types(t.get("observation_types")),
         "p_location_precision": item.location_precision,
         "p_location_confidence": item.location_confidence,
+        "p_source_text": _clip_text(item.text),
+        "p_source_text_en": _clip_text(t.get("caption_en")),
     }
     r = requests.post(
         f"{SUPABASE_URL}/rest/v1/rpc/ingest_triage",
