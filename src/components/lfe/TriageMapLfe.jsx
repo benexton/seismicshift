@@ -98,6 +98,11 @@ export default function TriageMapLfe({ reviewer, othersByRecord, setActiveRecord
             pathOptions={{ color: '#7c3aed', weight: 3, fill: false }}
             interactive={false} />
         )}
+        {r.location_precision === 'ai_estimated' && (
+          <CircleMarker center={pos} radius={11}
+            pathOptions={{ color: '#f59e0b', weight: 2, dashArray: '2 3', fill: false }}
+            interactive={false} />
+        )}
         <CircleMarker center={pos} radius={9}
           pathOptions={{
             color: SOURCE_COLOR[r.source_type] ?? '#ffffff',
@@ -112,6 +117,7 @@ export default function TriageMapLfe({ reviewer, othersByRecord, setActiveRecord
             {DAMAGE_LABEL[r.damage_score]?.split(' - ')[0] ?? '?'} · {observationTypesLabel(r.observation_types)} · {SOURCE_LABEL[r.source_type] ?? 'other'}
             {r._dupes?.length > 0 && ' · possible duplicate'}
             {others.length > 0 && ` · in use by ${others.join(', ')}`}
+            {r.location_precision === 'ai_estimated' && ' · AI-estimated location'}
           </Tooltip>
         </CircleMarker>
       </Fragment>
@@ -166,6 +172,10 @@ export default function TriageMapLfe({ reviewer, othersByRecord, setActiveRecord
         <div className="row">
           <span className="dot ring" style={{ borderColor: '#7c3aed' }} />
           In use by someone
+        </div>
+        <div className="row">
+          <span className="dot ring" style={{ borderColor: '#f59e0b', borderStyle: 'dashed' }} />
+          AI-estimated location - needs confirmation
         </div>
       </div>
       </div>

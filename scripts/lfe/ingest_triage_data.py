@@ -13,8 +13,17 @@ Pipeline order (keeps LLM spend low - dedup BEFORE the model):
     3. Collect           - fetch posts/articles with images.
     4. pHash dedup        - drop near-duplicate images (Hamming 0-5).
     5. AI triage          - reads image + text, returns damage, one or more
-                            observation types, and a best-guess location.
-    6. Geocode            - location string -> lat/lng via Nominatim.
+                            observation types, a best-guess place name, and -
+                            when a specific place can be recognised from a
+                            landmark, street sign, storefront signage, or
+                            address text - a direct coordinate guess.
+    6. Geocode            - place name -> lat/lng via Nominatim. If that
+                            fails, falls back to the AI's own coordinate
+                            guess from step 5, flagged 'ai_estimated' (not
+                            'approximate') so a human triager knows to
+                            confirm or correct it rather than trust it
+                            silently. Only genuinely unlocatable posts (no
+                            geocode, no AI guess) are dropped.
     7. Push               - upsert into Supabase via ingest_triage() (service role).
 
 Env vars:
@@ -82,6 +91,8 @@ class MediaItem:
     lat: float | None = None
     lng: float | None = None
     region: str | None = None
+    location_precision: str = "approximate"
+    location_confidence: str | None = None
     triage: dict[str, Any] = field(default_factory=dict)
 
 
@@ -249,8 +260,16 @@ def triage_prompt(event_name: str, country: str | None) -> str:
         '"observed_retrofits": "none" or short phrase, '
         '"location_text": best guess of the specific place (town/ward/landmark) '
         'from the caption, else null, '
-        '"confidence": float 0-1}. If the image is not earthquake-related, set '
-        'damage_score 0 and observation_types ["other"].'
+        '"location_lat": if, and only if, you can recognise the actual specific '
+        'place from a visible landmark, street sign, storefront signage, or '
+        'address text in the image or caption, your best-guess latitude as a '
+        'float, else null - do not guess if you are not reasonably sure, '
+        '"location_lng": matching longitude, else null, '
+        '"location_confidence": float 0-1, your confidence in location_lat/lng '
+        'specifically (0 if you gave neither), '
+        '"confidence": float 0-1, overall triage confidence}. If the image is '
+        'not earthquake-related, set damage_score 0 and observation_types '
+        '["other"].'
     )
 
 
@@ -411,6 +430,9 @@ def _triage_mock(item: MediaItem, event_name: str) -> dict[str, Any]:
         "failure_mechanism": ["soft-story collapse", "out-of-plane failure", "liquefaction", "slope failure"][seed % 4],
         "observed_retrofits": ["none", "tension-only bracing", "supplementary friction dampers"][seed % 3],
         "location_text": event_name,
+        "location_lat": None,
+        "location_lng": None,
+        "location_confidence": 0.0,
         "confidence": round(0.5 + (seed % 40) / 100.0, 3),
         "ai_model": "mock",
     }
@@ -427,6 +449,26 @@ def triage(item: MediaItem, event_name: str, country: str | None) -> dict[str, A
         if LLM_PROVIDER not in ("mock",):
             print(f"  ! triage failed ({item.media_url}): {exc}; using mock", file=sys.stderr)
         return _triage_mock(item, event_name)
+
+
+# --- LLM-assisted geolocation fallback (design doc 2.3) ---------------------
+def _valid_latlng(lat, lng) -> bool:
+    try:
+        return -90 <= float(lat) <= 90 and -180 <= float(lng) <= 180
+    except (TypeError, ValueError):
+        return False
+
+
+def _confidence_bucket(raw) -> str | None:
+    try:
+        v = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if v >= 0.7:
+        return "high"
+    if v >= 0.4:
+        return "medium"
+    return "low"
 
 
 # --- Geocoding (event-scoped: no hardcoded country) -------------------------
@@ -486,7 +528,8 @@ def push(item: MediaItem, event_id: str) -> None:
         "p_ai_model": t.get("ai_model"),
         "p_source_type": item.source_type,
         "p_observation_types": valid_observation_types(t.get("observation_types")),
-        "p_location_precision": "approximate",
+        "p_location_precision": item.location_precision,
+        "p_location_confidence": item.location_confidence,
     }
     r = requests.post(
         f"{SUPABASE_URL}/rest/v1/rpc/ingest_triage",
@@ -526,15 +569,25 @@ def process_event(event: dict) -> None:
 
     print("[5] Geocoding...")
     located: list[MediaItem] = []
+    ai_estimated = 0
     for it in items:
         it.lat, it.lng = geocode(it.triage.get("location_text"), country_code)
-        if it.lat is None and LLM_PROVIDER == "mock":
-            it.lat, it.lng = event.get("epicentre_lat"), event.get("epicentre_lng")
+        if it.lat is not None:
+            it.location_precision = "approximate"
+        else:
+            cand_lat, cand_lng = it.triage.get("location_lat"), it.triage.get("location_lng")
+            if _valid_latlng(cand_lat, cand_lng):
+                it.lat, it.lng = float(cand_lat), float(cand_lng)
+                it.location_precision = "ai_estimated"
+                it.location_confidence = _confidence_bucket(it.triage.get("location_confidence"))
+                ai_estimated += 1
+            elif LLM_PROVIDER == "mock":
+                it.lat, it.lng = event.get("epicentre_lat"), event.get("epicentre_lng")
         if it.lat is not None:
             located.append(it)
         else:
-            print(f"    - skipped (no location): {it.source_url}")
-    print(f"    {len(located)} geolocated")
+            print(f"    - skipped (no location, no AI estimate): {it.source_url}")
+    print(f"    {len(located)} geolocated ({ai_estimated} AI-estimated - flagged for human confirmation)")
 
     print("[6] Pushing...")
     for it in located:

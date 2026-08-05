@@ -164,6 +164,7 @@ body {
 .src-badge { display: inline-block; border: 2px solid #999; font-weight: 700; padding: 2px 10px; border-radius: 999px; font-size: 12px; margin-right: 6px; }
 .obs-badge { display: inline-block; background: #eef2f6; color: #334; font-weight: 600; padding: 3px 10px; border-radius: 999px; font-size: 12px; margin-right: 6px; }
 .approx-badge { display: inline-block; background: #fef3c7; color: #92400e; font-weight: 600; padding: 3px 10px; border-radius: 999px; font-size: 12px; }
+.ai-loc-badge { display: inline-block; background: #ffe4e6; color: #9f1239; font-weight: 600; padding: 3px 10px; border-radius: 999px; font-size: 12px; margin-right: 6px; }
 .modal .foot { display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); }
 .modal .foot .grow { flex: 1; }
 .btn-approve { background: var(--ok); color: #fff; border: none; border-radius: 8px; padding: 10px 16px; font-weight: 700; cursor: pointer; }
