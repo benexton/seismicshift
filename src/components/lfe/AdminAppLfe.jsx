@@ -32,8 +32,9 @@ async function syncKeywordsToScraperSources(eventId, keywordSets) {
   const terms = Object.values(keywordSets || {}).flat().map((t) => (t || '').trim()).filter(Boolean);
   if (!terms.length) return;
 
-  const { data: existing } = await supabaseLfe.from('scraper_sources')
+  const { data: existing, error: selErr } = await supabaseLfe.from('scraper_sources')
     .select('value').eq('event_id', eventId).eq('kind', 'bluesky');
+  if (selErr) throw selErr;
   const known = new Set((existing ?? []).map((r) => r.value.trim().toLowerCase()));
 
   const toInsert = [];
@@ -47,9 +48,14 @@ async function syncKeywordsToScraperSources(eventId, keywordSets) {
 
   const { data: u } = await supabaseLfe.auth.getUser();
   const createdBy = u?.user?.email ?? null;
-  await supabaseLfe.from('scraper_sources').insert(
+  // supabase-js does not throw on a failed insert (RLS denial, constraint
+  // violation, etc.) - it resolves with { error } - so this must be checked
+  // explicitly, or a failure here is completely invisible to both the caller
+  // and the console.
+  const { error: insErr } = await supabaseLfe.from('scraper_sources').insert(
     toInsert.map((value) => ({ event_id: eventId, kind: 'bluesky', value, created_by: createdBy }))
   );
+  if (insErr) throw insErr;
 }
 
 function slugify(name) {
@@ -318,13 +324,14 @@ function CreateEventPanel({ onCreated }) {
         }).eq('event_id', created.id);
       }
 
+      let keywordSyncWarning = '';
       try {
         await syncKeywordsToScraperSources(created.id, keywordSets);
       } catch (syncEx) {
-        console.warn('Failed to seed scraper sources from keywords:', syncEx);
+        keywordSyncWarning = ` Warning: could not add keywords to the scraper (${syncEx.message ?? syncEx}) - add them manually in the Scraper keywords and feeds tab.`;
       }
 
-      setStatus({ kind: 'ok', msg: `Event "${created.name}" created (slug: ${created.slug}). It starts in draft - flip it to active on the Manage events tab once it's ready.` });
+      setStatus({ kind: 'ok', msg: `Event "${created.name}" created (slug: ${created.slug}). It starts in draft - flip it to active on the Manage events tab once it's ready.${keywordSyncWarning}` });
       setName(''); setSlug(''); setSlugEdited(false); setCountry(''); setCountryCode(''); setEventDatetime('');
       setLat(''); setLng(''); setMagnitude(''); setDepth(''); setUsgsInput('');
       setEnglishKeywords(''); setKeywordText({});
@@ -451,7 +458,9 @@ function EventKeywordsEditor({ event, onClose, onSaved }) {
     try {
       await syncKeywordsToScraperSources(event.id, keyword_sets);
     } catch (syncEx) {
-      console.warn('Failed to seed scraper sources from keywords:', syncEx);
+      setBusy(false);
+      setStatus({ kind: 'err', msg: `Saved, but could not add keywords to the scraper: ${syncEx.message ?? syncEx}` });
+      return;
     }
     setBusy(false);
     onSaved?.();
