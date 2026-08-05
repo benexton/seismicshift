@@ -3,7 +3,7 @@ import {
   BorderStyle, ShadingType, AlignmentType, HeadingLevel, ImageRun, Header, Footer,
   PageNumber, PageBreak,
 } from 'docx';
-import { DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate } from './constantsLfe.js';
+import { DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate, phOr } from './constantsLfe.js';
 import { parseReportSections } from './reportSections.js';
 
 const MAROON = '8A1538';
@@ -143,10 +143,10 @@ export async function buildReportDocxBlob(records, meta, conclusions) {
     children: [new TextRun({ text: `VERT ${meta.eventName || 'Event'} - Version ${meta.version || '1.0'}`, color: MAROON, size: 30, font: BODY })] }));
   children.push(metaTable([
     ['Report issued', now],
-    ['Magnitude (Mw)', meta.magnitude], ['Depth (km)', meta.depth],
-    ['Location (geographical)', meta.locationName], ['Location (lat/long)', meta.locationLatLong],
-    ['Time and date', meta.eventDatetime], ['Faulting mechanism', meta.faulting],
-    ['Maximum Modified Mercalli Intensity', meta.maxMMI], ['Tsunami alert issued', meta.tsunami],
+    ['Magnitude (Mw)', phOr(meta.magnitude)], ['Depth (km)', phOr(meta.depth)],
+    ['Location (geographical)', phOr(meta.locationName)], ['Location (lat/long)', phOr(meta.locationLatLong)],
+    ['Time and date', phOr(meta.eventDatetime)], ['Faulting mechanism', phOr(meta.faulting)],
+    ['Maximum Modified Mercalli Intensity', phOr(meta.maxMMI)], ['Tsunami alert issued', phOr(meta.tsunami)],
   ]));
   if (meta.contributors) { children.push(new Paragraph({ spacing: { before: 160 }, children: [new TextRun({ text: 'Contributors: ', bold: true, size: 20, font: BODY }), new TextRun({ text: meta.contributors, size: 20, font: BODY })] })); }
   children.push(new Paragraph({ children: [new PageBreak()] }));
