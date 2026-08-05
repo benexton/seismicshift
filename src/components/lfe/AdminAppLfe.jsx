@@ -439,6 +439,7 @@ function EditEventPanel({ event, onClose, onSaved }) {
   const [languages, setLanguages] = useState((event.languages?.length ? event.languages : ['en']).join(', '));
   const [basemapKey, setBasemapKey] = useState(Object.keys(event.basemap || {})[0] || 'osm');
   const [zoom, setZoom] = useState(event.map_center?.zoom ?? 10);
+  const [gsheetId, setGsheetId] = useState(event.gsheet_id || '');
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
 
@@ -473,6 +474,7 @@ function EditEventPanel({ event, onClose, onSaved }) {
         languages: langList.length ? langList : ['en'],
         basemap,
         map_center: { lat: latNum ?? 0, lng: lngNum ?? 0, zoom: Number(zoom) },
+        gsheet_id: gsheetId.trim() || null,
       }).eq('id', event.id);
       if (error) throw error;
 
@@ -513,6 +515,16 @@ function EditEventPanel({ event, onClose, onSaved }) {
                 </select>
               </div>
               <div><label>Default zoom</label><input type="number" value={zoom} onChange={(e) => setZoom(e.target.value)} /></div>
+            </div>
+            <div className="field">
+              <label>Google Sheet ID</label>
+              <input type="text" value={gsheetId} onChange={(e) => setGsheetId(e.target.value)}
+                placeholder="e.g. 1AbCDeFgHiJkL... (the id in the sheet's URL)" />
+              <span className="muted small">
+                Create a blank Google Sheet under your own account, share it with the service account's email
+                (Editor access), then paste the sheet's id here. The export can only write to a sheet it's
+                been given access to - it cannot create one itself.
+              </span>
             </div>
             <div className="report-actions">
               <button className="btn secondary" type="button" onClick={onClose} disabled={busy}>Cancel</button>
@@ -570,7 +582,7 @@ function ManageEventsPanel({ events, loading, onChanged }) {
                   <td>
                     {ev.gsheet_id
                       ? <a href={`https://docs.google.com/spreadsheets/d/${ev.gsheet_id}`} target="_blank" rel="noreferrer">Open sheet</a>
-                      : <span className="muted small">Not yet generated - runs on first export</span>}
+                      : <span className="muted small">Not set - add the sheet ID via Edit</span>}
                   </td>
                   <td>
                     <button className="mini" onClick={() => { setEditingDetails(null); setEditingKeywords(editingKeywords === ev.id ? null : ev.id); }}>
