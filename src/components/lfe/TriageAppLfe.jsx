@@ -53,6 +53,7 @@ function Workspace({ reviewer, userId, signOut, updateName }) {
         <span className="navgroup">
           <a className="navlink" href="/lfe/">← All events</a>
           <a className="navlink" href="/lfe/public-preview/">Public view</a>
+          <a className="navlink" href="/lfe/admin/">Admin</a>
         </span>
         <span style={{ fontWeight: 600, alignSelf: 'center', margin: '0 6px' }}>{event.name}</span>
         {TABS.map(([id, label]) => (
