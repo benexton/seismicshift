@@ -70,7 +70,11 @@ body {
 
 /* ---- Scrollable panels (scraper, manual, report) -------------------------- */
 .panel-scroll { height: 100%; overflow-y: auto; }
-.panel-inner { max-width: 900px; margin: 0 auto; padding: 22px 20px 60px; }
+/* Left-aligned (not centred) and padded to exactly match the tab bar's own
+   inset (.tabs padding-left 12px + .tabs button padding-left 16px = 28px),
+   so the first tab's label lines up with the text directly beneath it
+   instead of the block floating off-centre on wide screens. */
+.panel-inner { max-width: 900px; margin: 0; padding: 22px 20px 60px 28px; }
 .panel-inner h1 { font-size: 22px; margin: 0 0 6px; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
