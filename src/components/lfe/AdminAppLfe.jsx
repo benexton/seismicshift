@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react';
-import { supabaseLfe } from '../../lib/supabaseLfe.js';
+import { supabaseLfe, edgeFunctionErrorMessage } from '../../lib/supabaseLfe.js';
 import LoginGateLfe from './LoginGateLfe.jsx';
 import LfeNavGroup from './LfeNavGroup.jsx';
 import { BASEMAP_PRESETS } from '../../lib/constantsLfe.js';
@@ -181,7 +181,7 @@ function CreateEventPanel({ onCreated }) {
           terms: terms.length ? terms : undefined,
         },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeFunctionErrorMessage(error));
       const sets = data?.keywordSets ?? {};
       setKeywordText((t) => {
         const next = { ...t };
@@ -373,7 +373,7 @@ function EventKeywordsEditor({ event, onClose, onSaved }) {
       const { data, error } = await supabaseLfe.functions.invoke('translate-keywords', {
         body: { event_id: event.id, languages },
       });
-      if (error) throw error;
+      if (error) throw new Error(await edgeFunctionErrorMessage(error));
       const sets = data?.keywordSets ?? {};
       setText((t) => {
         const next = { ...t };
