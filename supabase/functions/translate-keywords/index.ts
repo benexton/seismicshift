@@ -26,6 +26,43 @@ const CANONICAL_TERMS = [
   'shelter', 'aftershock', 'emergency response', 'evacuation centre',
 ];
 
+const BAD_MODEL_HINTS = [
+  'preview', 'exp', 'tts', 'image', 'audio', 'vision', 'lite', '-8b',
+  'robotics', 'computer-use', 'omni', 'embedding',
+];
+const FALLBACK_CANDIDATES = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'];
+
+// Cached per warm isolate. Hardcoding a single Gemini model name is brittle -
+// the scraper pipeline's Python scripts already hit this (models get
+// deprecated/renamed and 404 without warning), so this mirrors their
+// list-then-rank-then-try-with-fallback approach instead of guessing again.
+let cachedCandidates: string[] | null = null;
+
+async function geminiCandidates(apiKey: string): Promise<string[]> {
+  if (cachedCandidates) return cachedCandidates;
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (!res.ok) throw new Error(`list models failed (status ${res.status})`);
+    const data = await res.json();
+    const models: Array<{ name: string; supportedGenerationMethods?: string[] }> = data.models ?? [];
+    const usable = models
+      .filter((m) => (m.supportedGenerationMethods ?? []).includes('generateContent'))
+      .map((m) => m.name.split('/').pop() as string)
+      .filter((n) => n.startsWith('gemini') && !BAD_MODEL_HINTS.some((b) => n.includes(b)));
+    const ver = (n: string) => {
+      const m = n.match(/gemini-(\d+(?:\.\d+)?)/);
+      return m ? parseFloat(m[1]) : 0;
+    };
+    const flash = usable.filter((n) => n.includes('flash')).sort((a, b) => ver(b) - ver(a));
+    const others = usable.filter((n) => !flash.includes(n)).sort((a, b) => ver(b) - ver(a));
+    cachedCandidates = [...flash, ...others];
+  } catch {
+    cachedCandidates = [];
+  }
+  if (!cachedCandidates.length) cachedCandidates = FALLBACK_CANDIDATES;
+  return cachedCandidates;
+}
+
 async function translateTerms(apiKey: string, lang: string, baseTerms: string[], eventName?: string, country?: string): Promise<string[]> {
   if (lang === 'en') return baseTerms;
 
@@ -36,27 +73,32 @@ async function translateTerms(apiKey: string, lang: string, baseTerms: string[],
     'Return ONLY a JSON array of strings, same length and order as the input, ' +
     `no commentary, no markdown fences. Input: ${JSON.stringify(baseTerms)}`;
 
-  const model = 'gemini-2.0-flash';
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0, responseMimeType: 'application/json' },
-      }),
-    },
-  );
-  if (!res.ok) throw new Error(`Gemini request failed (status ${res.status})`);
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]';
-  try {
-    const parsed = JSON.parse(text);
-    return Array.isArray(parsed) ? parsed.filter((x: unknown) => typeof x === 'string') : baseTerms;
-  } catch {
-    return baseTerms;
+  const candidates = await geminiCandidates(apiKey);
+  let lastErr: Error | null = null;
+  for (const model of candidates) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0, responseMimeType: 'application/json' },
+        }),
+      },
+    );
+    if (res.status === 404) { lastErr = new Error(`model '${model}' not found`); continue; }
+    if (!res.ok) throw new Error(`Gemini request failed (status ${res.status})`);
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]';
+    try {
+      const parsed = JSON.parse(text);
+      return Array.isArray(parsed) ? parsed.filter((x: unknown) => typeof x === 'string') : baseTerms;
+    } catch {
+      return baseTerms;
+    }
   }
+  throw lastErr ?? new Error('no usable Gemini model');
 }
 
 Deno.serve(async (req: Request) => {
