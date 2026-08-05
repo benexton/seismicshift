@@ -21,6 +21,22 @@ export const supabaseLfe = createClient(url || 'https://lfe-not-configured.inval
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 });
 
+// supabase-js's FunctionsHttpError.message is always the generic "Edge
+// Function returned a non-2xx status code" - the function's own JSON error
+// body (what actually went wrong: not authenticated, not a platform admin,
+// LLM_API_KEY missing, etc.) is only reachable via error.context, a Response
+// that must be read separately. Without this, every Edge Function failure
+// looks identical in the UI regardless of cause.
+export async function edgeFunctionErrorMessage(error) {
+  if (error?.context?.json) {
+    try {
+      const body = await error.context.json();
+      if (body?.error) return body.error;
+    } catch { /* fall through to the generic message below */ }
+  }
+  return error?.message ?? String(error);
+}
+
 // Storage bucket for observation photos/files across all LFE events.
 export const LFE_MEDIA_BUCKET = 'lfe-observation-media';
 
