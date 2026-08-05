@@ -20,31 +20,38 @@ function EventList({ reviewer, signOut }) {
   }, []);
 
   return (
-    <div className="panel-scroll">
-      <div className="panel-inner">
-        <div className="tabs">
-          <a className="signout" href="/lfe/public/">Public view</a>
-          <a className="signout" href="/lfe/admin/">Admin</a>
-          <span className="tab-spacer" />
-          <span>{reviewer}</span>
-          <button className="signout" onClick={signOut}>Sign out</button>
+    <div className="triage-shell">
+      <div className="tabs">
+        <span style={{ fontWeight: 600 }}>LFE</span>
+        <a className="signout" href="/lfe/public/">Public view</a>
+        <a className="signout" href="/lfe/admin/">Admin</a>
+        <span className="tab-spacer" />
+        <span className="signout">{reviewer}</span>
+        <button className="signout" onClick={signOut}>Sign out</button>
+      </div>
+      <div className="tab-body">
+        <div className="panel-scroll">
+          <div className="panel-inner">
+            <h1>Your events</h1>
+            {loading && <p className="muted">Loading...</p>}
+            {err && <p className="err">{err}</p>}
+            {!loading && memberships.length === 0 && !err && (
+              <p className="muted">You are not assigned to any events yet. Contact your LFE admin.</p>
+            )}
+            {memberships.length > 0 && (
+              <ul className="event-list">
+                {memberships.map((m) => (
+                  <li key={m.events.id}>
+                    <a href={`/lfe/triage/?event=${encodeURIComponent(m.events.slug)}`}><b>{m.events.name}</b></a>
+                    {m.events.country ? ` - ${m.events.country}` : ''}
+                    {m.events.event_datetime ? ` - ${fmtDate(m.events.event_datetime)}` : ''}
+                    {' '}<span className="muted small">({m.role})</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
-        <h1>Your events</h1>
-        {loading && <p className="muted">Loading...</p>}
-        {err && <p className="err">{err}</p>}
-        {!loading && memberships.length === 0 && !err && (
-          <p className="muted">You are not assigned to any events yet. Contact your LFE admin.</p>
-        )}
-        <ul>
-          {memberships.map((m) => (
-            <li key={m.events.id}>
-              <a href={`/lfe/triage/?event=${encodeURIComponent(m.events.slug)}`}><b>{m.events.name}</b></a>
-              {m.events.country ? ` - ${m.events.country}` : ''}
-              {m.events.event_datetime ? ` - ${fmtDate(m.events.event_datetime)}` : ''}
-              {' '}<span className="muted small">({m.role})</span>
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );
