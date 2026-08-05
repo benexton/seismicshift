@@ -1,7 +1,7 @@
 # LFE platform migrations
 
 Run these against the new, separate LFE Supabase project only - never against
-the Kumamoto project. Run in numeric order (`0001` through `0029`), e.g. via
+the Kumamoto project. Run in numeric order (`0001` through `0030`), e.g. via
 the Supabase SQL editor or `supabase db push`. `0021` and `0022` are security
 fixes from a post-launch review (a client-writable report-conclusions column
 and an overly broad storage policy) - run them even if `0001`-`0020` are
@@ -25,7 +25,10 @@ scraper pipeline's auto-translation at ingest (see
 post-launch review - `event_site_counters` had never had row-level
 security enabled (unlike every other table in this schema), letting any
 authenticated user read or overwrite any event's site-numbering counter;
-run it even if `0001`-`0028` are already live.
+run it even if `0001`-`0028` are already live. `0030` adds `country_codes`/
+`country_code_entries` - the platform-wide seismic-code/retrofit knowledge
+base at `/lfe/codes/`, readable by any logged-in user and editable by any
+triager/admin on any event.
 
 After running them:
 1. Create a real user in that project's Auth dashboard.
