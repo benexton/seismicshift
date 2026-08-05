@@ -75,13 +75,19 @@ body {
 
 /* ---- Scrollable panels (scraper, manual, report) -------------------------- */
 .panel-scroll { height: 100%; overflow-y: auto; }
-/* Left-aligned (not centred) and padded to exactly match the tab bar's own
-   inset (.tabs padding-left 12px + .tabs button padding-left 16px = 28px).
-   Instructions is now the true first, fixed-position tab (the nav
-   group/event name moved after the tabs specifically so this could be
-   reliable), so this lines up with its label regardless of event name
-   length. */
-.panel-inner { max-width: 900px; margin: 0; padding: 22px 20px 60px 28px; }
+/* Centred by default - used by pages with no "work tabs" row above the
+   content at all (Your events, Codes & standards), where there is nothing
+   to left-align against. */
+.panel-inner { max-width: 900px; margin: 0 auto; padding: 22px 20px 60px; }
+/* Left-aligned variant, scoped to the per-event workspace's own tab content
+   only (Instructions/Manual input/Scraper keywords) - padded to exactly
+   match the tab bar's own inset (.tabs padding-left 12px + .tabs button
+   padding-left 16px = 28px). Instructions is the true first, fixed-position
+   tab there (the nav group/event name moved after the tabs specifically so
+   this could be reliable), so this lines up with its label regardless of
+   event name length. Do not apply this to .panel-inner generally - other
+   pages using that class are centred, not tab-aligned. */
+.panel-inner.left-aligned { margin: 0; padding-left: 28px; }
 .panel-inner h1 { font-size: 22px; margin: 0 0 6px; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
