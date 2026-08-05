@@ -1,0 +1,11 @@
+---
+import TriageLayout from '../../../layouts/TriageLayout.astro';
+import PublicViewLfe from '../../../components/lfe/PublicViewLfe.jsx';
+// Public, read-only viewer with an event dropdown. Reads static snapshots
+// published by the export_public.py Action - no login, no DB writes. Google
+// Analytics is enabled here (matching kumamoto-2026-public's convention),
+// not on the auth-gated /lfe/, /lfe/triage/, or /lfe/admin/ pages.
+---
+<TriageLayout title="LFE - Verified Sites (Beta)" gaId="G-ME4SZWK0H4">
+  <PublicViewLfe client:only="react" />
+</TriageLayout>
