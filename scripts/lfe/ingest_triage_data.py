@@ -22,8 +22,15 @@ Pipeline order (keeps LLM spend low - dedup BEFORE the model):
                             guess from step 5, flagged 'ai_estimated' (not
                             'approximate') so a human triager knows to
                             confirm or correct it rather than trust it
-                            silently. Only genuinely unlocatable posts (no
-                            geocode, no AI guess) are dropped.
+                            silently. Either way, a candidate more than
+                            EVENT_RADIUS_KM from the event's own epicentre is
+                            rejected outright - Bluesky's search has no way
+                            to filter by where a post was sent from, so this
+                            is the practical substitute: judge the content's
+                            own resolved location against the event instead
+                            of trusting keyword anchoring alone to keep
+                            results on-topic. Only genuinely unlocatable or
+                            out-of-range posts are dropped.
     7. Push               - upsert into Supabase via ingest_triage() (service role).
 
 Env vars:
@@ -32,6 +39,8 @@ Env vars:
     LLM_API_KEY
     NOMINATIM_UA = contact string for OSM usage policy (recommended)
     BLUESKY_IDENTIFIER, BLUESKY_APP_PASSWORD, BLUESKY_PDS (optional)
+    EVENT_RADIUS_KM = max distance from the event's epicentre a resolved
+        location may be before it's rejected (default 500)
 
 Usage:
     python ingest_triage_data.py --event-slug japan-2026
@@ -44,6 +53,7 @@ import argparse
 import hashlib
 import io
 import json
+import math
 import re
 import sys
 import time
@@ -79,6 +89,11 @@ LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 NOMINATIM_UA = os.environ.get("NOMINATIM_UA", "vert-lfe-recon/1.0 (contact: set NOMINATIM_UA)")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "")
 GEMINI_MIN_INTERVAL = float(os.environ.get("GEMINI_MIN_INTERVAL", "6"))
+# `or "500"` (not a dict default) because an unset GitHub Actions repo
+# variable still sets the env var to an empty string, not absent - a plain
+# os.environ.get(..., "500") default would never fire and float("") would
+# raise.
+EVENT_RADIUS_KM = float(os.environ.get("EVENT_RADIUS_KM") or "500")
 
 
 @dataclass
@@ -471,6 +486,32 @@ def _confidence_bucket(raw) -> str | None:
     return "low"
 
 
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    r = 6371.0088
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lng2 - lng1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlambda / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def _within_event_radius(lat: float, lng: float, event: dict) -> bool:
+    """Bluesky's searchPosts has no post/author geolocation to filter by -
+    the AT Protocol post and profile lexicons simply carry no geo field, so
+    keyword anchoring (baking the place name into the search term itself, as
+    Kumamoto's scraper does) is the only thing keeping results on-topic, and
+    generic terms alone pull in unrelated earthquakes worldwide. This is the
+    practical substitute: reject a candidate whose own resolved location
+    (Nominatim hit or AI guess) lands implausibly far from the event's
+    epicentre, so broad/generic keywords stay usable without flooding the
+    queue with off-topic posts. No epicentre on record means nothing to
+    judge distance against, so nothing is rejected on that basis."""
+    epi_lat, epi_lng = event.get("epicentre_lat"), event.get("epicentre_lng")
+    if epi_lat is None or epi_lng is None:
+        return True
+    return _haversine_km(lat, lng, epi_lat, epi_lng) <= EVENT_RADIUS_KM
+
+
 # --- Geocoding (event-scoped: no hardcoded country) -------------------------
 def geocode(place: str | None, country_code: str | None) -> tuple[float | None, float | None]:
     if not place:
@@ -567,9 +608,10 @@ def process_event(event: dict) -> None:
     for it in items:
         it.triage = triage(it, name, country)
 
-    print("[5] Geocoding...")
+    print(f"[5] Geocoding (event radius {EVENT_RADIUS_KM:.0f}km)...")
     located: list[MediaItem] = []
     ai_estimated = 0
+    out_of_range = 0
     for it in items:
         it.lat, it.lng = geocode(it.triage.get("location_text"), country_code)
         if it.lat is not None:
@@ -580,14 +622,22 @@ def process_event(event: dict) -> None:
                 it.lat, it.lng = float(cand_lat), float(cand_lng)
                 it.location_precision = "ai_estimated"
                 it.location_confidence = _confidence_bucket(it.triage.get("location_confidence"))
-                ai_estimated += 1
             elif LLM_PROVIDER == "mock":
                 it.lat, it.lng = event.get("epicentre_lat"), event.get("epicentre_lng")
+
+        if it.lat is not None and not _within_event_radius(it.lat, it.lng, event):
+            print(f"    - rejected (outside {EVENT_RADIUS_KM:.0f}km event radius): {it.source_url}")
+            it.lat, it.lng = None, None
+            out_of_range += 1
+        elif it.location_precision == "ai_estimated":
+            ai_estimated += 1
+
         if it.lat is not None:
             located.append(it)
         else:
             print(f"    - skipped (no location, no AI estimate): {it.source_url}")
-    print(f"    {len(located)} geolocated ({ai_estimated} AI-estimated - flagged for human confirmation)")
+    print(f"    {len(located)} geolocated ({ai_estimated} AI-estimated - flagged for human confirmation"
+          + (f"; {out_of_range} rejected as too far from the event" if out_of_range else "") + ")")
 
     print("[6] Pushing...")
     for it in located:
