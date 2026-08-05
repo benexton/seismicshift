@@ -17,6 +17,7 @@ export default defineConfig({
         !page.includes('/lfe/triage/') &&
         !page.includes('/lfe/admin/') &&
         !page.includes('/lfe/public-preview/') &&
+        !page.includes('/lfe/codes/') &&
         !page.endsWith('/lfe/'),
     }),
   ],
