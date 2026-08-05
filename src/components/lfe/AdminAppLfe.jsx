@@ -508,8 +508,39 @@ function ManageEventsPanel({ events, loading, onChanged }) {
   );
 }
 
+const PLATFORM_SCOPE = '__platform__';
+
+function DisplayNameCell({ member, onSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(member.display_name ?? '');
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    setBusy(true);
+    const { error } = await supabaseLfe.rpc('set_display_name', { p_user_id: member.user_id, p_display_name: draft });
+    setBusy(false);
+    if (!error) { setEditing(false); onSaved?.(); }
+  }
+
+  if (editing) {
+    return (
+      <span className="link-add">
+        <input value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="e.g. Jane Smith (NZSEE)"
+          style={{ width: 160 }} autoFocus />
+        <button className="mini" onClick={save} disabled={busy}>Save</button>
+      </span>
+    );
+  }
+  return (
+    <span className="link-add">
+      {member.display_name || <span className="muted small">(not set)</span>}
+      <button className="mini" onClick={() => { setDraft(member.display_name ?? ''); setEditing(true); }}>Edit</button>
+    </span>
+  );
+}
+
 function ProvisionUsersPanel({ events }) {
-  const [eventId, setEventId] = useState('');
+  const [scope, setScope] = useState('');
   const [members, setMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [email, setEmail] = useState('');
@@ -518,16 +549,20 @@ function ProvisionUsersPanel({ events }) {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const isPlatform = scope === PLATFORM_SCOPE;
+
   async function loadMembers(id) {
     if (!id) return setMembers([]);
     setLoadingMembers(true);
-    const { data, error } = await supabaseLfe.rpc('list_event_members', { p_event_id: id });
+    const { data, error } = id === PLATFORM_SCOPE
+      ? await supabaseLfe.rpc('list_platform_admins')
+      : await supabaseLfe.rpc('list_event_members', { p_event_id: id });
     setLoadingMembers(false);
     if (error) return setErr(error.message);
     setMembers(data ?? []);
   }
 
-  useEffect(() => { loadMembers(eventId); }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadMembers(scope); }, [scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function lookup() {
     setErr(''); setFoundId(null);
@@ -540,22 +575,25 @@ function ProvisionUsersPanel({ events }) {
   }
 
   async function addMember() {
-    if (!eventId || !foundId) return;
+    if (!scope || !foundId) return;
     setBusy(true); setErr('');
-    const { error } = await supabaseLfe.from('event_members')
-      .upsert({ event_id: eventId, user_id: foundId, role }, { onConflict: 'event_id,user_id' });
+    const { error } = isPlatform
+      ? await supabaseLfe.rpc('grant_platform_admin', { p_user_id: foundId })
+      : await supabaseLfe.from('event_members').upsert({ event_id: scope, user_id: foundId, role }, { onConflict: 'event_id,user_id' });
     setBusy(false);
     if (error) return setErr(error.message);
     setEmail(''); setFoundId(null);
-    loadMembers(eventId);
+    loadMembers(scope);
   }
 
   async function removeMember(userId) {
     setBusy(true); setErr('');
-    const { error } = await supabaseLfe.from('event_members').delete().eq('event_id', eventId).eq('user_id', userId);
+    const { error } = isPlatform
+      ? await supabaseLfe.rpc('revoke_platform_admin', { p_user_id: userId })
+      : await supabaseLfe.from('event_members').delete().eq('event_id', scope).eq('user_id', userId);
     setBusy(false);
     if (error) return setErr(error.message);
-    loadMembers(eventId);
+    loadMembers(scope);
   }
 
   return (
@@ -563,13 +601,20 @@ function ProvisionUsersPanel({ events }) {
       <h2 style={{ marginTop: 0 }}>Provision users</h2>
       <div className="field">
         <label>Event</label>
-        <select value={eventId} onChange={(e) => setEventId(e.target.value)}>
+        <select value={scope} onChange={(e) => setScope(e.target.value)}>
           <option value="">Select an event...</option>
+          <option value={PLATFORM_SCOPE}>— Platform admins (all events, global) —</option>
           {events.map((ev) => <option key={ev.id} value={ev.id}>{ev.name} ({ev.slug})</option>)}
         </select>
+        {isPlatform && (
+          <span className="muted small">
+            Platform admins can create events and provision users on any event. This does not by itself grant
+            access to any event's triage data - they still need their own membership on a given event to see its records.
+          </span>
+        )}
       </div>
 
-      {eventId && (
+      {scope && (
         <>
           <div className="field">
             <label>Add by email</label>
@@ -580,32 +625,40 @@ function ProvisionUsersPanel({ events }) {
           </div>
           {foundId && (
             <div className="field">
-              <label>Role</label>
-              <div className="link-add">
-                <select value={role} onChange={(e) => setRole(e.target.value)}>
-                  <option value="admin">Admin</option>
-                  <option value="triager">Triager</option>
-                  <option value="viewer">Viewer</option>
-                </select>
-                <button className="btn" type="button" onClick={addMember} disabled={busy}>Add to event</button>
-              </div>
+              {!isPlatform && (
+                <>
+                  <label>Role</label>
+                  <div className="link-add">
+                    <select value={role} onChange={(e) => setRole(e.target.value)}>
+                      <option value="admin">Admin</option>
+                      <option value="triager">Triager</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+                    <button className="btn" type="button" onClick={addMember} disabled={busy}>Add to event</button>
+                  </div>
+                </>
+              )}
+              {isPlatform && (
+                <button className="btn" type="button" onClick={addMember} disabled={busy}>Grant platform admin</button>
+              )}
             </div>
           )}
           {err && <p className="status-line err">{err}</p>}
 
-          <h3 style={{ fontSize: 14 }}>Current members</h3>
+          <h3 style={{ fontSize: 14 }}>{isPlatform ? 'Current platform admins' : 'Current members'}</h3>
           {loadingMembers ? <p className="muted">Loading...</p> : (
             <table className="record-table">
-              <thead><tr><th>Email</th><th>Role</th><th></th></tr></thead>
+              <thead><tr><th>Email</th><th>Display name</th>{!isPlatform && <th>Role</th>}<th></th></tr></thead>
               <tbody>
                 {members.map((m) => (
                   <tr key={m.user_id}>
                     <td>{m.email ?? m.user_id}</td>
-                    <td>{m.role}</td>
+                    <td><DisplayNameCell member={m} onSaved={() => loadMembers(scope)} /></td>
+                    {!isPlatform && <td>{m.role}</td>}
                     <td><button className="mini danger" onClick={() => removeMember(m.user_id)} disabled={busy}>Remove</button></td>
                   </tr>
                 ))}
-                {members.length === 0 && <tr><td colSpan={3} className="muted">No members yet.</td></tr>}
+                {members.length === 0 && <tr><td colSpan={isPlatform ? 3 : 4} className="muted">No {isPlatform ? 'platform admins' : 'members'} yet.</td></tr>}
               </tbody>
             </table>
           )}
