@@ -1,0 +1,13 @@
+---
+import TriageLayout from '../../../layouts/TriageLayout.astro';
+import PublicPreviewLfe from '../../../components/lfe/PublicPreviewLfe.jsx';
+// Internal-only mirror of /lfe/public/, wrapped in the tool's own top bar so
+// logged-in volunteers/admins clicking "Public view" keep a way back to
+// Your events/Admin. Not the page shared with the actual public, so no GA
+// and excluded from the sitemap (see astro.config.mjs) - same auth-gated
+// treatment as /lfe/, /lfe/triage/, /lfe/admin/, even though this content
+// itself needs no login to view.
+---
+<TriageLayout title="LFE - Public view (preview)">
+  <PublicPreviewLfe client:only="react" />
+</TriageLayout>
