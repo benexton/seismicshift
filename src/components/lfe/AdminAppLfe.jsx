@@ -174,6 +174,37 @@ function countryInfoFromRegion(region) {
   return { country: region, code: '', languages: ['en'] };
 }
 
+// Shared by both Create event and Edit event - an existing event created
+// before location/MMI/tsunami were captured has no other way to backfill
+// them short of retyping USGS's own page by hand, so Edit event needs the
+// same "Fetch from USGS" capability, not just Create event.
+async function fetchUsgsEvent(id) {
+  const res = await fetch(`https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/${id}.geojson`);
+  if (!res.ok) throw new Error(`USGS lookup failed (status ${res.status})`);
+  const data = await res.json();
+  const p = data.properties ?? {};
+  const coords = data.geometry?.coordinates ?? [];
+  const region = regionFromUsgsText(p.place || p.title);
+  const info = countryInfoFromRegion(region);
+  return {
+    name: p.title || '',
+    magnitude: p.mag != null ? String(p.mag) : '',
+    depth: coords[2] != null ? String(coords[2]) : '',
+    lng: coords[0] != null ? String(coords[0]) : '',
+    lat: coords[1] != null ? String(coords[1]) : '',
+    eventDatetime: p.time ? new Date(p.time).toISOString().slice(0, 16) : '',
+    locationName: p.place || '',
+    maxMmi: p.mmi != null ? String(p.mmi) : '',
+    // USGS's tsunami flag means "met the automated tsunami-alert
+    // threshold", not "a tsunami was confirmed" - phrased as such so it
+    // isn't mistaken for a confirmed observation.
+    tsunami: p.tsunami != null ? (p.tsunami ? 'Yes (met USGS automated alert threshold)' : 'No') : '',
+    country: info?.country || '',
+    countryCode: info?.code || '',
+    languages: info ? info.languages.join(', ') : '',
+  };
+}
+
 function CreateEventPanel({ onCreated }) {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -253,31 +284,17 @@ function CreateEventPanel({ onCreated }) {
     if (!id) return setStatus({ kind: 'err', msg: 'Paste a USGS event id or event page URL first.' });
     setUsgsBusy(true); setStatus(null);
     try {
-      const res = await fetch(`https://earthquake.usgs.gov/earthquakes/feed/v1.0/detail/${id}.geojson`);
-      if (!res.ok) throw new Error(`USGS lookup failed (status ${res.status})`);
-      const data = await res.json();
-      const p = data.properties ?? {};
-      const coords = data.geometry?.coordinates ?? [];
-      if (p.title) setName(p.title);
-      if (p.mag != null) setMagnitude(String(p.mag));
-      if (coords[2] != null) setDepth(String(coords[2]));
-      if (coords[0] != null) setLng(String(coords[0]));
-      if (coords[1] != null) setLat(String(coords[1]));
-      if (p.time) setEventDatetime(new Date(p.time).toISOString().slice(0, 16));
-      if (p.place) setLocationName(p.place);
-      if (p.mmi != null) setMaxMmi(String(p.mmi));
-      // USGS's tsunami flag means "met the automated tsunami-alert
-      // threshold", not "a tsunami was confirmed" - phrased as such so it
-      // isn't mistaken for a confirmed observation.
-      if (p.tsunami != null) setTsunami(p.tsunami ? 'Yes (met USGS automated alert threshold)' : 'No');
-
-      const region = regionFromUsgsText(p.place || p.title);
-      const info = countryInfoFromRegion(region);
-      if (info) {
-        setCountry(info.country);
-        setCountryCode(info.code);
-        onLanguagesChange(info.languages.join(', '));
-      }
+      const r = await fetchUsgsEvent(id);
+      if (r.name) setName(r.name);
+      if (r.magnitude) setMagnitude(r.magnitude);
+      if (r.depth) setDepth(r.depth);
+      if (r.lng) setLng(r.lng);
+      if (r.lat) setLat(r.lat);
+      if (r.eventDatetime) setEventDatetime(r.eventDatetime);
+      if (r.locationName) setLocationName(r.locationName);
+      if (r.maxMmi) setMaxMmi(r.maxMmi);
+      if (r.tsunami) setTsunami(r.tsunami);
+      if (r.country) { setCountry(r.country); setCountryCode(r.countryCode); onLanguagesChange(r.languages); }
 
       setStatus({ kind: 'ok', msg: 'Fetched from USGS. Review the fields below before creating the event.' });
     } catch (ex) {
@@ -554,8 +571,34 @@ function EditEventPanel({ event, onClose, onSaved }) {
   const [basemapKey, setBasemapKey] = useState(Object.keys(event.basemap || {})[0] || 'osm');
   const [zoom, setZoom] = useState(event.map_center?.zoom ?? 10);
   const [gsheetId, setGsheetId] = useState(event.gsheet_id || '');
+  const [usgsInput, setUsgsInput] = useState('');
+  const [usgsBusy, setUsgsBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
+
+  async function fetchUsgs() {
+    const id = usgsIdFromInput(usgsInput);
+    if (!id) return setStatus({ kind: 'err', msg: 'Paste a USGS event id or event page URL first.' });
+    setUsgsBusy(true); setStatus(null);
+    try {
+      const r = await fetchUsgsEvent(id);
+      if (r.magnitude) setMagnitude(r.magnitude);
+      if (r.depth) setDepth(r.depth);
+      if (r.lng) setLng(r.lng);
+      if (r.lat) setLat(r.lat);
+      if (r.eventDatetime) setEventDatetime(r.eventDatetime);
+      if (r.locationName) setLocationName(r.locationName);
+      if (r.maxMmi) setMaxMmi(r.maxMmi);
+      if (r.tsunami) setTsunami(r.tsunami);
+      if (r.country) { setCountry(r.country); setCountryCode(r.countryCode); }
+
+      setStatus({ kind: 'ok', msg: 'Fetched from USGS. Review the fields below, then Save.' });
+    } catch (ex) {
+      setStatus({ kind: 'err', msg: `USGS lookup failed: ${ex.message ?? ex}` });
+    } finally {
+      setUsgsBusy(false);
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -622,6 +665,17 @@ function EditEventPanel({ event, onClose, onSaved }) {
     <tr>
       <td colSpan={6}>
         <div className="card" style={{ margin: 0 }}>
+          <div className="field">
+            <label>USGS event id or event page URL</label>
+            <div className="link-add">
+              <input type="text" value={usgsInput} onChange={(e) => setUsgsInput(e.target.value)}
+                placeholder="e.g. us7000abcd, or a USGS event page URL" />
+              <button type="button" className="mini" onClick={fetchUsgs} disabled={usgsBusy}>
+                {usgsBusy ? 'Fetching...' : 'Fetch from USGS'}
+              </button>
+            </div>
+            <span className="muted small">Optional - backfills epicentre, time, magnitude, depth, location, and maximum MMI/tsunami-threshold below. Review before saving; the event name is not overwritten.</span>
+          </div>
           <form onSubmit={save}>
             <div className="report-meta-form">
               <div><label>Name</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></div>
