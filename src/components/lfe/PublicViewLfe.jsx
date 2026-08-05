@@ -10,6 +10,7 @@ import { emptyFilter, matchesFilter } from '../../lib/filterLfe.js';
 import {
   DAMAGE_COLOR, DAMAGE_LABEL, observationTypesLabel, HEIGHT_CLASSES, cap, fmtDate,
 } from '../../lib/constantsLfe.js';
+import LfeNavGroup from './LfeNavGroup.jsx';
 
 // Fully anonymous, zero-auth, zero-DB-query - same pattern as Kumamoto's
 // PublicView.jsx. First fetches the events-index manifest (every is_public
@@ -176,6 +177,12 @@ export default function PublicViewLfe() {
   }
 
   return (
+    <div className="triage-shell">
+      <div className="tabs">
+        <LfeNavGroup />
+        <span className="tab-spacer" />
+      </div>
+      <div className="tab-body">
     <div className="public-wrap">
       <header className="public-head">
         <img className="public-logo" src="/NZSEELogo.png" alt="NZSEE" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
@@ -235,6 +242,8 @@ export default function PublicViewLfe() {
       )}
 
       {selected && <PublicDetail site={selected} onClose={() => setSelected(null)} />}
+    </div>
+      </div>
     </div>
   );
 }

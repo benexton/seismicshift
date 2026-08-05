@@ -58,7 +58,7 @@ body {
   display: inline-flex;
   align-items: center;
 }
-.tabs button.active { background: var(--bg); color: var(--ink); }
+.tabs button.active, .tabs a.navlink.active { background: var(--bg); color: var(--ink); }
 .tabs a.navlink:hover { background: #1b3050; }
 .tabs .navgroup { display: flex; gap: 3px; padding-right: 9px; margin-right: 6px; border-right: 1px solid #263a58; }
 .tabs .tab-spacer { flex: 1; }
