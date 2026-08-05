@@ -143,6 +143,11 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
               {SOURCE_LABEL[record.source_type] ?? 'Other'}
             </span>
             <span className="obs-badge">{observationTypesLabel(record.observation_types)}</span>
+            {record.location_precision === 'ai_estimated' && (
+              <span className="ai-loc-badge">
+                AI-estimated location{record.location_confidence ? ` (${record.location_confidence} confidence)` : ''} - confirm or adjust below
+              </span>
+            )}
             {record.location_precision === 'approximate' && <span className="approx-badge">approx. location</span>}
 
             {record.media_url ? (
