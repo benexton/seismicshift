@@ -10,7 +10,6 @@ import { emptyFilter, matchesFilter } from '../../lib/filterLfe.js';
 import {
   DAMAGE_COLOR, DAMAGE_LABEL, observationTypesLabel, HEIGHT_CLASSES, cap, fmtDate,
 } from '../../lib/constantsLfe.js';
-import LfeNavGroup from './LfeNavGroup.jsx';
 
 // Fully anonymous, zero-auth, zero-DB-query - same pattern as Kumamoto's
 // PublicView.jsx. First fetches the events-index manifest (every is_public
@@ -116,6 +115,7 @@ function getInitialSlug() {
 
 export default function PublicViewLfe() {
   const [events, setEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsErr, setEventsErr] = useState('');
   const [slug, setSlug] = useState(getInitialSlug);
   const [data, setData] = useState(null);
@@ -126,14 +126,15 @@ export default function PublicViewLfe() {
   const [view, setView] = useState('map');
 
   useEffect(() => {
+    // Deliberately does not auto-select the first event when no ?event= is
+    // in the URL - with more than one public event, silently dropping a
+    // visitor into an arbitrary "first" one hides that others exist. Direct
+    // links (?event=slug) still go straight to that event as before.
     fetch(INDEX_URL)
       .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
-      .then((idx) => {
-        const list = idx?.events ?? [];
-        setEvents(list);
-        setSlug((s) => s || list[0]?.slug || '');
-      })
-      .catch(() => setEventsErr('The list of public events could not be loaded yet. Please check back shortly.'));
+      .then((idx) => setEvents(idx?.events ?? []))
+      .catch(() => setEventsErr('The list of public events could not be loaded yet. Please check back shortly.'))
+      .finally(() => setEventsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -177,32 +178,31 @@ export default function PublicViewLfe() {
   }
 
   return (
-    <div className="triage-shell">
-      <div className="tabs">
-        <LfeNavGroup />
-        <span className="tab-spacer" />
-      </div>
-      <div className="tab-body">
     <div className="public-wrap">
       <header className="public-head">
         <img className="public-logo" src="/NZSEELogo.png" alt="NZSEE" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
         <div>
           <h1>Virtual Earthquake Reconnaissance Team</h1>
           <p>
-            {events.length > 1 ? (
-              <select value={slug} onChange={(e) => selectEvent(e.target.value)}>
-                {events.map((ev) => <option key={ev.slug} value={ev.slug}>{ev.name}</option>)}
-              </select>
-            ) : (data?.event?.name ?? 'Verified sites')}
+            <select value={slug} onChange={(e) => selectEvent(e.target.value)} disabled={eventsLoading || events.length === 0}>
+              <option value="">Select an event...</option>
+              {events.map((ev) => <option key={ev.slug} value={ev.slug}>{ev.name}</option>)}
+            </select>
             {' '}· Verified sites · <span className="beta-tag">Beta</span>
           </p>
         </div>
       </header>
 
-      {eventsErr && events.length === 0 ? (
-        <p className="muted" style={{ padding: 20 }}>{eventsErr}</p>
-      ) : !slug ? (
-        <p className="muted" style={{ padding: 20 }}>No public events yet. Please check back shortly.</p>
+      {!slug ? (
+        <p className="muted" style={{ padding: 20 }}>
+          {eventsLoading
+            ? 'Loading all events. This may take some time.'
+            : eventsErr
+              ? eventsErr
+              : events.length === 0
+                ? 'No public events yet. Please check back shortly.'
+                : 'Please select a specific event of interest from the dropdown above.'}
+        </p>
       ) : (
         <>
           <FilterBarLfe filter={filter} setFilter={setFilter} shown={filtered.length} total={sites.length} view={view} setView={setView} hideSource />
@@ -242,8 +242,6 @@ export default function PublicViewLfe() {
       )}
 
       {selected && <PublicDetail site={selected} onClose={() => setSelected(null)} />}
-    </div>
-      </div>
     </div>
   );
 }

@@ -16,6 +16,7 @@ export default defineConfig({
         !page.includes('/kumamoto-triage-2026/') &&
         !page.includes('/lfe/triage/') &&
         !page.includes('/lfe/admin/') &&
+        !page.includes('/lfe/public-preview/') &&
         !page.endsWith('/lfe/'),
     }),
   ],
