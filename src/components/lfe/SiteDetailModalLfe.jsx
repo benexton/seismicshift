@@ -80,6 +80,17 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
             {record.streetview_url && (
               <p className="kv"><b>Street View:</b> <a href={record.streetview_url} target="_blank" rel="noreferrer">screenshot</a></p>
             )}
+            {record.source_text_en && (
+              <div className="caption-block">
+                <p className="kv"><b>Post text{record.source_text_en !== record.source_text ? ' (translated)' : ''}:</b> {record.source_text_en}</p>
+                {record.source_text && record.source_text !== record.source_text_en && (
+                  <details className="muted small">
+                    <summary>Show original</summary>
+                    {record.source_text}
+                  </details>
+                )}
+              </div>
+            )}
             <p className="kv"><b>Provenance:</b> {provenanceLabel(record)}</p>
             <p className="kv"><b>Verified by:</b> {record.reviewed_by ?? '-'}</p>
             {record.source_url && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
