@@ -1,0 +1,18 @@
+# LFE platform migrations
+
+Run these against the new, separate LFE Supabase project only - never against
+the Kumamoto project. Run in numeric order (`0001` through `0022`), e.g. via
+the Supabase SQL editor or `supabase db push`. `0021` and `0022` are security
+fixes from a post-launch review (a client-writable report-conclusions column
+and an overly broad storage policy) - run them even if `0001`-`0020` are
+already live on your project.
+
+After running them:
+1. Create a real user in that project's Auth dashboard.
+2. Fill in and run the placeholder inserts at the bottom of
+   `0011_seed_test_event.sql` (event_members admin row for the seeded test
+   event, and a platform_admins row so that user can also create new events
+   and provision others via `/lfe/admin/`).
+3. Deploy the `translate-keywords` Edge Function under `supabase/functions/`
+   and set its `LLM_API_KEY` secret (see that folder's README) if you want the
+   admin UI's keyword auto-translation to work.

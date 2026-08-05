@@ -1,0 +1,34 @@
+name: LFE - Generate report conclusions
+
+# Drafts AI "Preliminary Conclusions" from an event's verified sites and
+# stores them in that event's own event_meta row. Read-only on observation
+# data. Leave event_slug blank to process every status='active' event.
+on:
+  workflow_dispatch:
+    inputs:
+      event_slug:
+        description: 'Event slug (blank = every active event)'
+        required: false
+        default: ''
+
+concurrency:
+  group: lfe-generate-report
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r scripts/requirements-report.txt
+      - name: Draft conclusions
+        env:
+          LFE_SUPABASE_URL: ${{ secrets.LFE_SUPABASE_URL }}
+          LFE_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.LFE_SUPABASE_SERVICE_ROLE_KEY }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: python scripts/lfe/generate_report.py --event-slug "${{ inputs.event_slug }}"

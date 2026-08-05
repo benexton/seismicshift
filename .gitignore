@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Supabase CLI local state (project links, etc.) - machine-specific, not secrets
+supabase/.temp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
