@@ -10,7 +10,7 @@ export default function InstructionsLfe({ onGoTo }) {
 
   return (
     <div className="panel-scroll">
-      <div className="panel-inner instructions">
+      <div className="panel-inner instructions left-aligned">
         <h1>LFE triage - how it works</h1>
         <p>
           This tool gathers post-earthquake observations for this event from
