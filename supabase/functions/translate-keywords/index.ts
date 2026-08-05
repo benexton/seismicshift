@@ -8,6 +8,18 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
+// Called cross-origin from the static site's browser JS, so the browser
+// sends a CORS preflight OPTIONS request before the real POST. Without these
+// headers on every response (including the preflight itself), the preflight
+// fails and the browser never even attempts the POST - which surfaces in
+// supabase-js as the generic "Failed to send a request to the Edge Function"
+// network-level error, not as a 4xx/5xx from this function's own logic.
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, content-type, apikey, x-client-info',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 const CANONICAL_TERMS = [
   'earthquake', 'collapse', 'damage', 'liquefaction', 'landslide', 'crack',
   'fire', 'evacuation', 'building', 'bridge', 'road', 'injured', 'rescue',
@@ -48,8 +60,14 @@ async function translateTerms(apiKey: string, lang: string, baseTerms: string[],
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'POST only' }), { status: 405 });
+    return new Response(JSON.stringify({ error: 'POST only' }), {
+      status: 405,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 
   try {
@@ -61,7 +79,10 @@ Deno.serve(async (req: Request) => {
     // to the built-in canonical list if not supplied.
     const { event_id, languages, event_name, country, terms } = await req.json();
     if (!Array.isArray(languages) || languages.length === 0) {
-      return new Response(JSON.stringify({ error: 'languages[] is required' }), { status: 400 });
+      return new Response(JSON.stringify({ error: 'languages[] is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
     const baseTerms: string[] = Array.isArray(terms) && terms.length ? terms : CANONICAL_TERMS;
 
@@ -73,7 +94,10 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const apiKey = Deno.env.get('LLM_API_KEY') ?? '';
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: 'LLM_API_KEY is not configured on this function' }), { status: 500 });
+      return new Response(JSON.stringify({ error: 'LLM_API_KEY is not configured on this function' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Client scoped to the caller's own JWT, to identify who is actually
@@ -86,7 +110,10 @@ Deno.serve(async (req: Request) => {
     });
     const { data: userData, error: userErr } = await callerClient.auth.getUser();
     if (userErr || !userData?.user) {
-      return new Response(JSON.stringify({ error: 'Not authenticated' }), { status: 401 });
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
     const uid = userData.user.id;
 
@@ -116,7 +143,10 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!authorized) {
-      return new Response(JSON.stringify({ error: event_id ? 'Not an admin of this event' : 'Not a platform admin' }), { status: 403 });
+      return new Response(JSON.stringify({ error: event_id ? 'Not an admin of this event' : 'Not a platform admin' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const keywordSets: Record<string, string[]> = {};
@@ -125,9 +155,12 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(JSON.stringify({ keywordSets }), {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (ex) {
-    return new Response(JSON.stringify({ error: String((ex as Error)?.message ?? ex) }), { status: 500 });
+    return new Response(JSON.stringify({ error: String((ex as Error)?.message ?? ex) }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   }
 });
