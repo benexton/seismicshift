@@ -45,7 +45,7 @@ body {
   padding: 6px 12px 0;
   background: var(--nav);
 }
-.tabs button {
+.tabs button, .tabs a.navlink {
   background: #16263f;
   color: #cdd6e4;
   border: none;
@@ -54,12 +54,18 @@ body {
   border-radius: 8px 8px 0 0;
   font-size: 14px;
   font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }
 .tabs button.active { background: var(--bg); color: var(--ink); }
+.tabs a.navlink:hover { background: #1b3050; }
+.tabs .navgroup { display: flex; gap: 3px; padding-right: 9px; margin-right: 6px; border-right: 1px solid #263a58; }
 .tabs .tab-spacer { flex: 1; }
 .tabs .signout {
   background: transparent; color: #9fb0c9; border: none;
   cursor: pointer; font-size: 13px; padding: 9px 12px; border-radius: 6px;
+  text-decoration: none; display: inline-flex; align-items: center;
 }
 
 /* ---- Scrollable panels (scraper, manual, report) -------------------------- */
