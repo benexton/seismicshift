@@ -55,6 +55,13 @@ export function observationTypesLabel(types) {
   return types.map((t) => OBSERVATION_LABEL[t] ?? t).join(' + ');
 }
 
+// A bare '-' for a missing report field reads as "confirmed: none" rather
+// than "still needs entering" - used in both the on-screen report preview
+// and the downloaded .docx so a reviewer can't mistake one for the other.
+export function phOr(value) {
+  return (value === null || value === undefined || value === '') ? '[add before publishing]' : value;
+}
+
 // Built-in basemap presets an admin can pick from when creating an event,
 // and the ones the public views themselves can fall back to. Shared here
 // (rather than duplicated per-file) since PublicViewLfe's combined "all

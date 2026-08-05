@@ -3,7 +3,7 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { supabaseLfe, LFE_RECORD_COLUMNS } from '../../lib/supabaseLfe.js';
 import { useEvent } from '../../lib/useEvent.js';
-import { DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate } from '../../lib/constantsLfe.js';
+import { DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate, phOr } from '../../lib/constantsLfe.js';
 import { buildReportDocxBlob } from '../../lib/reportDocxLfe.js';
 import { parseReportSections } from '../../lib/reportSections.js';
 
@@ -173,7 +173,7 @@ export default function ReportGeneratorLfe() {
               ['Location (lat/long)', event?.epicentre_lat != null ? `${event.epicentre_lat}, ${event.epicentre_lng}` : ''],
               ['Time and date', event?.event_datetime ? fmtDate(event.event_datetime) : ''], ['Faulting mechanism', meta.faulting],
               ['Maximum Modified Mercalli Intensity', meta.max_mmi], ['Tsunami alert issued', meta.tsunami],
-            ].map(([k, v]) => (<tr key={k}><th>{k}</th><td>{v || '-'}</td></tr>))}
+            ].map(([k, v]) => (<tr key={k}><th>{k}</th><td>{phOr(v)}</td></tr>))}
           </tbody>
         </table>
 
