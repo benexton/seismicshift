@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import LoginGateLfe from './LoginGateLfe.jsx';
+import LfeNavGroup from './LfeNavGroup.jsx';
 
 // A few built-in basemap presets an admin can pick from when creating an
 // event. Full custom tile URLs can be added later; this covers the common
@@ -420,7 +421,7 @@ function EventKeywordsEditor({ event, onClose, onSaved }) {
 
   return (
     <tr>
-      <td colSpan={5}>
+      <td colSpan={6}>
         <div className="card" style={{ margin: 0 }}>
           <div className="report-actions">
             <button type="button" className="mini" onClick={translate} disabled={busy}>
@@ -445,9 +446,110 @@ function EventKeywordsEditor({ event, onClose, onSaved }) {
   );
 }
 
+function EditEventPanel({ event, onClose, onSaved }) {
+  const [name, setName] = useState(event.name || '');
+  const [country, setCountry] = useState(event.country || '');
+  const [countryCode, setCountryCode] = useState(event.country_code || '');
+  const [eventDatetime, setEventDatetime] = useState(event.event_datetime ? new Date(event.event_datetime).toISOString().slice(0, 16) : '');
+  const [lat, setLat] = useState(event.epicentre_lat ?? '');
+  const [lng, setLng] = useState(event.epicentre_lng ?? '');
+  const [magnitude, setMagnitude] = useState('');
+  const [depth, setDepth] = useState('');
+  const [metaLoaded, setMetaLoaded] = useState(false);
+  const [languages, setLanguages] = useState((event.languages?.length ? event.languages : ['en']).join(', '));
+  const [basemapKey, setBasemapKey] = useState(Object.keys(event.basemap || {})[0] || 'osm');
+  const [zoom, setZoom] = useState(event.map_center?.zoom ?? 10);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabaseLfe.from('event_meta').select('magnitude, depth').eq('event_id', event.id).maybeSingle();
+      if (data) {
+        setMagnitude(data.magnitude != null ? String(data.magnitude) : '');
+        setDepth(data.depth != null ? String(data.depth) : '');
+      }
+      setMetaLoaded(true);
+    })();
+  }, [event.id]);
+
+  async function save(e) {
+    e.preventDefault();
+    if (!name.trim()) return setStatus({ kind: 'err', msg: 'Event name is required.' });
+    setBusy(true); setStatus(null);
+    try {
+      const langList = languages.split(',').map((l) => l.trim()).filter(Boolean);
+      const latNum = lat !== '' ? Number(lat) : null;
+      const lngNum = lng !== '' ? Number(lng) : null;
+      const basemap = { [basemapKey]: BASEMAP_PRESETS[basemapKey] };
+
+      const { error } = await supabaseLfe.from('events').update({
+        name: name.trim(),
+        country: country || null,
+        country_code: countryCode || null,
+        event_datetime: eventDatetime ? new Date(eventDatetime).toISOString() : null,
+        epicentre_lat: latNum,
+        epicentre_lng: lngNum,
+        languages: langList.length ? langList : ['en'],
+        basemap,
+        map_center: { lat: latNum ?? 0, lng: lngNum ?? 0, zoom: Number(zoom) },
+      }).eq('id', event.id);
+      if (error) throw error;
+
+      const { error: metaError } = await supabaseLfe.from('event_meta').update({
+        magnitude: magnitude !== '' ? Number(magnitude) : null,
+        depth: depth !== '' ? Number(depth) : null,
+      }).eq('event_id', event.id);
+      if (metaError) throw metaError;
+
+      setStatus({ kind: 'ok', msg: 'Saved.' });
+      onSaved?.();
+    } catch (ex) {
+      setStatus({ kind: 'err', msg: `Save failed: ${ex.message ?? ex}` });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <tr>
+      <td colSpan={6}>
+        <div className="card" style={{ margin: 0 }}>
+          <form onSubmit={save}>
+            <div className="report-meta-form">
+              <div><label>Name</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></div>
+              <div><label>Country</label><input type="text" value={country} onChange={(e) => setCountry(e.target.value)} /></div>
+              <div><label>Country code</label><input type="text" value={countryCode} onChange={(e) => setCountryCode(e.target.value)} placeholder="e.g. NZ" /></div>
+              <div><label>Event date/time</label><input type="datetime-local" value={eventDatetime} onChange={(e) => setEventDatetime(e.target.value)} /></div>
+              <div><label>Epicentre latitude</label><input type="number" step="0.0001" value={lat} onChange={(e) => setLat(e.target.value)} /></div>
+              <div><label>Epicentre longitude</label><input type="number" step="0.0001" value={lng} onChange={(e) => setLng(e.target.value)} /></div>
+              <div><label>Magnitude (Mw)</label><input type="number" step="0.1" value={magnitude} onChange={(e) => setMagnitude(e.target.value)} disabled={!metaLoaded} /></div>
+              <div><label>Depth (km)</label><input type="number" step="0.1" value={depth} onChange={(e) => setDepth(e.target.value)} disabled={!metaLoaded} /></div>
+              <div><label>Languages (comma-separated codes)</label><input type="text" value={languages} onChange={(e) => setLanguages(e.target.value)} placeholder="en, ja" /></div>
+              <div>
+                <label>Basemap preset</label>
+                <select value={basemapKey} onChange={(e) => setBasemapKey(e.target.value)}>
+                  {Object.entries(BASEMAP_PRESETS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
+              <div><label>Default zoom</label><input type="number" value={zoom} onChange={(e) => setZoom(e.target.value)} /></div>
+            </div>
+            <div className="report-actions">
+              <button className="btn secondary" type="button" onClick={onClose} disabled={busy}>Cancel</button>
+              <button className="btn" type="submit" disabled={busy}>{busy ? 'Saving...' : 'Save changes'}</button>
+              {status && <span className={`status-line ${status.kind}`}>{status.msg}</span>}
+            </div>
+          </form>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function ManageEventsPanel({ events, loading, onChanged }) {
   const [busyId, setBusyId] = useState(null);
   const [editingKeywords, setEditingKeywords] = useState(null);
+  const [editingDetails, setEditingDetails] = useState(null);
   const [err, setErr] = useState('');
 
   async function updateEvent(ev, patch) {
@@ -491,13 +593,19 @@ function ManageEventsPanel({ events, loading, onChanged }) {
                       : <span className="muted small">Not yet generated - runs on first export</span>}
                   </td>
                   <td>
-                    <button className="mini" onClick={() => setEditingKeywords(editingKeywords === ev.id ? null : ev.id)}>
+                    <button className="mini" onClick={() => { setEditingDetails(null); setEditingKeywords(editingKeywords === ev.id ? null : ev.id); }}>
                       Keywords
+                    </button>{' '}
+                    <button className="mini" onClick={() => { setEditingKeywords(null); setEditingDetails(editingDetails === ev.id ? null : ev.id); }}>
+                      Edit
                     </button>
                   </td>
                 </tr>
                 {editingKeywords === ev.id && (
                   <EventKeywordsEditor event={ev} onClose={() => setEditingKeywords(null)} onSaved={onChanged} />
+                )}
+                {editingDetails === ev.id && (
+                  <EditEventPanel event={ev} onClose={() => setEditingDetails(null)} onSaved={onChanged} />
                 )}
               </Fragment>
             ))}
@@ -708,10 +816,7 @@ function AdminWorkspace({ signOut }) {
   return (
     <div className="triage-shell">
       <div className="tabs">
-        <span className="navgroup">
-          <a className="navlink" href="/lfe/">Your events</a>
-          <a className="navlink" href="/lfe/public/">Public view</a>
-        </span>
+        <LfeNavGroup />
         <span style={{ fontWeight: 600, alignSelf: 'center', margin: '0 6px' }}>LFE Admin</span>
         <button className={tab === 'create' ? 'active' : ''} onClick={() => setTab('create')}>Create event</button>
         <button className={tab === 'manage' ? 'active' : ''} onClick={() => setTab('manage')}>Manage events</button>
