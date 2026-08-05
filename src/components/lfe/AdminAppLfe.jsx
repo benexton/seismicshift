@@ -656,6 +656,9 @@ function ProvisionUsersPanel({ events }) {
   const [foundId, setFoundId] = useState(null);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [bulkEmails, setBulkEmails] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
 
   const isPlatform = scope === PLATFORM_SCOPE;
 
@@ -691,6 +694,31 @@ function ProvisionUsersPanel({ events }) {
     setBusy(false);
     if (error) return setErr(error.message);
     setEmail(''); setFoundId(null);
+    loadMembers(scope);
+  }
+
+  async function bulkAdd() {
+    if (!scope || isPlatform) return;
+    const list = [...new Set(bulkEmails.split(',').map((e) => e.trim()).filter(Boolean))];
+    if (!list.length) return;
+    setBulkBusy(true); setBulkResult(null); setErr('');
+    const existingIds = new Set(members.map((m) => m.user_id));
+    const added = []; const notFound = []; const alreadyMember = []; const failed = [];
+    for (const emailAddr of list) {
+      const { data: uid, error: lookupErr } = await supabaseLfe.rpc('lookup_user_by_email', { p_email: emailAddr });
+      if (lookupErr) { failed.push(emailAddr); continue; }
+      if (!uid) { notFound.push(emailAddr); continue; }
+      if (existingIds.has(uid)) { alreadyMember.push(emailAddr); continue; }
+      // Insert, not upsert: existingIds already excludes current members, so
+      // there's no legitimate conflict left to resolve - an insert-only call
+      // guarantees this can never silently downgrade an existing admin's role.
+      const { error: insertErr } = await supabaseLfe.from('event_members')
+        .insert({ event_id: scope, user_id: uid, role: 'triager' });
+      if (insertErr) failed.push(emailAddr); else added.push(emailAddr);
+    }
+    setBulkBusy(false);
+    setBulkResult({ added, notFound, alreadyMember, failed });
+    setBulkEmails('');
     loadMembers(scope);
   }
 
@@ -756,6 +784,28 @@ function ProvisionUsersPanel({ events }) {
               )}
               {isPlatform && (
                 <button className="btn" type="button" onClick={addMember} disabled={busy}>Grant platform admin</button>
+              )}
+            </div>
+          )}
+
+          {!isPlatform && (
+            <div className="field">
+              <label>Bulk add as triagers (comma-separated emails)</label>
+              <div className="link-add">
+                <input type="text" value={bulkEmails} onChange={(e) => setBulkEmails(e.target.value)}
+                  placeholder="a@example.com, b@example.com, c@example.com" style={{ flex: 1 }} />
+                <button type="button" className="mini" onClick={bulkAdd} disabled={bulkBusy || !bulkEmails.trim()}>
+                  {bulkBusy ? 'Adding...' : 'Bulk add as triagers'}
+                </button>
+              </div>
+              <span className="muted small">Everyone found is added with the Triager role. Existing members keep whatever role they already have.</span>
+              {bulkResult && (
+                <p className="status-line small" style={{ marginTop: 6 }}>
+                  {bulkResult.added.length > 0 && <>Added as triager: {bulkResult.added.join(', ')}. </>}
+                  {bulkResult.alreadyMember.length > 0 && <>Already a member, role unchanged: {bulkResult.alreadyMember.join(', ')}. </>}
+                  {bulkResult.notFound.length > 0 && <>No account found (create in Supabase dashboard first): {bulkResult.notFound.join(', ')}. </>}
+                  {bulkResult.failed.length > 0 && <>Failed: {bulkResult.failed.join(', ')}.</>}
+                </p>
               )}
             </div>
           )}
