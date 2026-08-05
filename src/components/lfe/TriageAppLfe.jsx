@@ -50,11 +50,11 @@ function Workspace({ reviewer, userId, signOut, updateName }) {
   return (
     <div className="triage-shell">
       <div className="tabs">
-        <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6 }}>{event.name}</span>
         <span className="navgroup">
           <a className="navlink" href="/lfe/">← All events</a>
           <a className="navlink" href="/lfe/public/">Public view</a>
         </span>
+        <span style={{ fontWeight: 600, alignSelf: 'center', margin: '0 6px' }}>{event.name}</span>
         {TABS.map(([id, label]) => (
           <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>
         ))}

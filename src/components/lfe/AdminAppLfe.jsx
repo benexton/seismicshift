@@ -700,6 +700,7 @@ function AdminWorkspace({ signOut }) {
     return (
       <div className="container">
         <p className="err">You do not have LFE admin access. Contact an existing admin if you believe you need it.</p>
+        <p><a href="/lfe/">Back to your events</a></p>
       </div>
     );
   }
@@ -707,11 +708,11 @@ function AdminWorkspace({ signOut }) {
   return (
     <div className="triage-shell">
       <div className="tabs">
-        <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6 }}>LFE Admin</span>
         <span className="navgroup">
           <a className="navlink" href="/lfe/">Your events</a>
           <a className="navlink" href="/lfe/public/">Public view</a>
         </span>
+        <span style={{ fontWeight: 600, alignSelf: 'center', margin: '0 6px' }}>LFE Admin</span>
         <button className={tab === 'create' ? 'active' : ''} onClick={() => setTab('create')}>Create event</button>
         <button className={tab === 'manage' ? 'active' : ''} onClick={() => setTab('manage')}>Manage events</button>
         <button className={tab === 'provision' ? 'active' : ''} onClick={() => setTab('provision')}>Provision users</button>
