@@ -707,7 +707,11 @@ function AdminWorkspace({ signOut }) {
   return (
     <div className="triage-shell">
       <div className="tabs">
-        <span style={{ fontWeight: 600 }}>LFE Admin</span>
+        <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6 }}>LFE Admin</span>
+        <span className="navgroup">
+          <a className="navlink" href="/lfe/">Your events</a>
+          <a className="navlink" href="/lfe/public/">Public view</a>
+        </span>
         <button className={tab === 'create' ? 'active' : ''} onClick={() => setTab('create')}>Create event</button>
         <button className={tab === 'manage' ? 'active' : ''} onClick={() => setTab('manage')}>Manage events</button>
         <button className={tab === 'provision' ? 'active' : ''} onClick={() => setTab('provision')}>Provision users</button>
