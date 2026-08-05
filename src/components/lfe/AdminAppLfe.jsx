@@ -137,6 +137,8 @@ function countryInfoFromRegion(region) {
 
 function CreateEventPanel({ onCreated }) {
   const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [slugEdited, setSlugEdited] = useState(false);
   const [country, setCountry] = useState('');
   const [countryCode, setCountryCode] = useState('');
   const [eventDatetime, setEventDatetime] = useState('');
@@ -163,6 +165,12 @@ function CreateEventPanel({ onCreated }) {
 
   const langList = languages.split(',').map((l) => l.trim()).filter(Boolean);
   const foreignLangs = langList.filter((l) => l !== 'en');
+
+  // Auto-suggests a slug from the name, but stops the moment the admin types
+  // into the slug field directly - the admin has final say, not the name.
+  useEffect(() => {
+    if (!slugEdited) setSlug(name.trim() ? slugify(name) : '');
+  }, [name, slugEdited]);
 
   function onLanguagesChange(v) {
     setLanguages(v);
@@ -233,6 +241,7 @@ function CreateEventPanel({ onCreated }) {
   async function createEvent(e) {
     e.preventDefault();
     if (!name.trim()) return setStatus({ kind: 'err', msg: 'Event name is required.' });
+    if (!slug.trim()) return setStatus({ kind: 'err', msg: 'Slug is required.' });
 
     const untranslated = foreignLangs.filter((l) => !(keywordText[l] || '').trim());
     if (untranslated.length && !confirmSkipTranslation) {
@@ -252,7 +261,7 @@ function CreateEventPanel({ onCreated }) {
       const { data: userData } = await supabaseLfe.auth.getUser();
 
       const { data: created, error } = await supabaseLfe.from('events').insert({
-        slug: slugify(name),
+        slug: slug.trim(),
         name: name.trim(),
         country: country || null,
         country_code: countryCode || null,
@@ -277,7 +286,7 @@ function CreateEventPanel({ onCreated }) {
       }
 
       setStatus({ kind: 'ok', msg: `Event "${created.name}" created (slug: ${created.slug}). It starts in draft - flip it to active on the Manage events tab once it's ready.` });
-      setName(''); setCountry(''); setCountryCode(''); setEventDatetime('');
+      setName(''); setSlug(''); setSlugEdited(false); setCountry(''); setCountryCode(''); setEventDatetime('');
       setLat(''); setLng(''); setMagnitude(''); setDepth(''); setUsgsInput('');
       setEnglishKeywords(''); setKeywordText({});
       setConfirmSkipTranslation(false);
@@ -308,6 +317,12 @@ function CreateEventPanel({ onCreated }) {
       <form onSubmit={createEvent}>
         <div className="report-meta-form">
           <div><label>Name</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></div>
+          <div>
+            <label>Slug</label>
+            <input type="text" value={slug} onChange={(e) => { setSlug(e.target.value); setSlugEdited(true); }}
+              placeholder="e.g. catia-la-mar-2026" required />
+            <span className="muted small">Used in the event's URL and public snapshot filename. Auto-suggested from the name, but you decide the final value.</span>
+          </div>
           <div><label>Country</label><input type="text" value={country} onChange={(e) => setCountry(e.target.value)} /></div>
           <div><label>Country code</label><input type="text" value={countryCode} onChange={(e) => setCountryCode(e.target.value)} placeholder="e.g. NZ" /></div>
           <div><label>Event date/time</label><input type="datetime-local" value={eventDatetime} onChange={(e) => setEventDatetime(e.target.value)} /></div>
@@ -428,6 +443,7 @@ function EventKeywordsEditor({ event, onClose, onSaved }) {
 
 function EditEventPanel({ event, onClose, onSaved }) {
   const [name, setName] = useState(event.name || '');
+  const [slug, setSlug] = useState(event.slug || '');
   const [country, setCountry] = useState(event.country || '');
   const [countryCode, setCountryCode] = useState(event.country_code || '');
   const [eventDatetime, setEventDatetime] = useState(event.event_datetime ? new Date(event.event_datetime).toISOString().slice(0, 16) : '');
@@ -457,6 +473,7 @@ function EditEventPanel({ event, onClose, onSaved }) {
   async function save(e) {
     e.preventDefault();
     if (!name.trim()) return setStatus({ kind: 'err', msg: 'Event name is required.' });
+    if (!slug.trim()) return setStatus({ kind: 'err', msg: 'Slug is required.' });
     setBusy(true); setStatus(null);
     try {
       const langList = languages.split(',').map((l) => l.trim()).filter(Boolean);
@@ -465,6 +482,7 @@ function EditEventPanel({ event, onClose, onSaved }) {
       const basemap = { [basemapKey]: BASEMAP_PRESETS[basemapKey] };
 
       const { error } = await supabaseLfe.from('events').update({
+        slug: slug.trim(),
         name: name.trim(),
         country: country || null,
         country_code: countryCode || null,
@@ -500,6 +518,11 @@ function EditEventPanel({ event, onClose, onSaved }) {
           <form onSubmit={save}>
             <div className="report-meta-form">
               <div><label>Name</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></div>
+              <div>
+                <label>Slug</label>
+                <input type="text" value={slug} onChange={(e) => setSlug(e.target.value)} required />
+                <span className="muted small">Used in the event's URL and public snapshot filename. Changing it after the event has live data leaves a stale public snapshot until the next export runs.</span>
+              </div>
               <div><label>Country</label><input type="text" value={country} onChange={(e) => setCountry(e.target.value)} /></div>
               <div><label>Country code</label><input type="text" value={countryCode} onChange={(e) => setCountryCode(e.target.value)} placeholder="e.g. NZ" /></div>
               <div><label>Event date/time</label><input type="datetime-local" value={eventDatetime} onChange={(e) => setEventDatetime(e.target.value)} /></div>
