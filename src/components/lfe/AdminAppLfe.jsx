@@ -744,9 +744,14 @@ function ManageEventsPanel({ events, loading, onChanged }) {
     <div className="card">
       <h2 style={{ marginTop: 0 }}>Manage events</h2>
       {err && <p className="status-line err">{err}</p>}
-      {loading && <p className="muted">Loading...</p>}
+      {/* Only the very first load hides the table - a background refresh
+          (e.g. onChanged() after a save inside an open Edit/Keywords row)
+          must not unmount it, or it tears down that row's own component
+          instantly, wiping its just-set status message before it can ever
+          be seen. */}
+      {loading && events.length === 0 && <p className="muted">Loading...</p>}
       {!loading && events.length === 0 && <p className="muted">No events yet - create one on the other tab.</p>}
-      {!loading && events.length > 0 && (
+      {events.length > 0 && (
         <table className="record-table">
           <thead><tr><th>Name</th><th>Slug</th><th>Status</th><th>Public</th><th>Sheets backup</th><th></th></tr></thead>
           <tbody>
