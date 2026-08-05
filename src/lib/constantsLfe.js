@@ -55,6 +55,30 @@ export function observationTypesLabel(types) {
   return types.map((t) => OBSERVATION_LABEL[t] ?? t).join(' + ');
 }
 
+// Built-in basemap presets an admin can pick from when creating an event,
+// and the ones the public views themselves can fall back to. Shared here
+// (rather than duplicated per-file) since PublicViewLfe's combined "all
+// events" map needs a sensible default with true global coverage -
+// gsi_photo (Japan-only aerial imagery from GSI) would render blank
+// outside Japan, so esri_world_imagery is the one used there.
+export const BASEMAP_PRESETS = {
+  gsi_photo: {
+    label: 'GSI Aerial (Japan)',
+    url: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
+    attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noreferrer">GSI Japan</a>',
+  },
+  osm: {
+    label: 'OpenStreetMap',
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap contributors',
+  },
+  esri_world_imagery: {
+    label: 'Esri World Imagery',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Esri, Maxar, Earthstar Geographics',
+  },
+};
+
 // Small, type-specific structured fields shown when that type is ticked,
 // stored in triage_records.type_details (jsonb, keyed by type). 'building'
 // has its own dedicated fields already (building_name/type/material/etc);

@@ -8,7 +8,7 @@ import Zoomable from '../Zoomable.jsx';
 import { downloadFile } from '../../lib/mediaLfe.js';
 import { emptyFilter, matchesFilter } from '../../lib/filterLfe.js';
 import {
-  DAMAGE_COLOR, DAMAGE_LABEL, observationTypesLabel, HEIGHT_CLASSES, cap, fmtDate,
+  DAMAGE_COLOR, DAMAGE_LABEL, observationTypesLabel, HEIGHT_CLASSES, cap, fmtDate, BASEMAP_PRESETS,
 } from '../../lib/constantsLfe.js';
 
 // Fully anonymous, zero-auth, zero-DB-query - same pattern as Kumamoto's
@@ -19,9 +19,10 @@ const SUPA = import.meta.env.PUBLIC_LFE_SUPABASE_URL || '';
 const BUCKET_BASE = `${SUPA}/storage/v1/object/public/lfe-observation-media`;
 const INDEX_URL = `${BUCKET_BASE}/public/events-index.json`;
 
-// Used for the combined "all events" view, which has no single event to
-// take a basemap preset from.
-const DEFAULT_BASEMAP = { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; OpenStreetMap contributors' };
+// Used for the combined "all events" view, which has no single event to take
+// a basemap preset from - esri_world_imagery, not gsi_photo, since GSI's
+// aerial tiles only cover Japan and would render blank everywhere else.
+const DEFAULT_BASEMAP = BASEMAP_PRESETS.esri_world_imagery;
 
 const DISCLAIMERS = [
   {

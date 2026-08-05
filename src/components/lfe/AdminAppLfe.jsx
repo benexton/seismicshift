@@ -2,27 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import LoginGateLfe from './LoginGateLfe.jsx';
 import LfeNavGroup from './LfeNavGroup.jsx';
-
-// A few built-in basemap presets an admin can pick from when creating an
-// event. Full custom tile URLs can be added later; this covers the common
-// cases (Japan via GSI, everywhere else via OSM or satellite imagery).
-const BASEMAP_PRESETS = {
-  gsi_photo: {
-    label: 'GSI Aerial (Japan)',
-    url: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',
-    attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noreferrer">GSI Japan</a>',
-  },
-  osm: {
-    label: 'OpenStreetMap',
-    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; OpenStreetMap contributors',
-  },
-  esri_world_imagery: {
-    label: 'Esri World Imagery',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Esri, Maxar, Earthstar Geographics',
-  },
-};
+import { BASEMAP_PRESETS } from '../../lib/constantsLfe.js';
 
 // Accepts either a bare USGS event id (e.g. "us7000abcd") or a full event
 // page URL and returns just the id. Event page URLs almost always carry a
