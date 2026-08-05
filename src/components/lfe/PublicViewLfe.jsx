@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import ClusterGroup from '../ClusterGroup.jsx';
 import FilterBarLfe from './FilterBarLfe.jsx';
@@ -18,6 +18,10 @@ import {
 const SUPA = import.meta.env.PUBLIC_LFE_SUPABASE_URL || '';
 const BUCKET_BASE = `${SUPA}/storage/v1/object/public/lfe-observation-media`;
 const INDEX_URL = `${BUCKET_BASE}/public/events-index.json`;
+
+// Used for the combined "all events" view, which has no single event to
+// take a basemap preset from.
+const DEFAULT_BASEMAP = { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '&copy; OpenStreetMap contributors' };
 
 const DISCLAIMERS = [
   {
@@ -108,6 +112,23 @@ function PublicDetail({ site, onClose }) {
   );
 }
 
+// Imperatively fits the map to whatever's actually being shown, the same
+// way TriageMapLfe/TriagedSitesLfe do - MapContainer's own center/zoom props
+// only apply on its first mount, so relying on them alone leaves the map
+// stuck at its initial framing (e.g. the world view) when the underlying
+// records change after that, such as switching from the combined "all
+// events" view into a single event, or between two different events.
+function FitToData({ records }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!records.length) return;
+    try {
+      map.fitBounds(records.map((r) => [r.latitude, r.longitude]), { padding: [40, 40], maxZoom: 14 });
+    } catch { /* ignore */ }
+  }, [records.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
+
 function getInitialSlug() {
   if (typeof window === 'undefined') return '';
   return new URLSearchParams(window.location.search).get('event') ?? '';
@@ -120,6 +141,8 @@ export default function PublicViewLfe() {
   const [slug, setSlug] = useState(getInitialSlug);
   const [data, setData] = useState(null);
   const [err, setErr] = useState('');
+  const [allSites, setAllSites] = useState(null);
+  const [allSitesLoading, setAllSitesLoading] = useState(false);
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(emptyFilter);
@@ -146,22 +169,38 @@ export default function PublicViewLfe() {
       .catch(() => setErr('The public data for this event could not be loaded yet. Please check back shortly.'));
   }, [slug]);
 
+  useEffect(() => {
+    // Combined world view: only fetched once, the first time no specific
+    // event is selected and the index has finished loading, then cached in
+    // allSites for the rest of the session (switching back and forth
+    // between "all events" and a specific event shouldn't keep re-fetching).
+    if (slug || eventsLoading || events.length === 0 || allSites !== null) return;
+    let cancelled = false;
+    setAllSitesLoading(true);
+    Promise.all(events.map((ev) => fetch(`${BUCKET_BASE}/public/${ev.slug}.json`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => (d?.sites ?? []).map((s) => ({ ...s, eventSlug: ev.slug, eventName: ev.name })))
+      .catch(() => [])))
+      .then((lists) => { if (!cancelled) setAllSites(lists.flat()); })
+      .finally(() => { if (!cancelled) setAllSitesLoading(false); });
+    return () => { cancelled = true; };
+  }, [slug, eventsLoading, events, allSites]);
+
   function selectEvent(newSlug) {
     setSlug(newSlug);
+    if (!newSlug) { setData(null); setErr(''); }
     const url = new URL(window.location.href);
-    url.searchParams.set('event', newSlug);
+    if (newSlug) url.searchParams.set('event', newSlug); else url.searchParams.delete('event');
     window.history.replaceState(null, '', url);
   }
 
-  const sites = useMemo(() => (data?.sites ?? []).filter((s) => s.lat != null && s.lng != null), [data]);
+  const activeSites = slug ? (data?.sites ?? []) : (allSites ?? []);
+  const sites = useMemo(() => activeSites.filter((s) => s.lat != null && s.lng != null), [activeSites]);
   const filtered = useMemo(() => sites.filter((s) => matchesFilter(s, filter)), [sites, filter]);
   const mapRecords = useMemo(() => filtered.map((s) => ({ ...s, id: s.site_id, latitude: s.lat, longitude: s.lng })), [filtered]);
 
-  const mapCenter = data?.event?.mapCenter;
-  const center = mapCenter ? [mapCenter.lat, mapCenter.lng] : [0, 0];
-  const zoom = mapCenter?.zoom ?? 2;
   const basemapOptions = Object.entries(data?.event?.basemap ?? {});
-  const base = basemapOptions[0]?.[1];
+  const base = (slug && basemapOptions[0]?.[1]) || DEFAULT_BASEMAP;
 
   function renderMarker(s, pos, key, solo) {
     return (
@@ -170,6 +209,7 @@ export default function PublicViewLfe() {
         eventHandlers={{ click: () => setSelected(s) }}>
         <Tooltip direction="top">
           {solo && s.media_url && <img className="tip-thumb" src={s.media_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+          {s.eventName && `${s.eventName} · `}
           {s.site_id != null && `#${s.site_id} · `}
           {DAMAGE_LABEL[s.damage_score]?.split(' - ')[0] ?? '?'} · {observationTypesLabel(s.observation_types)}
         </Tooltip>
@@ -193,24 +233,28 @@ export default function PublicViewLfe() {
         </div>
       </header>
 
-      {!slug ? (
-        <p className="muted" style={{ padding: 20 }}>
-          {eventsLoading
-            ? 'Loading all events. This may take some time.'
-            : eventsErr
-              ? eventsErr
-              : events.length === 0
-                ? 'No public events yet. Please check back shortly.'
-                : 'Please select a specific event of interest from the dropdown above.'}
-        </p>
+      {!slug && eventsLoading ? (
+        <p className="muted" style={{ padding: 20 }}>Loading all events. This may take some time.</p>
       ) : (
         <>
           <FilterBarLfe filter={filter} setFilter={setFilter} shown={filtered.length} total={sites.length} view={view} setView={setView} hideSource />
 
           {view === 'map' ? (
             <div className="public-map-area">
-              <MapContainer center={center} zoom={zoom} className="triage-map" scrollWheelZoom>
+              {!slug && (
+                <div className="public-banner">
+                  {eventsErr
+                    ? eventsErr
+                    : events.length === 0
+                      ? 'No public events yet. Please check back shortly.'
+                      : allSitesLoading
+                        ? 'Loading the full dataset of all events and verified sites. This may take some time.'
+                        : 'Showing every verified site across all events - select a specific event from the dropdown above to focus on just that one.'}
+                </div>
+              )}
+              <MapContainer center={[0, 0]} zoom={2} className="triage-map" scrollWheelZoom>
                 {base && <TileLayer url={base.url} attribution={base.attribution ?? ''} maxZoom={18} />}
+                <FitToData records={mapRecords} />
                 <ClusterGroup records={mapRecords} renderMarker={renderMarker} />
               </MapContainer>
               <div className="map-legend">
@@ -218,7 +262,7 @@ export default function PublicViewLfe() {
                 {[0, 1, 2, 3, 4, 5].map((s) => (
                   <div className="row" key={s}><span className="dot" style={{ background: DAMAGE_COLOR[s] }} />{DAMAGE_LABEL[s]}</div>
                 ))}
-                <div className="count">{err ? err : `${filtered.length} verified site(s)`}{data?.generatedAt && !err ? ` · updated ${fmtDate(data.generatedAt)}` : ''}</div>
+                <div className="count">{err ? err : `${filtered.length} verified site(s)`}{slug && data?.generatedAt && !err ? ` · updated ${fmtDate(data.generatedAt)}` : ''}</div>
               </div>
             </div>
           ) : (
