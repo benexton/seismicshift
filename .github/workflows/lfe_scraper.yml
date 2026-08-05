@@ -38,4 +38,5 @@ jobs:
           NOMINATIM_UA: ${{ secrets.NOMINATIM_UA }}
           BLUESKY_IDENTIFIER: ${{ secrets.BLUESKY_IDENTIFIER }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+          EVENT_RADIUS_KM: ${{ vars.EVENT_RADIUS_KM }}  # optional, defaults to 500 in the script
         run: python scripts/lfe/ingest_triage_data.py --event-slug "${{ inputs.event_slug }}"
