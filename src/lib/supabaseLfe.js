@@ -48,4 +48,4 @@ export const LFE_RECORD_COLUMNS =
   'ai_model, status, engineer_notes, reviewed_by, reviewed_at, ' +
   'source_type, observation_types, location_precision, submitted_by, phash, merged_into, ' +
   'building_name, address, location_confidence, streetview_url, building_type, primary_material, height_class, ' +
-  'nonstructural_damage, type_details';
+  'nonstructural_damage, type_details, source_text, source_text_en';
