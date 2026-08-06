@@ -341,6 +341,10 @@ function CreateEventPanel({ onCreated }) {
         status: 'draft',
         is_public: false,
         created_by: userData?.user?.id ?? null,
+        // Kept so the report generator can re-query USGS later for
+        // ShakeMap/ground-failure hazard figures, without asking the admin
+        // to paste the id a second time.
+        usgs_event_id: usgsIdFromInput(usgsInput.trim()) || null,
       }).select().single();
       if (error) throw error;
 
@@ -572,6 +576,7 @@ function EditEventPanel({ event, onClose, onSaved }) {
   const [zoom, setZoom] = useState(event.map_center?.zoom ?? 10);
   const [gsheetId, setGsheetId] = useState(event.gsheet_id || '');
   const [usgsInput, setUsgsInput] = useState('');
+  const [usgsEventId, setUsgsEventId] = useState(event.usgs_event_id || '');
   const [usgsBusy, setUsgsBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
@@ -591,6 +596,7 @@ function EditEventPanel({ event, onClose, onSaved }) {
       if (r.maxMmi) setMaxMmi(r.maxMmi);
       if (r.tsunami) setTsunami(r.tsunami);
       if (r.country) { setCountry(r.country); setCountryCode(r.countryCode); }
+      setUsgsEventId(id);
 
       setStatus({ kind: 'ok', msg: 'Fetched from USGS. Review the fields below, then Save.' });
     } catch (ex) {
@@ -639,6 +645,7 @@ function EditEventPanel({ event, onClose, onSaved }) {
         basemap,
         map_center: { lat: latNum ?? 0, lng: lngNum ?? 0, zoom: Number(zoom) },
         gsheet_id: gsheetId.trim() || null,
+        usgs_event_id: usgsEventId.trim() || null,
       }).eq('id', event.id);
       if (error) throw error;
 
@@ -703,6 +710,15 @@ function EditEventPanel({ event, onClose, onSaved }) {
                 </select>
               </div>
               <div><label>Default zoom</label><input type="number" value={zoom} onChange={(e) => setZoom(e.target.value)} /></div>
+            </div>
+            <div className="field">
+              <label>USGS event id</label>
+              <input type="text" value={usgsEventId} onChange={(e) => setUsgsEventId(e.target.value)}
+                placeholder="e.g. us7000abcd" />
+              <span className="muted small">
+                Set by "Fetch from USGS" above, or paste one directly. Lets the report generator re-query USGS for
+                ShakeMap and ground-failure hazard figures without asking for the id again.
+              </span>
             </div>
             <div className="field">
               <label>Google Sheet ID</label>
