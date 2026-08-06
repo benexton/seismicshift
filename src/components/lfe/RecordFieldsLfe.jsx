@@ -117,6 +117,14 @@ export default function RecordFieldsLfe({ v, set }) {
         <input type="text" value={v.failure_mechanism ?? ''} onChange={set('failure_mechanism')} />
       </div>
       <div className="field">
+        <label>Region</label>
+        <input type="text" value={v.region ?? ''} onChange={set('region')} />
+        <span className="muted small">
+          Feeds the report's region groupings and headings - keep it in English (the
+          AI's first guess occasionally comes through in the local language).
+        </span>
+      </div>
+      <div className="field">
         <label>Address</label>
         <input type="text" value={v.address ?? ''} onChange={set('address')} />
       </div>
@@ -143,7 +151,7 @@ export default function RecordFieldsLfe({ v, set }) {
 export const EDITABLE_KEYS = [
   'observation_types', 'damage_score', 'building_name', 'building_type',
   'primary_material', 'height_class', 'code_era', 'observed_retrofits',
-  'failure_mechanism', 'address', 'location_confidence', 'type_details',
+  'failure_mechanism', 'region', 'address', 'location_confidence', 'type_details',
 ];
 
 // Build a DB patch from a values object, coercing types and nulling blanks.
@@ -160,6 +168,7 @@ export function fieldsPatch(v) {
     observation_types: types,
     damage_score: Number(v.damage_score),
     failure_mechanism: orNull(v.failure_mechanism),
+    region: orNull(v.region),
     address: orNull(v.address),
     location_confidence: orNull(v.location_confidence),
     building_name: isBuilding ? orNull(v.building_name) : null,

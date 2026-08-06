@@ -21,6 +21,7 @@ export default function PublicPreviewLfe() {
         <div className="triage-shell">
           <div className="tabs">
             <LfeNavGroup />
+            <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6, color: '#cdd6e4' }}>Public view</span>
             <span className="tab-spacer" />
           </div>
           <div className="tab-body">
