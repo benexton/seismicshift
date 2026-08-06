@@ -58,14 +58,119 @@ function CountryList({ countries, onSelect, onAdd, canWrite }) {
   );
 }
 
+// A country's overview is a list of independently-editable title+body
+// sections (e.g. "Seismotectonic setting", "Seismic code and retrofit
+// policy history") rather than one combined textarea, with the ability to
+// add further named sections - so a section can be edited, added, or
+// removed without disturbing the others.
+function SectionsBlock({ country, sections, canWrite, reviewer, onChanged }) {
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
+  const [editBusy, setEditBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newBody, setNewBody] = useState('');
+  const [addBusy, setAddBusy] = useState(false);
+  const [status, setStatus] = useState(null);
+
+  function startEdit(s) {
+    setEditingId(s.id);
+    setEditDraft({ title: s.title, body_md: s.body_md ?? '' });
+    setStatus(null);
+  }
+  function cancelEdit() { setEditingId(null); setEditDraft(null); }
+
+  async function saveEdit(id) {
+    if (!editDraft.title.trim()) return;
+    setEditBusy(true); setStatus(null);
+    const { error } = await supabaseLfe.from('country_code_sections').update({
+      title: editDraft.title.trim(), body_md: editDraft.body_md, updated_by: reviewer,
+    }).eq('id', id);
+    setEditBusy(false);
+    if (error) return setStatus({ kind: 'err', msg: `Save failed: ${error.message}` });
+    setEditingId(null); setEditDraft(null);
+    onChanged();
+  }
+
+  async function removeSection(id) {
+    const { error } = await supabaseLfe.from('country_code_sections').delete().eq('id', id);
+    if (error) return setStatus({ kind: 'err', msg: `Remove failed: ${error.message}` });
+    onChanged();
+  }
+
+  async function addSection(e) {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
+    setAddBusy(true); setStatus(null);
+    const { error } = await supabaseLfe.from('country_code_sections').insert({
+      country, title: newTitle.trim(), body_md: newBody, updated_by: reviewer,
+    });
+    setAddBusy(false);
+    if (error) return setStatus({ kind: 'err', msg: `Add failed: ${error.message}` });
+    setNewTitle(''); setNewBody(''); setAdding(false);
+    onChanged();
+  }
+
+  return (
+    <>
+      {sections.length === 0 && <p className="muted">No sections yet.</p>}
+      {sections.map((s) => (
+        <div key={s.id} style={{ marginBottom: 20 }}>
+          {editingId === s.id ? (
+            <>
+              <input type="text" value={editDraft.title}
+                onChange={(e) => setEditDraft((d) => ({ ...d, title: e.target.value }))}
+                style={{ width: '100%', fontWeight: 700, fontSize: 16, marginBottom: 6 }} required />
+              <textarea value={editDraft.body_md} onChange={(e) => setEditDraft((d) => ({ ...d, body_md: e.target.value }))}
+                style={{ width: '100%', minHeight: 140 }} placeholder="Markdown supported." />
+              <div className="report-actions">
+                <button className="btn" onClick={() => saveEdit(s.id)} disabled={editBusy}>{editBusy ? 'Saving...' : 'Save'}</button>
+                <button className="btn secondary" onClick={cancelEdit} disabled={editBusy}>Cancel</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2>{s.title}</h2>
+              {s.body_md
+                ? <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(s.body_md) }} />
+                : <p className="muted">No content yet.</p>}
+              {canWrite && (
+                <p>
+                  <button className="mini" onClick={() => startEdit(s)}>Edit</button>{' '}
+                  <button className="mini danger" onClick={() => removeSection(s.id)}>Remove section</button>
+                </p>
+              )}
+            </>
+          )}
+        </div>
+      ))}
+
+      {canWrite && (
+        adding ? (
+          <form onSubmit={addSection} style={{ marginBottom: 20 }}>
+            <input type="text" placeholder="Section title, e.g. Building stock" value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)} style={{ width: '100%', marginBottom: 6 }} required />
+            <textarea placeholder="Section content (markdown supported)" value={newBody}
+              onChange={(e) => setNewBody(e.target.value)} style={{ width: '100%', minHeight: 100 }} />
+            <div className="report-actions">
+              <button className="btn" type="submit" disabled={addBusy}>{addBusy ? 'Adding...' : 'Add section'}</button>
+              <button className="btn secondary" type="button" onClick={() => setAdding(false)} disabled={addBusy}>Cancel</button>
+            </div>
+          </form>
+        ) : (
+          <button className="mini" onClick={() => setAdding(true)} style={{ marginBottom: 20 }}>+ Add section</button>
+        )
+      )}
+      {status && <p className={`status-line ${status.kind}`}>{status.msg}</p>}
+    </>
+  );
+}
+
 function CountryDetail({ country, canWrite, reviewer, onBack }) {
-  const [overview, setOverview] = useState('');
-  const [overviewDraft, setOverviewDraft] = useState('');
-  const [editingOverview, setEditingOverview] = useState(false);
+  const [sections, setSections] = useState([]);
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState(null);
-  const [busy, setBusy] = useState(false);
 
   const [yearStart, setYearStart] = useState('');
   const [yearEnd, setYearEnd] = useState('');
@@ -79,27 +184,15 @@ function CountryDetail({ country, canWrite, reviewer, onBack }) {
 
   async function load() {
     setLoading(true);
-    const [c, e] = await Promise.all([
-      supabaseLfe.from('country_codes').select('overview_md').eq('country', country).maybeSingle(),
+    const [s, e] = await Promise.all([
+      supabaseLfe.from('country_code_sections').select('*').eq('country', country).order('created_at', { ascending: true }),
       supabaseLfe.from('country_code_entries').select('*').eq('country', country).order('year_start', { ascending: true }),
     ]);
     setLoading(false);
-    const md = c.data?.overview_md || '';
-    setOverview(md);
-    setOverviewDraft(md);
+    setSections(s.data ?? []);
     setEntries(e.data ?? []);
   }
   useEffect(() => { load(); }, [country]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function saveOverview() {
-    setBusy(true); setStatus(null);
-    const { error } = await supabaseLfe.from('country_codes')
-      .update({ overview_md: overviewDraft, updated_by: reviewer }).eq('country', country);
-    setBusy(false);
-    if (error) return setStatus({ kind: 'err', msg: `Save failed: ${error.message}` });
-    setOverview(overviewDraft);
-    setEditingOverview(false);
-  }
 
   async function addEntry(e) {
     e.preventDefault();
@@ -166,26 +259,7 @@ function CountryDetail({ country, canWrite, reviewer, onBack }) {
 
         {loading ? <p className="muted">Loading...</p> : (
           <>
-            <h2>Overview</h2>
-            {editingOverview ? (
-              <>
-                <textarea value={overviewDraft} onChange={(e) => setOverviewDraft(e.target.value)}
-                  style={{ width: '100%', minHeight: 160 }}
-                  placeholder="Seismotectonic setting, general code history, etc. Markdown supported." />
-                <div className="report-actions">
-                  <button className="btn" onClick={saveOverview} disabled={busy}>{busy ? 'Saving...' : 'Save'}</button>
-                  <button className="btn secondary" disabled={busy}
-                    onClick={() => { setOverviewDraft(overview); setEditingOverview(false); }}>Cancel</button>
-                </div>
-              </>
-            ) : (
-              <>
-                {overview
-                  ? <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(overview) }} />
-                  : <p className="muted">No overview yet.</p>}
-                {canWrite && <button className="mini" onClick={() => setEditingOverview(true)}>Edit overview</button>}
-              </>
-            )}
+            <SectionsBlock country={country} sections={sections} canWrite={canWrite} reviewer={reviewer} onChanged={load} />
 
             <h2 style={{ marginTop: 24 }}>Code timeline</h2>
             {entries.length === 0 && <p className="muted">No code entries yet.</p>}
@@ -289,8 +363,16 @@ function CodesWorkspace({ reviewer, signOut }) {
 
   async function addCountry(name) {
     const { error } = await supabaseLfe.from('country_codes').insert({ country: name, updated_by: reviewer });
-    if (!error) load();
-    return !error;
+    if (error) return false;
+    // Seeds the same two starting sections every country so far has used,
+    // as a consistent scaffold - additional sections can still be added per
+    // country from there.
+    await supabaseLfe.from('country_code_sections').insert([
+      { country: name, title: 'Seismotectonic setting', body_md: '', updated_by: reviewer },
+      { country: name, title: 'Seismic code and retrofit policy history', body_md: '', updated_by: reviewer },
+    ]);
+    load();
+    return true;
   }
 
   return (
