@@ -1,7 +1,7 @@
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType,
   BorderStyle, ShadingType, AlignmentType, HeadingLevel, ImageRun, Header, Footer,
-  PageNumber, PageBreak, ExternalHyperlink,
+  PageNumber, PageBreak, ExternalHyperlink, InternalHyperlink, Bookmark, TableOfContents,
 } from 'docx';
 import { DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate, phOr } from './constantsLfe.js';
 import { parseReportSections } from './reportSections.js';
@@ -33,7 +33,7 @@ const allBorders = {
   insideHorizontal: { style: BorderStyle.SINGLE, size: 4, color: RULE }, insideVertical: { style: BorderStyle.SINGLE, size: 4, color: RULE },
 };
 
-function heading(level, text) {
+function heading(level, text, extraRuns = []) {
   const map = {
     1: { size: 32, color: MAROON, before: 40, after: 120 },
     2: { size: 26, color: MAROON, before: 300, after: 120 },
@@ -41,7 +41,7 @@ function heading(level, text) {
   };
   const s = map[level] || map[3];
   return new Paragraph({ heading: HeadingLevel[`HEADING_${level}`], keepNext: true, spacing: { before: s.before, after: s.after },
-    children: [new TextRun({ text, bold: true, color: s.color, size: s.size, font: BODY })] });
+    children: [new TextRun({ text, bold: true, color: s.color, size: s.size, font: BODY }), ...extraRuns] });
 }
 
 function para(text, opts = {}) {
@@ -103,9 +103,9 @@ async function fetchImage(url) {
   } catch { return null; }
 }
 
-function caption(text) {
+function caption(text, extraRuns = []) {
   return new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 180 },
-    children: [new TextRun({ text, italics: true, color: MAROON_LT, size: 18, font: BODY })] });
+    children: [new TextRun({ text, italics: true, color: MAROON_LT, size: 18, font: BODY }), ...extraRuns] });
 }
 
 function placeholder(text) {
@@ -150,6 +150,31 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
   const buildings = approved.filter((r) => (r.observation_types || []).includes('building'));
   const now = fmtDate(new Date());
 
+  // Computed up front, not just where the References section renders, so
+  // inline superscript citations earlier in the document can look up a
+  // source's fixed position in the list - a lookup, not a typed-in number,
+  // so adding more references anywhere else in the report can never throw
+  // existing citations out of sync.
+  const refEarliest = new Map();
+  const noteRef = (url, date) => {
+    if (!url) return;
+    const prev = refEarliest.get(url);
+    if (!prev || (date && new Date(date) < new Date(prev))) refEarliest.set(url, date);
+  };
+  for (const r of approved) noteRef(r.source_url, r.created_at);
+  for (const a of attachments) noteRef(a.source_url, a.created_at);
+  const refList = [...refEarliest.entries()].sort((a, b) => new Date(a[1]) - new Date(b[1]))
+    .map(([url, date]) => ({ url, date }));
+  const usgsEventPageUrl = usgsEventId ? `https://earthquake.usgs.gov/earthquakes/eventpage/${usgsEventId}` : null;
+  if (usgsEventPageUrl) refList.unshift({ url: usgsEventPageUrl, date: null, label: 'USGS event page' });
+  const refIndex = new Map(refList.map((r, i) => [r.url, i + 1]));
+  function cite(url) {
+    const n = url ? refIndex.get(url) : undefined;
+    if (!n) return [];
+    return [new InternalHyperlink({ anchor: `ref-${n}`,
+      children: [new TextRun({ text: `${n}`, superScript: true, bold: true, color: MAROON_LT, size: 16, font: BODY })] })];
+  }
+
   const parsed = parseReportSections(conclusions);
   const sec = parsed?.structured ? parsed.sections : null;
   const aiNote = () => new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: 'AI-assisted draft from the verified observations only. Review before use.', italics: true, color: GREY, size: 18, font: BODY })] });
@@ -168,21 +193,28 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
   ]));
   if (meta.contributors) { children.push(new Paragraph({ spacing: { before: 160 }, children: [new TextRun({ text: 'Contributors: ', bold: true, size: 20, font: BODY }), new TextRun({ text: meta.contributors, size: 20, font: BODY })] })); }
   children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(heading(2, 'Contents'));
+  children.push(new Paragraph({ spacing: { after: 120 },
+    children: [new TextRun({ text: "Right-click and choose \"Update Field\" to populate this list once open in Word.", italics: true, color: GREY, size: 18, font: BODY })] }));
+  children.push(new TableOfContents('Contents', { hyperlink: true, headingStyleRange: '1-2' }));
+  children.push(new Paragraph({ children: [new PageBreak()] }));
 
   let figNo = 1;
 
   children.push(heading(2, 'Introduction'));
   if (sec?.introduction) { children.push(aiNote()); children.push(...mdParas(sec.introduction)); }
-  if (hazard) {
-    const hazardFigs = [
-      [hazard.intensityUrl, 'USGS ShakeMap - macroseismic intensity (MMI).'],
-      [hazard.pgaUrl, 'USGS ShakeMap - peak ground acceleration (PGA).'],
-      [hazard.pgvUrl, 'USGS ShakeMap - peak ground velocity (PGV).'],
-      [hazard.liquefactionUrl, 'USGS Ground Failure - liquefaction probability.'],
-      [hazard.landslideUrl, 'USGS Ground Failure - landslide probability.'],
-    ];
+  children.push(placeholder(`event background and seismotectonic setting.${usgsEventId ? '' : " Set the event's USGS event id to auto-pull ShakeMap and ground-failure figures here."}`));
+
+  const hazardFigs = (hazard ? [
+    [hazard.intensityUrl, 'USGS ShakeMap - macroseismic intensity (MMI).'],
+    [hazard.pgaUrl, 'USGS ShakeMap - peak ground acceleration (PGA).'],
+    [hazard.pgvUrl, 'USGS ShakeMap - peak ground velocity (PGV).'],
+    [hazard.liquefactionUrl, 'USGS Ground Failure - liquefaction probability.'],
+    [hazard.landslideUrl, 'USGS Ground Failure - landslide probability.'],
+  ] : []).filter(([url]) => url);
+  if (hazardFigs.length) {
+    children.push(heading(3, 'Key Event Graphics ', cite(usgsEventPageUrl)));
     for (const [url, label] of hazardFigs) {
-      if (!url) continue;
       const img = await fetchImage(url);
       if (!img) continue;
       children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 },
@@ -191,7 +223,6 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
       figNo += 1;
     }
   }
-  children.push(placeholder(`event background and seismotectonic setting.${usgsEventId ? '' : " Set the event's USGS event id to auto-pull ShakeMap and ground-failure figures here."}`));
 
   children.push(heading(2, `Seismic Code and Retrofit History${meta.country ? ` - ${meta.country}` : ''}`));
   if (countrySections.length > 0) {
@@ -239,7 +270,7 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
       if (img) {
         children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 },
           children: [new ImageRun({ data: img.data, type: img.type, transformation: { width: 360, height: 240 } })] }));
-        children.push(caption(`Figure ${figNo}. Site #${withPhoto.site_id ?? '-'}, ${region}: ${DAMAGE_LABEL[withPhoto.damage_score]?.split(' - ')[0] ?? ''}${withPhoto.failure_mechanism ? ` - ${withPhoto.failure_mechanism}` : ''}.`));
+        children.push(caption(`Figure ${figNo}. Site #${withPhoto.site_id ?? '-'}, ${region}: ${DAMAGE_LABEL[withPhoto.damage_score]?.split(' - ')[0] ?? ''}${withPhoto.failure_mechanism ? ` - ${withPhoto.failure_mechanism}` : ''}. `, cite(withPhoto.source_url)));
         figNo += 1;
       }
     }
@@ -269,21 +300,10 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
   children.push(placeholder('confirm conclusions and add limitations, next steps, and acknowledgements.'));
 
   children.push(heading(2, 'References'));
-  const refEarliest = new Map();
-  const noteRef = (url, date) => {
-    if (!url) return;
-    const prev = refEarliest.get(url);
-    if (!prev || (date && new Date(date) < new Date(prev))) refEarliest.set(url, date);
-  };
-  for (const r of approved) noteRef(r.source_url, r.created_at);
-  for (const a of attachments) noteRef(a.source_url, a.created_at);
-  const refList = [...refEarliest.entries()].sort((a, b) => new Date(a[1]) - new Date(b[1]))
-    .map(([url, date]) => ({ url, date }));
-  if (usgsEventId) refList.unshift({ url: `https://earthquake.usgs.gov/earthquakes/eventpage/${usgsEventId}`, date: null, label: 'USGS event page' });
   if (refList.length) {
     refList.forEach((ref, i) => {
       children.push(new Paragraph({ spacing: { after: 80 }, children: [
-        new TextRun({ text: `${i + 1}. ${ref.label ? `${ref.label}: ` : ''}`, size: 20, font: BODY }),
+        new Bookmark({ id: `ref-${i + 1}`, children: [new TextRun({ text: `${i + 1}. ${ref.label ? `${ref.label}: ` : ''}`, size: 20, font: BODY })] }),
         new ExternalHyperlink({ link: ref.url, children: [new TextRun({ text: ref.url, size: 20, font: BODY, color: '0563C1', underline: {} })] }),
         ...(ref.date ? [new TextRun({ text: ` (retrieved ${fmtDate(ref.date)})`, size: 18, color: GREY, font: BODY })] : []),
       ] }));
