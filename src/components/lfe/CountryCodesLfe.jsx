@@ -73,6 +73,10 @@ function CountryDetail({ country, canWrite, reviewer, onBack }) {
   const [description, setDescription] = useState('');
   const [addBusy, setAddBusy] = useState(false);
 
+  const [editingId, setEditingId] = useState(null);
+  const [editDraft, setEditDraft] = useState(null);
+  const [editBusy, setEditBusy] = useState(false);
+
   async function load() {
     setLoading(true);
     const [c, e] = await Promise.all([
@@ -121,6 +125,39 @@ function CountryDetail({ country, canWrite, reviewer, onBack }) {
     setEntries((prev) => prev.filter((x) => x.id !== id));
   }
 
+  function startEdit(en) {
+    setEditingId(en.id);
+    setEditDraft({
+      year_start: String(en.year_start),
+      year_end: en.year_end != null ? String(en.year_end) : '',
+      title: en.title,
+      description: en.description ?? '',
+    });
+    setStatus(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditDraft(null);
+  }
+
+  async function saveEdit(id) {
+    if (!editDraft.title.trim() || editDraft.year_start === '') return;
+    setEditBusy(true); setStatus(null);
+    const { error } = await supabaseLfe.from('country_code_entries').update({
+      year_start: Number(editDraft.year_start),
+      year_end: editDraft.year_end !== '' ? Number(editDraft.year_end) : null,
+      title: editDraft.title.trim(),
+      description: editDraft.description.trim() || null,
+      updated_by: reviewer,
+    }).eq('id', id);
+    setEditBusy(false);
+    if (error) return setStatus({ kind: 'err', msg: `Save failed: ${error.message}` });
+    setEditingId(null);
+    setEditDraft(null);
+    load();
+  }
+
   return (
     <div className="panel-scroll">
       <div className="panel-inner">
@@ -157,12 +194,44 @@ function CountryDetail({ country, canWrite, reviewer, onBack }) {
                 <thead><tr><th>Year(s)</th><th>Code</th><th>Description</th>{canWrite && <th></th>}</tr></thead>
                 <tbody>
                   {entries.map((en) => (
-                    <tr key={en.id}>
-                      <td>{en.year_start}{en.year_end ? `–${en.year_end}` : ''}</td>
-                      <td>{en.title}</td>
-                      <td>{en.description}</td>
-                      {canWrite && <td><button className="mini danger" onClick={() => removeEntry(en.id)}>Remove</button></td>}
-                    </tr>
+                    editingId === en.id ? (
+                      <tr key={en.id}>
+                        <td>
+                          <input type="number" value={editDraft.year_start}
+                            onChange={(e) => setEditDraft((d) => ({ ...d, year_start: e.target.value }))}
+                            style={{ width: 80 }} required />
+                          <input type="number" placeholder="end (opt.)" value={editDraft.year_end}
+                            onChange={(e) => setEditDraft((d) => ({ ...d, year_end: e.target.value }))}
+                            style={{ width: 90, marginTop: 4 }} />
+                        </td>
+                        <td>
+                          <input type="text" value={editDraft.title}
+                            onChange={(e) => setEditDraft((d) => ({ ...d, title: e.target.value }))} required />
+                        </td>
+                        <td>
+                          <input type="text" value={editDraft.description}
+                            onChange={(e) => setEditDraft((d) => ({ ...d, description: e.target.value }))} />
+                        </td>
+                        <td>
+                          <button className="mini" onClick={() => saveEdit(en.id)} disabled={editBusy}>
+                            {editBusy ? 'Saving...' : 'Save'}
+                          </button>{' '}
+                          <button className="mini" onClick={cancelEdit} disabled={editBusy}>Cancel</button>
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr key={en.id}>
+                        <td>{en.year_start}{en.year_end ? `–${en.year_end}` : ''}</td>
+                        <td>{en.title}</td>
+                        <td>{en.description}</td>
+                        {canWrite && (
+                          <td>
+                            <button className="mini" onClick={() => startEdit(en)}>Edit</button>{' '}
+                            <button className="mini danger" onClick={() => removeEntry(en.id)}>Remove</button>
+                          </td>
+                        )}
+                      </tr>
+                    )
                   ))}
                 </tbody>
               </table>
