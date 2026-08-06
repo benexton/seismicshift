@@ -158,7 +158,10 @@ function regionFromUsgsText(placeOrTitle) {
   const cleaned = placeOrTitle.replace(/^M\s*[\d.]+\s*-\s*/i, '');
   const lastComma = cleaned.lastIndexOf(',');
   if (lastComma === -1) return null;
-  return cleaned.slice(lastComma + 1).trim();
+  // Notable/named events sometimes carry a trailing "Earthquake" after the
+  // place (e.g. "...Kumamoto, Japan Earthquake"), which would otherwise get
+  // swallowed into the country name below.
+  return cleaned.slice(lastComma + 1).trim().replace(/\s+earthquake$/i, '').trim() || null;
 }
 
 // Returns {country, code, languages} for a parsed region string, checking
