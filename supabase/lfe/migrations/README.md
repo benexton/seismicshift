@@ -1,7 +1,7 @@
 # LFE platform migrations
 
 Run these against the new, separate LFE Supabase project only - never against
-the Kumamoto project. Run in numeric order (`0001` through `0032`), e.g. via
+the Kumamoto project. Run in numeric order (`0001` through `0033`), e.g. via
 the Supabase SQL editor or `supabase db push`. `0021` and `0022` are security
 fixes from a post-launch review (a client-writable report-conclusions column
 and an overly broad storage policy) - run them even if `0001`-`0020` are
@@ -37,7 +37,10 @@ setting" and "Seismic code and retrofit policy history" as separate boxes,
 with the ability to add further sections) - migrates Venezuela/Japan's
 existing content into that shape and drops `overview_md`. Also run once
 only; safe to run even if `0031` has not been run yet (it seeds the
-`country_codes` anchor rows itself if missing).
+`country_codes` anchor rows itself if missing). `0033` seeds five more
+countries (Canada, Chile, New Zealand, Taiwan, United States - alphabetical
+order), researched via web search against primary/authoritative sources for
+each country's seismic code history. Requires `0032`; run once only.
 
 After running them:
 1. Create a real user in that project's Auth dashboard.
