@@ -56,7 +56,7 @@ function Workspace({ reviewer, userId, signOut, updateName }) {
           <a className="navlink" href="/lfe/public-preview/">Public view</a>
           <a className="navlink" href="/lfe/admin/">Admin</a>
         </span>
-        <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6 }}>{event.name}</span>
+        <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6, color: '#cdd6e4' }}>{event.name}</span>
         {TABS.map(([id, label]) => (
           <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>
         ))}
