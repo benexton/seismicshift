@@ -45,7 +45,7 @@ body {
   padding: 6px 12px 0;
   background: var(--nav);
 }
-.tabs button, .tabs a.navlink {
+.tabs button {
   background: #16263f;
   color: #cdd6e4;
   border: none;
@@ -58,9 +58,19 @@ body {
   display: inline-flex;
   align-items: center;
 }
-.tabs button.active, .tabs a.navlink.active { background: var(--bg); color: var(--ink); }
-.tabs a.navlink:hover { background: #1b3050; }
-.tabs .navgroup { display: flex; gap: 3px; padding-right: 9px; margin-right: 9px; border-right: 1px solid #263a58; }
+.tabs button.active { background: var(--bg); color: var(--ink); }
+.tabs .navgroup { position: relative; display: flex; gap: 3px; padding-right: 9px; margin-right: 9px; border-right: 1px solid #263a58; }
+.navmenu-btn { padding: 9px 12px; }
+.navmenu-btn[aria-expanded="true"] { background: #1b3050; }
+.navmenu-drop {
+  position: absolute; top: 100%; left: 0; margin-top: 4px;
+  background: #16263f; border: 1px solid #263a58; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  display: flex; flex-direction: column; min-width: 180px; z-index: 50; overflow: hidden;
+}
+.navmenu-item { padding: 10px 14px; color: #cdd6e4; text-decoration: none; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.navmenu-item:hover { background: #1b3050; }
+.navmenu-item.active { background: var(--bg); color: var(--ink); }
 .tabs .tab-spacer { flex: 1; }
 .tabs .signout {
   background: transparent; color: #9fb0c9; border: none;

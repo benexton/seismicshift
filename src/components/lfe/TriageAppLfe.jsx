@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { usePresenceLfe } from '../../lib/usePresenceLfe.js';
 import { EventProvider, useEvent } from '../../lib/useEvent.js';
 import LoginGateLfe from './LoginGateLfe.jsx';
+import LfeNavGroup from './LfeNavGroup.jsx';
 import InstructionsLfe from './InstructionsLfe.jsx';
 import ScraperConfigLfe from './ScraperConfigLfe.jsx';
 import ManualInputLfe from './ManualInputLfe.jsx';
@@ -50,12 +51,7 @@ function Workspace({ reviewer, userId, signOut, updateName }) {
   return (
     <div className="triage-shell">
       <div className="tabs">
-        <span className="navgroup">
-          <a className="navlink" href="/lfe/">← All events</a>
-          <a className="navlink" href="/lfe/codes/">Codes & standards</a>
-          <a className="navlink" href="/lfe/public-preview/">Public view</a>
-          <a className="navlink" href="/lfe/admin/">Admin</a>
-        </span>
+        <LfeNavGroup />
         <span
           title={event.name}
           style={{
