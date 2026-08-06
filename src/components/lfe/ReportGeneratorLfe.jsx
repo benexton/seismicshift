@@ -19,6 +19,8 @@ const META_FIELDS = [
   ['faulting', 'Faulting mechanism'],
   ['max_mmi', 'Maximum MMI'],
   ['tsunami', 'Tsunami alert'],
+  ['vert_deployment', 'VERT deployment'],
+  ['physical_mission_deployment', 'Physical mission deployment'],
 ];
 
 const EMPTY_META = Object.fromEntries([...META_FIELDS.map(([k]) => k), 'contributors'].map((k) => [k, '']));
@@ -118,6 +120,8 @@ export default function ReportGeneratorLfe() {
         faulting: meta.faulting,
         maxMMI: meta.max_mmi,
         tsunami: meta.tsunami,
+        vertDeployment: meta.vert_deployment,
+        physicalMissionDeployment: meta.physical_mission_deployment,
         contributors: meta.contributors,
       };
       const blob = await buildReportDocxBlob(records, fullMeta, conclusions, {
@@ -253,9 +257,17 @@ export default function ReportGeneratorLfe() {
               ['Location (lat/long)', event?.epicentre_lat != null ? `${event.epicentre_lat}, ${event.epicentre_lng}` : ''],
               ['Time and date', event?.event_datetime ? fmtDate(event.event_datetime) : ''], ['Faulting mechanism', meta.faulting],
               ['Maximum Modified Mercalli Intensity', meta.max_mmi], ['Tsunami alert issued', meta.tsunami],
+              ['VERT deployment', meta.vert_deployment], ['Physical mission deployment', meta.physical_mission_deployment],
             ].map(([k, v]) => (<tr key={k}><th>{k}</th><td>{phOr(v)}</td></tr>))}
           </tbody>
         </table>
+
+        <h2 className="report-h2">Contributors to this report</h2>
+        {meta.contributors ? (
+          <p>This report was written with the voluntary contributions of the following people: {meta.contributors}</p>
+        ) : (
+          <div className="report-ph">AUTHOR TO ADD: names and affiliations of contributors (set on Event details above).</div>
+        )}
 
         {conclusions && (
           <p className="report-note">
@@ -273,13 +285,13 @@ export default function ReportGeneratorLfe() {
 
         {hazardFigList.length > 0 && (
           <>
-            <h3 className="report-h3">Key Event Graphics <Cite url={usgsEventPageUrl} /></h3>
+            <h3 className="report-h3">Key Event Graphics</h3>
             {hazardFigList.map(([url, label]) => {
               figNo += 1;
               return (
                 <figure className="report-fig" key={url}>
                   <img src={url} alt="" />
-                  <figcaption>Figure {figNo}. {label}</figcaption>
+                  <figcaption>Figure {figNo}. {label} <Cite url={usgsEventPageUrl} /></figcaption>
                 </figure>
               );
             })}

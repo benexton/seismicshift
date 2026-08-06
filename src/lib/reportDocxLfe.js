@@ -180,6 +180,11 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
   const aiNote = () => new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: 'AI-assisted draft from the verified observations only. Review before use.', italics: true, color: GREY, size: 18, font: BODY })] });
 
   const children = [];
+  const logo = await fetchImage('/NZSEELogo.png');
+  if (logo) {
+    children.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { after: 40 },
+      children: [new ImageRun({ data: logo.data, type: logo.type, transformation: { width: 140, height: 56 } })] }));
+  }
   children.push(new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: 'LEARNING FROM EARTHQUAKES', bold: true, color: MAROON_LT, size: 20, font: BODY, characterSpacing: 30 })] }));
   children.push(new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: 'Significant Event Report', bold: true, color: MAROON, size: 48, font: BODY })] }));
   children.push(new Paragraph({ spacing: { after: 160 }, border: { bottom: { style: BorderStyle.SINGLE, size: 18, color: MAROON } },
@@ -190,8 +195,14 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
     ['Location (geographical)', phOr(meta.locationName)], ['Location (lat/long)', phOr(meta.locationLatLong)],
     ['Time and date', phOr(meta.eventDatetime)], ['Faulting mechanism', phOr(meta.faulting)],
     ['Maximum Modified Mercalli Intensity', phOr(meta.maxMMI)], ['Tsunami alert issued', phOr(meta.tsunami)],
+    ['VERT deployment', phOr(meta.vertDeployment)], ['Physical mission deployment', phOr(meta.physicalMissionDeployment)],
   ]));
-  if (meta.contributors) { children.push(new Paragraph({ spacing: { before: 160 }, children: [new TextRun({ text: 'Contributors: ', bold: true, size: 20, font: BODY }), new TextRun({ text: meta.contributors, size: 20, font: BODY })] })); }
+  children.push(heading(2, 'Contributors to this report'));
+  if (meta.contributors) {
+    children.push(para(`This report was written with the voluntary contributions of the following people: ${meta.contributors}`));
+  } else {
+    children.push(placeholder('names and affiliations of contributors (set on Event details above).'));
+  }
   children.push(new Paragraph({ children: [new PageBreak()] }));
   children.push(heading(2, 'Contents'));
   children.push(new Paragraph({ spacing: { after: 120 },
@@ -213,13 +224,13 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
     [hazard.landslideUrl, 'USGS Ground Failure - landslide probability.'],
   ] : []).filter(([url]) => url);
   if (hazardFigs.length) {
-    children.push(heading(3, 'Key Event Graphics ', cite(usgsEventPageUrl)));
+    children.push(heading(3, 'Key Event Graphics'));
     for (const [url, label] of hazardFigs) {
       const img = await fetchImage(url);
       if (!img) continue;
       children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 },
         children: [new ImageRun({ data: img.data, type: img.type, transformation: { width: 360, height: 270 } })] }));
-      children.push(caption(`Figure ${figNo}. ${label}`));
+      children.push(caption(`Figure ${figNo}. ${label} `, cite(usgsEventPageUrl)));
       figNo += 1;
     }
   }
@@ -333,7 +344,7 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
   const doc = new Document({
     creator: 'VERT Triage Hub', title: `VERT ${meta.eventName || 'Event'} Report`,
     sections: [{
-      properties: { titlePage: true, page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, bottom: 1440, left: 1417, right: 1417 } } },
+      properties: { titlePage: true, page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 } } },
       headers: { default: runHeader, first: new Header({ children: [new Paragraph({ children: [] })] }) },
       footers: { default: runFooter, first: new Footer({ children: [new Paragraph({ children: [] })] }) },
       children,
