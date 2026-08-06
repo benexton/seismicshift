@@ -6,6 +6,7 @@ import { useEvent } from '../../lib/useEvent.js';
 import { DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate, phOr } from '../../lib/constantsLfe.js';
 import { buildReportDocxBlob } from '../../lib/reportDocxLfe.js';
 import { parseReportSections } from '../../lib/reportSections.js';
+import { fetchUsgsHazardFigures } from '../../lib/usgsHazardLfe.js';
 
 // Fields that live in event_meta (editable here). Name, epicentre, and
 // event_datetime live on the events row itself (set at creation / on the
@@ -26,10 +27,12 @@ export default function ReportGeneratorLfe() {
   const { event } = useEvent();
   const eventId = event?.id;
   const [records, setRecords] = useState([]);
+  const [attachments, setAttachments] = useState([]);
   const [meta, setMeta] = useState(EMPTY_META);
   const [countrySections, setCountrySections] = useState([]);
   const [countryEntries, setCountryEntries] = useState([]);
   const [conclusions, setConclusions] = useState('');
+  const [hazard, setHazard] = useState(null);
   const [genAt, setGenAt] = useState(null);
   const [genBy, setGenBy] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +62,14 @@ export default function ReportGeneratorLfe() {
     setRecords(recs.data ?? []);
     setCountrySections(cs.data ?? []);
     setCountryEntries(ce.data ?? []);
+    const recordIds = (recs.data ?? []).map((r) => r.id);
+    if (recordIds.length) {
+      const att = await supabaseLfe.from('record_attachments').select('source_url, created_at')
+        .in('record_id', recordIds).not('source_url', 'is', null);
+      setAttachments(att.data ?? []);
+    } else {
+      setAttachments([]);
+    }
     if (ev.data) {
       const m = { ...EMPTY_META };
       for (const key of Object.keys(EMPTY_META)) m[key] = ev.data[key] ?? '';
@@ -69,6 +80,18 @@ export default function ReportGeneratorLfe() {
     }
   }
   useEffect(() => { load(); }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Best-effort: an event with no usgs_event_id, or a USGS outage, just
+  // means this section falls back to its "AUTHOR TO ADD" placeholder.
+  useEffect(() => {
+    const id = event?.usgs_event_id;
+    if (!id) { setHazard(null); return; }
+    let cancelled = false;
+    fetchUsgsHazardFigures(id)
+      .then((h) => { if (!cancelled) setHazard(h); })
+      .catch(() => { if (!cancelled) setHazard(null); });
+    return () => { cancelled = true; };
+  }, [event?.usgs_event_id]);
 
   const set = (key) => (e) => setMeta((m) => ({ ...m, [key]: e.target.value }));
 
@@ -97,7 +120,10 @@ export default function ReportGeneratorLfe() {
         tsunami: meta.tsunami,
         contributors: meta.contributors,
       };
-      const blob = await buildReportDocxBlob(records, fullMeta, conclusions, { sections: countrySections, entries: countryEntries });
+      const blob = await buildReportDocxBlob(records, fullMeta, conclusions, {
+        sections: countrySections, entries: countryEntries,
+        attachments, usgsEventId: event?.usgs_event_id, hazard,
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -126,6 +152,24 @@ export default function ReportGeneratorLfe() {
   }, [approved]);
   const nsCount = useMemo(() => approved.filter((r) => r.nonstructural_damage).length, [approved]);
   const regions = useMemo(() => [...new Set(approved.map((r) => r.region).filter(Boolean))], [approved]);
+  // Every observation and attachment already carries a source URL - compile
+  // a de-duplicated, dated list rather than leaving this to the author.
+  const references = useMemo(() => {
+    const earliest = new Map();
+    const note = (url, date) => {
+      if (!url) return;
+      const prev = earliest.get(url);
+      if (!prev || (date && new Date(date) < new Date(prev))) earliest.set(url, date);
+    };
+    for (const r of approved) note(r.source_url, r.created_at);
+    for (const a of attachments) note(a.source_url, a.created_at);
+    const list = [...earliest.entries()].sort((a, b) => new Date(a[1]) - new Date(b[1]))
+      .map(([url, date]) => ({ url, date }));
+    if (event?.usgs_event_id) {
+      list.unshift({ url: `https://earthquake.usgs.gov/earthquakes/eventpage/${event.usgs_event_id}`, date: null, label: 'USGS event page' });
+    }
+    return list;
+  }, [approved, attachments, event?.usgs_event_id]);
   const parsed = useMemo(() => parseReportSections(conclusions), [conclusions]);
   const sec = parsed?.structured ? parsed.sections : null;
   // conclusions_md is meant to be pipeline-written only, but the base RLS
@@ -201,7 +245,25 @@ export default function ReportGeneratorLfe() {
 
         <h2 className="report-h2">Introduction {sec?.introduction && <span className="ai-tag">AI</span>}</h2>
         {sec?.introduction && <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.introduction) }} />}
-        <div className="report-ph">AUTHOR TO ADD: event background, seismotectonic setting, and any regional or shakemap figures.</div>
+        {hazard && [
+          [hazard.intensityUrl, 'USGS ShakeMap - macroseismic intensity (MMI).'],
+          [hazard.pgaUrl, 'USGS ShakeMap - peak ground acceleration (PGA).'],
+          [hazard.pgvUrl, 'USGS ShakeMap - peak ground velocity (PGV).'],
+          [hazard.liquefactionUrl, 'USGS Ground Failure - liquefaction probability.'],
+          [hazard.landslideUrl, 'USGS Ground Failure - landslide probability.'],
+        ].filter(([url]) => url).map(([url, label]) => {
+          figNo += 1;
+          return (
+            <figure className="report-fig" key={url}>
+              <img src={url} alt="" />
+              <figcaption>Figure {figNo}. {label}</figcaption>
+            </figure>
+          );
+        })}
+        <div className="report-ph">
+          AUTHOR TO ADD: event background and seismotectonic setting.
+          {!event?.usgs_event_id && " Set the event's USGS event id (Manage events -> Edit) to auto-pull ShakeMap and ground-failure figures here."}
+        </div>
 
         <h2 className="report-h2">Seismic Code and Retrofit History{event?.country ? ` - ${event.country}` : ''}</h2>
         {countrySections.length > 0 ? (
@@ -299,7 +361,19 @@ export default function ReportGeneratorLfe() {
         <div className="report-ph">AUTHOR TO ADD: confirm conclusions and add limitations, next steps, and acknowledgements.</div>
 
         <h2 className="report-h2">References</h2>
-        <div className="report-ph">AUTHOR TO ADD: references, e.g. USGS event page, GeoNet, JMA, NZSEE guidance, cited literature.</div>
+        {references.length > 0 ? (
+          <ol className="report-refs">
+            {references.map((ref) => (
+              <li key={ref.url}>
+                {ref.label ? `${ref.label}: ` : ''}
+                <a href={ref.url} target="_blank" rel="noreferrer">{ref.url}</a>
+                {ref.date ? ` (retrieved ${fmtDate(ref.date)})` : ''}
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <div className="report-ph">AUTHOR TO ADD: references, e.g. GeoNet, JMA, NZSEE guidance, cited literature.</div>
+        )}
       </div>
     </div>
   );

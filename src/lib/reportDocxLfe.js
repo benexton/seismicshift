@@ -1,7 +1,7 @@
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType,
   BorderStyle, ShadingType, AlignmentType, HeadingLevel, ImageRun, Header, Footer,
-  PageNumber, PageBreak,
+  PageNumber, PageBreak, ExternalHyperlink,
 } from 'docx';
 import { DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate, phOr } from './constantsLfe.js';
 import { parseReportSections } from './reportSections.js';
@@ -140,9 +140,12 @@ function multiTypeCounts(records) {
  * (structured JSON sections or a plain markdown block) woven through the
  * data-driven sections. Verified sites only.
  */
-export async function buildReportDocxBlob(records, meta, conclusions, countryContent = {}) {
-  const countrySections = countryContent.sections ?? [];
-  const countryEntries = countryContent.entries ?? [];
+export async function buildReportDocxBlob(records, meta, conclusions, extra = {}) {
+  const countrySections = extra.sections ?? [];
+  const countryEntries = extra.entries ?? [];
+  const attachments = extra.attachments ?? [];
+  const usgsEventId = extra.usgsEventId ?? null;
+  const hazard = extra.hazard ?? null;
   const approved = records.filter((r) => r.status === 'Approved');
   const buildings = approved.filter((r) => (r.observation_types || []).includes('building'));
   const now = fmtDate(new Date());
@@ -166,9 +169,29 @@ export async function buildReportDocxBlob(records, meta, conclusions, countryCon
   if (meta.contributors) { children.push(new Paragraph({ spacing: { before: 160 }, children: [new TextRun({ text: 'Contributors: ', bold: true, size: 20, font: BODY }), new TextRun({ text: meta.contributors, size: 20, font: BODY })] })); }
   children.push(new Paragraph({ children: [new PageBreak()] }));
 
+  let figNo = 1;
+
   children.push(heading(2, 'Introduction'));
   if (sec?.introduction) { children.push(aiNote()); children.push(...mdParas(sec.introduction)); }
-  children.push(placeholder('event background, seismotectonic setting, and any regional or shakemap figures.'));
+  if (hazard) {
+    const hazardFigs = [
+      [hazard.intensityUrl, 'USGS ShakeMap - macroseismic intensity (MMI).'],
+      [hazard.pgaUrl, 'USGS ShakeMap - peak ground acceleration (PGA).'],
+      [hazard.pgvUrl, 'USGS ShakeMap - peak ground velocity (PGV).'],
+      [hazard.liquefactionUrl, 'USGS Ground Failure - liquefaction probability.'],
+      [hazard.landslideUrl, 'USGS Ground Failure - landslide probability.'],
+    ];
+    for (const [url, label] of hazardFigs) {
+      if (!url) continue;
+      const img = await fetchImage(url);
+      if (!img) continue;
+      children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 },
+        children: [new ImageRun({ data: img.data, type: img.type, transformation: { width: 360, height: 270 } })] }));
+      children.push(caption(`Figure ${figNo}. ${label}`));
+      figNo += 1;
+    }
+  }
+  children.push(placeholder(`event background and seismotectonic setting.${usgsEventId ? '' : " Set the event's USGS event id to auto-pull ShakeMap and ground-failure figures here."}`));
 
   children.push(heading(2, `Seismic Code and Retrofit History${meta.country ? ` - ${meta.country}` : ''}`));
   if (countrySections.length > 0) {
@@ -204,7 +227,6 @@ export async function buildReportDocxBlob(records, meta, conclusions, countryCon
   const regions = [...new Set(approved.map((r) => r.region).filter(Boolean))];
   children.push(heading(2, 'Observations by Region'));
   children.push(countTable('Region', labelCounts(approved, (r) => r.region)));
-  let figNo = 1;
   for (const region of regions) {
     const inRegion = approved.filter((r) => r.region === region);
     const heavy = inRegion.filter((r) => r.damage_score === 3 || r.damage_score === 4).length;
@@ -247,7 +269,28 @@ export async function buildReportDocxBlob(records, meta, conclusions, countryCon
   children.push(placeholder('confirm conclusions and add limitations, next steps, and acknowledgements.'));
 
   children.push(heading(2, 'References'));
-  children.push(placeholder('add references, e.g. USGS event page, GeoNet, JMA, NZSEE guidance, and any cited literature.'));
+  const refEarliest = new Map();
+  const noteRef = (url, date) => {
+    if (!url) return;
+    const prev = refEarliest.get(url);
+    if (!prev || (date && new Date(date) < new Date(prev))) refEarliest.set(url, date);
+  };
+  for (const r of approved) noteRef(r.source_url, r.created_at);
+  for (const a of attachments) noteRef(a.source_url, a.created_at);
+  const refList = [...refEarliest.entries()].sort((a, b) => new Date(a[1]) - new Date(b[1]))
+    .map(([url, date]) => ({ url, date }));
+  if (usgsEventId) refList.unshift({ url: `https://earthquake.usgs.gov/earthquakes/eventpage/${usgsEventId}`, date: null, label: 'USGS event page' });
+  if (refList.length) {
+    refList.forEach((ref, i) => {
+      children.push(new Paragraph({ spacing: { after: 80 }, children: [
+        new TextRun({ text: `${i + 1}. ${ref.label ? `${ref.label}: ` : ''}`, size: 20, font: BODY }),
+        new ExternalHyperlink({ link: ref.url, children: [new TextRun({ text: ref.url, size: 20, font: BODY, color: '0563C1', underline: {} })] }),
+        ...(ref.date ? [new TextRun({ text: ` (retrieved ${fmtDate(ref.date)})`, size: 18, color: GREY, font: BODY })] : []),
+      ] }));
+    });
+  } else {
+    children.push(placeholder('add references, e.g. GeoNet, JMA, NZSEE guidance, and any cited literature.'));
+  }
 
   children.push(new Paragraph({ children: [new PageBreak()] }));
   children.push(heading(2, 'Appendix A - Verified Observation Inventory'));
