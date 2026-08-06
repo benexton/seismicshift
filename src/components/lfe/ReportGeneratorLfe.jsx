@@ -27,6 +27,8 @@ export default function ReportGeneratorLfe() {
   const eventId = event?.id;
   const [records, setRecords] = useState([]);
   const [meta, setMeta] = useState(EMPTY_META);
+  const [countrySections, setCountrySections] = useState([]);
+  const [countryEntries, setCountryEntries] = useState([]);
   const [conclusions, setConclusions] = useState('');
   const [genAt, setGenAt] = useState(null);
   const [genBy, setGenBy] = useState(null);
@@ -38,13 +40,25 @@ export default function ReportGeneratorLfe() {
 
   async function load() {
     if (!eventId) return;
-    const [recs, ev] = await Promise.all([
+    const country = event?.country?.trim();
+    const [recs, ev, cs, ce] = await Promise.all([
       supabaseLfe.from('triage_records').select(LFE_RECORD_COLUMNS).eq('event_id', eventId).eq('status', 'Approved').is('merged_into', null).order('region', { ascending: true }),
       supabaseLfe.from('event_meta').select('*').eq('event_id', eventId).maybeSingle(),
+      // Case-insensitive match: events.country is free text set at creation
+      // (from USGS place text or typed by hand), so it may not match a
+      // country_codes row's casing exactly even when it's the same country.
+      country
+        ? supabaseLfe.from('country_code_sections').select('*').ilike('country', country).order('created_at', { ascending: true })
+        : Promise.resolve({ data: [] }),
+      country
+        ? supabaseLfe.from('country_code_entries').select('*').ilike('country', country).order('year_start', { ascending: true })
+        : Promise.resolve({ data: [] }),
     ]);
     setLoading(false);
     if (recs.error) return setErr(recs.error.message);
     setRecords(recs.data ?? []);
+    setCountrySections(cs.data ?? []);
+    setCountryEntries(ce.data ?? []);
     if (ev.data) {
       const m = { ...EMPTY_META };
       for (const key of Object.keys(EMPTY_META)) m[key] = ev.data[key] ?? '';
@@ -71,6 +85,7 @@ export default function ReportGeneratorLfe() {
     try {
       const fullMeta = {
         eventName: event?.name,
+        country: event?.country,
         version: meta.version,
         magnitude: meta.magnitude,
         depth: meta.depth,
@@ -82,7 +97,7 @@ export default function ReportGeneratorLfe() {
         tsunami: meta.tsunami,
         contributors: meta.contributors,
       };
-      const blob = await buildReportDocxBlob(records, fullMeta, conclusions);
+      const blob = await buildReportDocxBlob(records, fullMeta, conclusions, { sections: countrySections, entries: countryEntries });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -187,6 +202,36 @@ export default function ReportGeneratorLfe() {
         <h2 className="report-h2">Introduction {sec?.introduction && <span className="ai-tag">AI</span>}</h2>
         {sec?.introduction && <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.introduction) }} />}
         <div className="report-ph">AUTHOR TO ADD: event background, seismotectonic setting, and any regional or shakemap figures.</div>
+
+        <h2 className="report-h2">Seismic Code and Retrofit History{event?.country ? ` - ${event.country}` : ''}</h2>
+        {countrySections.length > 0 ? (
+          countrySections.map((s) => (
+            <div key={s.id}>
+              <h3 className="report-h3">{s.title}</h3>
+              {s.body_md && <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(s.body_md) }} />}
+            </div>
+          ))
+        ) : (
+          <div className="report-ph">
+            {event?.country
+              ? `AUTHOR TO ADD: no Codes & standards entry found yet for ${event.country} - add it in the Codes & standards tab so this and future events for that country benefit.`
+              : "AUTHOR TO ADD: seismic code and retrofit history for this event's country. Set the event's country (Manage events -> Edit) and add an entry in the Codes & standards tab to have this pulled in automatically."}
+          </div>
+        )}
+        {countryEntries.length > 0 && (
+          <table className="report-table">
+            <thead><tr><th>Year(s)</th><th>Code</th><th>Description</th></tr></thead>
+            <tbody>
+              {countryEntries.map((en) => (
+                <tr key={en.id}>
+                  <td>{en.year_start}{en.year_end ? `–${en.year_end}` : ''}</td>
+                  <td>{en.title}</td>
+                  <td>{en.description}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
 
         <h2 className="report-h2">Summary Statistics</h2>
         <p>{approved.length} verified observation(s), including {buildings.length} building observation(s).</p>
