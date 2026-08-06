@@ -153,7 +153,7 @@ export default function ManualInputLfe({ reviewer }) {
 
   return (
     <div className="panel-scroll">
-      <div className="panel-inner left-aligned">
+      <div className="panel-inner">
         <h1>Manual observation entry</h1>
         <p className="muted">
           Set the exact location, record what you observed, and submit. It enters

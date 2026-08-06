@@ -61,7 +61,7 @@ export default function ScraperConfigLfe() {
 
   return (
     <div className="panel-scroll">
-      <div className="panel-inner left-aligned">
+      <div className="panel-inner">
         <h1>Scraper keywords and feeds</h1>
         <p className="muted">
           The automated pipeline reads this list on its next run. Add Bluesky
