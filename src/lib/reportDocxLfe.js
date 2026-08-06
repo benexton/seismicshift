@@ -276,7 +276,7 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
     children.push(para(`${inRegion.length} verified observation(s) in ${region}, of which ${heavy} were heavy-to-severe (D3-D4).`));
     if (sec?.regions && sec.regions[region]) children.push(...mdParas(sec.regions[region]));
     const withPhoto = inRegion.find((r) => r.media_url);
-    if (withPhoto && figNo <= 12) {
+    if (withPhoto) {
       const img = await fetchImage(withPhoto.media_url);
       if (img) {
         children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 },
