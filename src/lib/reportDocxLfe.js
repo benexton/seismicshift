@@ -68,6 +68,19 @@ function metaTable(rows) {
     ] })) });
 }
 
+function codeTimelineTable(entries) {
+  const widths = [1400, 2800, 4872];
+  const head = new TableRow({ tableHeader: true, children: ['Year(s)', 'Code', 'Description'].map((h, i) => new TableCell({
+    width: { size: widths[i], type: WidthType.DXA }, shading: { type: ShadingType.CLEAR, color: 'auto', fill: HEADSHADE }, margins: { top: 50, bottom: 50, left: 90, right: 90 },
+    children: [new Paragraph({ children: [new TextRun({ text: h, bold: true, color: 'FFFFFF', size: 20, font: BODY })] })] })) });
+  const rows = entries.map((en) => new TableRow({ children: [
+    `${en.year_start}${en.year_end ? `-${en.year_end}` : ''}`, en.title, en.description ?? '',
+  ].map((c, i) => new TableCell({
+    width: { size: widths[i], type: WidthType.DXA }, margins: { top: 40, bottom: 40, left: 90, right: 90 },
+    children: [new Paragraph({ children: inline(String(c), { size: 20 }) })] })) }));
+  return new Table({ width: { size: TABLE_W, type: WidthType.DXA }, columnWidths: widths, borders: allBorders, rows: [head, ...rows] });
+}
+
 function countTable(header, counts) {
   const entries = Object.entries(counts);
   const total = entries.reduce((s, [, n]) => s + n, 0);
@@ -127,7 +140,9 @@ function multiTypeCounts(records) {
  * (structured JSON sections or a plain markdown block) woven through the
  * data-driven sections. Verified sites only.
  */
-export async function buildReportDocxBlob(records, meta, conclusions) {
+export async function buildReportDocxBlob(records, meta, conclusions, countryContent = {}) {
+  const countrySections = countryContent.sections ?? [];
+  const countryEntries = countryContent.entries ?? [];
   const approved = records.filter((r) => r.status === 'Approved');
   const buildings = approved.filter((r) => (r.observation_types || []).includes('building'));
   const now = fmtDate(new Date());
@@ -154,6 +169,19 @@ export async function buildReportDocxBlob(records, meta, conclusions) {
   children.push(heading(2, 'Introduction'));
   if (sec?.introduction) { children.push(aiNote()); children.push(...mdParas(sec.introduction)); }
   children.push(placeholder('event background, seismotectonic setting, and any regional or shakemap figures.'));
+
+  children.push(heading(2, `Seismic Code and Retrofit History${meta.country ? ` - ${meta.country}` : ''}`));
+  if (countrySections.length > 0) {
+    for (const s of countrySections) {
+      children.push(heading(3, s.title));
+      if (s.body_md) children.push(...mdParas(s.body_md));
+    }
+  } else {
+    children.push(placeholder(meta.country
+      ? `no Codes & standards entry found yet for ${meta.country} - add it in the Codes & standards tab so this and future events for that country benefit.`
+      : "seismic code and retrofit history for this event's country. Set the event's country and add an entry in the Codes & standards tab to have this pulled in automatically."));
+  }
+  if (countryEntries.length > 0) children.push(codeTimelineTable(countryEntries));
 
   children.push(heading(2, 'Summary Statistics'));
   children.push(para(`${approved.length} verified observation(s), including ${buildings.length} building observation(s).`));
