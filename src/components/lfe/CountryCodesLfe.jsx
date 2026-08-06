@@ -379,6 +379,7 @@ function CodesWorkspace({ reviewer, signOut }) {
     <div className="triage-shell">
       <div className="tabs">
         <LfeNavGroup />
+        <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6, color: '#cdd6e4' }}>Codes & standards</span>
         <span className="tab-spacer" />
         <button className="signout" onClick={signOut}>Sign out</button>
       </div>
