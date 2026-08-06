@@ -61,11 +61,6 @@ body {
 .tabs button.active, .tabs a.navlink.active { background: var(--bg); color: var(--ink); }
 .tabs a.navlink:hover { background: #1b3050; }
 .tabs .navgroup { display: flex; gap: 3px; padding-right: 9px; margin-right: 6px; border-right: 1px solid #263a58; }
-/* Trailing variant: the per-event workspace puts this group after the work
-   tabs (so Instructions etc. are the true leftmost, fixed-position buttons,
-   letting .panel-inner align to them) rather than before a title - the
-   divider needs to move to the other side to still read as a separator. */
-.tabs .navgroup.trailing { padding-right: 0; margin-right: 0; border-right: none; padding-left: 9px; margin-left: 6px; border-left: 1px solid #263a58; }
 .tabs .tab-spacer { flex: 1; }
 .tabs .signout {
   background: transparent; color: #9fb0c9; border: none;
@@ -75,19 +70,7 @@ body {
 
 /* ---- Scrollable panels (scraper, manual, report) -------------------------- */
 .panel-scroll { height: 100%; overflow-y: auto; }
-/* Centred by default - used by pages with no "work tabs" row above the
-   content at all (Your events, Codes & standards), where there is nothing
-   to left-align against. */
 .panel-inner { max-width: 900px; margin: 0 auto; padding: 22px 20px 60px; }
-/* Left-aligned variant, scoped to the per-event workspace's own tab content
-   only (Instructions/Manual input/Scraper keywords) - padded to exactly
-   match the tab bar's own inset (.tabs padding-left 12px + .tabs button
-   padding-left 16px = 28px). Instructions is the true first, fixed-position
-   tab there (the nav group/event name moved after the tabs specifically so
-   this could be reliable), so this lines up with its label regardless of
-   event name length. Do not apply this to .panel-inner generally - other
-   pages using that class are centred, not tab-aligned. */
-.panel-inner.left-aligned { margin: 0; padding-left: 28px; }
 .panel-inner h1 { font-size: 22px; margin: 0 0 6px; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
