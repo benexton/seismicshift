@@ -32,7 +32,7 @@ function EventList({ reviewer, signOut }) {
     <div className="triage-shell">
       <div className="tabs">
         <LfeNavGroup />
-        <span style={{ fontWeight: 600, alignSelf: 'center', margin: '0 6px' }}>LFE</span>
+        <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6 }}>LFE</span>
         <span className="tab-spacer" />
         <span className="signout">{reviewer}</span>
         <button className="signout" onClick={signOut}>Sign out</button>
