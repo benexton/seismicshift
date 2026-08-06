@@ -170,6 +170,17 @@ export default function ReportGeneratorLfe() {
     }
     return list;
   }, [approved, attachments, event?.usgs_event_id]);
+  // url -> its fixed position (1-based) in the references list above, so an
+  // inline superscript always points at the right entry - since it's a
+  // lookup rather than a typed-in number, adding more references anywhere
+  // else in the report can never throw the existing citations out of sync.
+  const refIndex = useMemo(() => new Map(references.map((r, i) => [r.url, i + 1])), [references]);
+  const usgsEventPageUrl = event?.usgs_event_id ? `https://earthquake.usgs.gov/earthquakes/eventpage/${event.usgs_event_id}` : null;
+  const Cite = ({ url }) => {
+    const n = url ? refIndex.get(url) : undefined;
+    if (!n) return null;
+    return <sup className="report-cite"><a href={`#ref-${n}`}>{n}</a></sup>;
+  };
   const parsed = useMemo(() => parseReportSections(conclusions), [conclusions]);
   const sec = parsed?.structured ? parsed.sections : null;
   // conclusions_md is meant to be pipeline-written only, but the base RLS
@@ -180,6 +191,16 @@ export default function ReportGeneratorLfe() {
   // sections before being rendered via dangerouslySetInnerHTML.
   const mdHtml = (t) => DOMPurify.sanitize(marked.parse(String(t || '')));
   const plainConcl = sec ? sec.conclusions : (parsed && !parsed.structured ? parsed.markdown : '');
+  const hazardFigList = useMemo(() => {
+    if (!hazard) return [];
+    return [
+      [hazard.intensityUrl, 'USGS ShakeMap - macroseismic intensity (MMI).'],
+      [hazard.pgaUrl, 'USGS ShakeMap - peak ground acceleration (PGA).'],
+      [hazard.pgvUrl, 'USGS ShakeMap - peak ground velocity (PGV).'],
+      [hazard.liquefactionUrl, 'USGS Ground Failure - liquefaction probability.'],
+      [hazard.landslideUrl, 'USGS Ground Failure - landslide probability.'],
+    ].filter(([url]) => url);
+  }, [hazard]);
 
   let figNo = 0;
 
@@ -245,25 +266,25 @@ export default function ReportGeneratorLfe() {
 
         <h2 className="report-h2">Introduction {sec?.introduction && <span className="ai-tag">AI</span>}</h2>
         {sec?.introduction && <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.introduction) }} />}
-        {hazard && [
-          [hazard.intensityUrl, 'USGS ShakeMap - macroseismic intensity (MMI).'],
-          [hazard.pgaUrl, 'USGS ShakeMap - peak ground acceleration (PGA).'],
-          [hazard.pgvUrl, 'USGS ShakeMap - peak ground velocity (PGV).'],
-          [hazard.liquefactionUrl, 'USGS Ground Failure - liquefaction probability.'],
-          [hazard.landslideUrl, 'USGS Ground Failure - landslide probability.'],
-        ].filter(([url]) => url).map(([url, label]) => {
-          figNo += 1;
-          return (
-            <figure className="report-fig" key={url}>
-              <img src={url} alt="" />
-              <figcaption>Figure {figNo}. {label}</figcaption>
-            </figure>
-          );
-        })}
         <div className="report-ph">
           AUTHOR TO ADD: event background and seismotectonic setting.
           {!event?.usgs_event_id && " Set the event's USGS event id (Manage events -> Edit) to auto-pull ShakeMap and ground-failure figures here."}
         </div>
+
+        {hazardFigList.length > 0 && (
+          <>
+            <h3 className="report-h3">Key Event Graphics <Cite url={usgsEventPageUrl} /></h3>
+            {hazardFigList.map(([url, label]) => {
+              figNo += 1;
+              return (
+                <figure className="report-fig" key={url}>
+                  <img src={url} alt="" />
+                  <figcaption>Figure {figNo}. {label}</figcaption>
+                </figure>
+              );
+            })}
+          </>
+        )}
 
         <h2 className="report-h2">Seismic Code and Retrofit History{event?.country ? ` - ${event.country}` : ''}</h2>
         {countrySections.length > 0 ? (
@@ -336,7 +357,7 @@ export default function ReportGeneratorLfe() {
               {photo && (
                 <figure className="report-fig">
                   <img src={photo.media_url} alt="" />
-                  <figcaption>Figure {figNo}. Site #{photo.site_id ?? '-'}, {region}: {DAMAGE_LABEL[photo.damage_score]?.split(' - ')[0] ?? ''}{photo.failure_mechanism ? ` - ${photo.failure_mechanism}` : ''}.</figcaption>
+                  <figcaption>Figure {figNo}. Site #{photo.site_id ?? '-'}, {region}: {DAMAGE_LABEL[photo.damage_score]?.split(' - ')[0] ?? ''}{photo.failure_mechanism ? ` - ${photo.failure_mechanism}` : ''}. <Cite url={photo.source_url} /></figcaption>
                 </figure>
               )}
               <div className="report-ph">AUTHOR TO ADD: additional detail, photographs, and references for {region}.</div>
@@ -363,8 +384,8 @@ export default function ReportGeneratorLfe() {
         <h2 className="report-h2">References</h2>
         {references.length > 0 ? (
           <ol className="report-refs">
-            {references.map((ref) => (
-              <li key={ref.url}>
+            {references.map((ref, i) => (
+              <li key={ref.url} id={`ref-${i + 1}`}>
                 {ref.label ? `${ref.label}: ` : ''}
                 <a href={ref.url} target="_blank" rel="noreferrer">{ref.url}</a>
                 {ref.date ? ` (retrieved ${fmtDate(ref.date)})` : ''}
