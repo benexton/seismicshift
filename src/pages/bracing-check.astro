@@ -1,0 +1,76 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import BracingCheck from '../components/BracingCheck.jsx'
+
+const BRAND = '#17638f'
+---
+
+<BaseLayout
+  title="Bracing Resilience Check | Seismic Shift"
+  description="See how much bracing above the NZS 3604:2011 minimum a stay-livable home needs on your site, and where wind loads already have you covered."
+  canonicalPath="/bracing-check/"
+>
+  <section class="w-full bg-white py-16">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <p class="text-xs font-black uppercase tracking-widest text-slate-400">Bracing resilience check</p>
+        <span class="shrink-0 text-[0.62rem] font-black uppercase tracking-widest text-[#c07c1c] bg-[#f6edd9] border border-[#e6d3a8] rounded-full px-2.5 py-1">
+          Prototype: illustrative figures
+        </span>
+      </div>
+
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tighter text-slate-900 mb-6">
+        Building codes are designed to save lives.<br />
+        <span style={`color:${BRAND}`}>What would it take to save your home too?</span>
+      </h1>
+
+      <p class="text-lg md:text-xl text-slate-500 leading-relaxed">
+        New Zealand homes are required to be braced to at least the NZS 3604:2011 minimum. That's enough to generally get everyone out safely, but not always enough to keep the house livable afterwards, or to minimise damage. This page shows how much bracing above that minimum could enable a more resilient home on your site. In some situations wind loads are already higher than earthquake loads, meaning the home already has extra earthquake capacity built in.
+      </p>
+
+      <details class="mt-6 group">
+        <summary class="inline-flex items-center gap-2 cursor-pointer select-none text-sm font-black tracking-wide uppercase text-[#17638f] hover:text-[#0f4c6e] transition list-none [&::-webkit-details-marker]:hidden">
+          <span>Want the technical basis?</span>
+          <svg class="w-3 h-3 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M5 8l5 5 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </summary>
+
+        <div class="mt-4 pl-4 md:pl-5 border-l-2 border-slate-200">
+          <p class="text-lg md:text-xl text-slate-500 leading-relaxed">
+            The extra bracing shown here draws on two separate sources: BRANZ Study Report SR337 (2015), which found that NZS 3604 homes may need around 50% more seismic bracing to limit damage in a design-level earthquake rather than only meet the life-safety standard, and the 2022 National Seismic Hazard Model, which has since raised our understanding of earthquake hazard across much of New Zealand.
+          </p>
+
+          <div class="mt-6 bg-slate-50 border border-slate-100 rounded-2xl p-6 md:p-8">
+            <p class="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Worked example: Wellington, site class C</p>
+            <ol class="space-y-3 text-sm md:text-base text-slate-600 leading-relaxed list-decimal pl-5">
+              <li>NZS 3604:2011 groups every site into one of four earthquake zones, based on the NZS 1170.5 Z factor at that site: zone 1 is based on a Z factor of 0.2, zone 2 on a Z factor of 0.3, zone 3 on a Z factor of 0.45, and zone 4 on a Z factor of 0.6. Wellington's real Z factor is 0.40, which falls in zone 3, so its NZS 3604 earthquake bracing demand is calculated at the zone's Z = 0.45 ceiling, not its actual Z = 0.40 - a zone-rounding factor of 0.40 &divide; 0.45 = 0.89.</li>
+              <li>For this example, say that zone-3 earthquake bracing demand comes out to <strong class="text-slate-900">1,200 BU</strong> (whole house, along direction) - an illustrative figure for this walkthrough.</li>
+              <li>Compare TS 1170.5:2025 to NZS 1170.5:2004 at Wellington's real Z = 0.40, site class C: a raw hazard shift of <strong class="text-slate-900">&times;1.95</strong>.</li>
+              <li>Apply the 0.89 zone-rounding factor from step 1, since the demand in step 2 already assumes the zone's Z = 0.45, not the real Z = 0.40: 1.95 &times; 0.89 = <strong class="text-slate-900">&times;1.73</strong>. This is the hazard-shift ratio (H) used below.</li>
+              <li>Apply the SR337 damage-control factor: <strong class="text-slate-900">&times;1.5</strong>.</li>
+              <li>Damage-control target: 1,200 &times; 1.73 &times; 1.5 = <strong class="text-slate-900">3,114 BU</strong>.</li>
+              <li>
+                Compare that 3,114 BU target to the code minimum (the larger of earthquake and wind demand - 1,200 BU here): it works out to
+                <strong style={`color:${BRAND}`}> 260% of code minimum</strong>, meaning this site would need about 2.6 times as much bracing as a code-minimum design to hold to a damage-control standard.
+              </li>
+            </ol>
+          </div>
+        </div>
+      </details>
+
+      <div class="mt-10">
+        <BracingCheck client:load />
+      </div>
+    </div>
+  </section>
+
+  <section class="w-full bg-slate-50 border-t border-slate-100 py-16">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <p class="text-xs font-black text-slate-500 mb-3">Disclaimer</p>
+      <p class="text-sm text-slate-400 leading-relaxed">
+        This indicates relative demand, not a design specification. Any build requires specific engineering design. Preliminary information only, not professional engineering, legal, or insurance advice. Figures shown throughout this page are illustrative placeholders, not final figures. The moderate, high and extreme shift bands are illustrative cutoffs, not final thresholds. Worked-example bracing units for the curated locations, and baseline estimates for every other location, are placeholders too, not location-specific NZS 3604 calculations. The SR337 uplift factor is set from Seismic Shift's own models; the basis will be published separately.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
