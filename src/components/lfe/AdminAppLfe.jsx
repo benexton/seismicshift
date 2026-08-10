@@ -1065,7 +1065,8 @@ function AdminWorkspace({ signOut }) {
 
   async function loadEvents() {
     setLoadingEvents(true);
-    const { data, error } = await supabaseLfe.from('events').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabaseLfe.from('events').select('*')
+      .order('event_datetime', { ascending: false, nullsFirst: false });
     setLoadingEvents(false);
     if (!error) setEvents(data ?? []);
   }
