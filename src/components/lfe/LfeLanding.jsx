@@ -24,7 +24,12 @@ function EventList({ reviewer, signOut }) {
         .eq('user_id', uid);
       setLoading(false);
       if (error) return setErr(error.message);
-      setMemberships((data ?? []).filter((m) => m.events));
+      const sorted = (data ?? []).filter((m) => m.events).sort((a, b) => {
+        const da = a.events.event_datetime ? new Date(a.events.event_datetime).getTime() : -Infinity;
+        const db = b.events.event_datetime ? new Date(b.events.event_datetime).getTime() : -Infinity;
+        return db - da;
+      });
+      setMemberships(sorted);
     })();
   }, []);
 
