@@ -1,7 +1,7 @@
 # LFE platform migrations
 
 Run these against the new, separate LFE Supabase project only - never against
-the Kumamoto project. Run in numeric order (`0001` through `0034`), e.g. via
+the Kumamoto project. Run in numeric order (`0001` through `0035`), e.g. via
 the Supabase SQL editor or `supabase db push`. `0021` and `0022` are security
 fixes from a post-launch review (a client-writable report-conclusions column
 and an overly broad storage policy) - run them even if `0001`-`0020` are
@@ -44,6 +44,8 @@ each country's seismic code history. Requires `0032`; run once only. `0034`
 adds `vert_deployment` and `physical_mission_deployment` to `event_meta` -
 two more report characteristics-table fields matching the VERT report
 template - and backfills `vert_deployment = 'Active'` on existing rows.
+`0035` seeds Colombia, researched the same way as `0033`. Requires `0032`;
+run once only.
 
 After running them:
 1. Create a real user in that project's Auth dashboard.
