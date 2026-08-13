@@ -6,6 +6,8 @@ import {
 import RecordFieldsLfe, { fieldsPatch } from './RecordFieldsLfe.jsx';
 import Zoomable from '../Zoomable.jsx';
 import AttachmentAdderLfe from './AttachmentAdderLfe.jsx';
+import StreetviewFieldLfe from './StreetviewFieldLfe.jsx';
+import { uploadImage } from '../../lib/mediaLfe.js';
 import { coordError } from '../../lib/coordsLfe.js';
 
 /**
@@ -23,6 +25,7 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
   const [status, setStatus] = useState(null);
   const [attachPending, setAttachPending] = useState(false);
   const [pendingWarn, setPendingWarn] = useState(false);
+  const [streetviewFile, setStreetviewFile] = useState(null);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && guardedClose();
@@ -47,10 +50,15 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
         const geo = await supabaseLfe.rpc('move_observation', { p_id: record.id, p_lng: Number(lng), p_lat: Number(lat) });
         if (geo.error) throw geo.error;
       }
-      const p = { ...fieldsPatch(v), engineer_notes: notes || null, location_precision: movedLocation ? 'exact' : record.location_precision };
+      const streetviewUrl = streetviewFile ? await uploadImage(streetviewFile) : null;
+      const p = {
+        ...fieldsPatch(v), engineer_notes: notes || null, location_precision: movedLocation ? 'exact' : record.location_precision,
+        ...(streetviewUrl ? { streetview_url: streetviewUrl } : {}),
+      };
       const { error } = await supabaseLfe.from('triage_records').update(p).eq('id', record.id);
       if (error) throw error;
       setBusy(false);
+      setStreetviewFile(null);
       setStatus({ kind: 'ok', msg: 'Saved.' });
       onSaved?.(record.id, { ...p, ...(movedLocation ? { latitude: Number(lat), longitude: Number(lng) } : {}) });
     } catch (ex) { setBusy(false); setErr(`Save failed: ${ex.message ?? ex}`); }
@@ -77,9 +85,7 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
             <span className="obs-badge">{SOURCE_LABEL[record.source_type] ?? 'Other'}</span>
 
             {record.media_url && <Zoomable className="media" src={record.media_url} alt="Primary" />}
-            {record.streetview_url && (
-              <p className="kv"><b>Street View:</b> <a href={record.streetview_url} target="_blank" rel="noreferrer">screenshot</a></p>
-            )}
+            <StreetviewFieldLfe url={record.streetview_url} file={streetviewFile} onFile={setStreetviewFile} />
             {record.source_text_en && (
               <div className="caption-block">
                 <p className="kv"><b>Post text{record.source_text_en !== record.source_text ? ' (translated)' : ''}:</b> {record.source_text_en}</p>

@@ -58,6 +58,8 @@ export default function ManualInputLfe({ reviewer }) {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
   const [farConfirm, setFarConfirm] = useState(false);
+  const [submittedSite, setSubmittedSite] = useState(null);
+  const [showWarning, setShowWarning] = useState(true);
 
   const isBuilding = obsTypes.includes('building');
 
@@ -135,7 +137,15 @@ export default function ManualInputLfe({ reviewer }) {
         if (ns.error) throw ns.error;
       }
 
-      setStatus({ kind: 'ok', msg: 'Submitted to the triage queue for verification.' });
+      // assign_site_id() runs as a BEFORE INSERT trigger, so site_id is
+      // already set on the row by the time submit_observation returns its id.
+      let siteNum = null;
+      if (newId) {
+        const site = await supabaseLfe.from('triage_records').select('site_id').eq('id', newId).single();
+        siteNum = site.data?.site_id ?? null;
+      }
+
+      setStatus(null);
       setPos(null); setObsTypes(['building']); setTypeDetailsState({}); setRegion(''); setAddress(''); setBuildingName(''); setMechanism('');
       setNotes(''); setSourceUrl(''); setLinks([]); setImages([]); setDocs([]); setStreetview(null); setNonstructural(false); setFarConfirm(false);
       // Reset every field that carries a non-empty default, so it can't
@@ -144,6 +154,7 @@ export default function ManualInputLfe({ reviewer }) {
       // record only changes the pin and photo).
       setLocConfidence('high'); setBuildingType('residential'); setMaterial('reinforced concrete');
       setHeightClass('low-rise'); setDamage(2); setCodeEra('unknown'); setRetrofit('none');
+      setSubmittedSite(siteNum ?? true);
     } catch (ex) {
       setStatus({ kind: 'err', msg: `Submit failed: ${ex.message ?? ex}` });
     } finally {
@@ -151,10 +162,21 @@ export default function ManualInputLfe({ reviewer }) {
     }
   }
 
+  function submitAnother() { setSubmittedSite(null); }
+
   return (
     <div className="panel-scroll">
       <div className="panel-inner">
         <h1>Manual observation entry</h1>
+
+        {submittedSite ? (
+          <div className="submit-confirm">
+            <h2>Congratulations - you've successfully submitted{typeof submittedSite === 'number' ? ` site #${submittedSite}` : ' this site'}.</h2>
+            <p className="muted">It has been added to the triage queue for a second volunteer to verify.</p>
+            <button className="btn" onClick={submitAnother}>Submit another observation</button>
+          </div>
+        ) : (
+        <>
         <p className="muted">
           Set the exact location, record what you observed, and submit. It enters
           the queue for a second volunteer to verify.
@@ -354,7 +376,31 @@ export default function ManualInputLfe({ reviewer }) {
             {status && <p className={`status-line ${status.kind}`}>{status.msg}</p>}
           </form>
         </div>
+        </>
+        )}
       </div>
+
+      {showWarning && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="head">
+              <h2>Check before you enter a new site</h2>
+            </div>
+            <div className="body" style={{ display: 'block' }}>
+              <p>
+                Before entering a manual input, please check through the sites already
+                sitting in the <b>Triaged sites</b> tab or the <b>Triage queue</b>. If your
+                site already exists, please add information to the existing record rather
+                than creating a new manual entry.
+              </p>
+            </div>
+            <div className="foot">
+              <span className="grow" />
+              <button className="btn" onClick={() => setShowWarning(false)}>Continue</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

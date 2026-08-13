@@ -84,6 +84,12 @@ body {
 .panel-inner h1 { font-size: 22px; margin: 0 0 6px; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
+.submit-confirm {
+  margin-top: 24px; padding: 22px; background: #f0fdf4; border: 1px solid #bbf7d0;
+  border-radius: 12px; text-align: center;
+}
+.submit-confirm h2 { margin: 0 0 8px; font-size: 18px; color: #166534; }
+.submit-confirm .btn { margin-top: 14px; }
 
 .btn {
   display: inline-block; background: var(--brand); color: #fff; border: none;
@@ -301,6 +307,11 @@ body {
 .presence-banner {
   margin: 0 20px; padding: 8px 12px; background: #f5f3ff; border: 1px solid #ddd6fe;
   border-radius: 10px; font-size: 13px; color: #5b21b6;
+}
+
+.reminder-banner {
+  margin: 8px 20px 0; padding: 8px 12px; background: #eff6ff; border: 1px solid #bfdbfe;
+  border-radius: 10px; font-size: 13px; color: #1e40af;
 }
 
 /* merge summary line */

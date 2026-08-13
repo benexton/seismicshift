@@ -2,10 +2,10 @@
 // observation_types is now an array field (a record can match a selected
 // filter type by containing it, not by equality).
 
-export const emptyFilter = { q: '', damage: '', obs: '', source: '', nonstructural: '' };
+export const emptyFilter = { q: '', damage: '', obs: '', source: '', nonstructural: '', height: '' };
 
 export const filterActive = (f) =>
-  !!(f && (f.q?.trim() || f.damage !== '' || f.obs || f.source || f.nonstructural));
+  !!(f && (f.q?.trim() || f.damage !== '' || f.obs || f.source || f.nonstructural || f.height));
 
 export function matchesFilter(rec, f) {
   if (!f) return true;
@@ -22,5 +22,6 @@ export function matchesFilter(rec, f) {
   if (f.source && rec.source_type !== f.source) return false;
   if (f.nonstructural === 'yes' && !rec.nonstructural_damage) return false;
   if (f.nonstructural === 'no' && rec.nonstructural_damage) return false;
+  if (f.height && rec.height_class !== f.height) return false;
   return true;
 }
