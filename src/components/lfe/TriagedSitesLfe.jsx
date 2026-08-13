@@ -94,7 +94,7 @@ export default function TriagedSitesLfe({ reviewer, othersByRecord, setActiveRec
 
       {view === 'map' ? (
         <div className="map-area">
-          <MapContainer center={center} zoom={zoom} className="triage-map" scrollWheelZoom>
+          <MapContainer center={center} zoom={zoom} className="triage-map" scrollWheelZoom zoomAnimation={false}>
             {base && <TileLayer url={base.url} attribution={base.attribution ?? ''} maxZoom={18} />}
             <FitToData records={filtered} />
             <ClusterGroup records={filtered} renderMarker={renderMarker} />

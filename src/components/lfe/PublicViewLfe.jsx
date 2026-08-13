@@ -34,8 +34,8 @@ const DISCLAIMERS = [
       <>
         <p><b>This is a Beta tool.</b> This NZ Earthquake Reconnaissance Programme (ERP) triage tool is under active development and is intended to eventually be hosted on the NZSEE website.</p>
         <p>Observations were captured within a short time frame following each event. NZSEE volunteers have made every effort to triage the information accurately, and copyright has been attributed where possible. Please contact NZSEE for any corrections or amendments.</p>
-        <p>This work does <b>not</b> represent the work of Seismic Shift or the views of the company. The Seismic Shift website is being used only to host this beta version of the tool during development.</p>
-        <p>All information is preliminary and provided as-is, without warranty. It should not be relied upon for engineering, insurance, safety, or commercial decisions.</p>
+        <p>This work does <b>not</b> represent the work of NZSEE or Seismic Shift or the views of either organisation. The Seismic Shift website is being used only to host this beta version of the tool during development.</p>
+        <p>All information is preliminary and provided as-is, without warranty. It should not be relied upon for anything including but not limited to engineering, insurance, safety, or commercial decisions.</p>
       </>
     ),
     button: 'I understand',
@@ -47,6 +47,7 @@ const DISCLAIMERS = [
         <p>The triaged sites shown here have been <b>verified</b> by NZSEE volunteers.</p>
         <p>Some markers appear <b>over water</b>. For these sites, all of the observation information has been verified, but the exact location could not be determined - so placeholder coordinates over water have been used. The site information itself is still valid; only the mapped position is a placeholder. Please contact NZSEE if you can help locate these sites.</p>
         <p>If you have further information, corrections, or amendments for any site, please contact NZSEE.</p>
+        <p>This work is being carried out by volunteers, and therefore <b>it may take us some time to respond to any contact.</b></p>
       </>
     ),
     button: 'View the sites',
@@ -437,7 +438,15 @@ export default function PublicViewLfe() {
                     : 'Showing every verified site across all events - select a specific event from the dropdown above to focus on just that one.'}
             </div>
           )}
-          <MapContainer center={[0, 180]} zoom={2} className="triage-map" scrollWheelZoom>
+          {/* zoomAnimation off: on Chrome/Windows, Leaflet's CSS-transform
+              zoom transition can leave each tile's translate3d() position a
+              fraction of a pixel off after it settles, showing as a
+              persistent hairline grid between tiles (worst over uniform
+              tiles like ocean) - not a CSS fix on top of the symptom, this
+              removes the animation that introduces the rounding error in
+              the first place. Trade-off: zoom now snaps instead of
+              animating smoothly. */}
+          <MapContainer center={[0, 180]} zoom={2} className="triage-map" scrollWheelZoom zoomAnimation={false}>
             {base && <TileLayer url={base.url} attribution={base.attribution ?? ''} maxZoom={18} />}
             <FitToData records={mapRecords} />
             <InvalidateOnResize />

@@ -188,7 +188,7 @@ export default function ManualInputLfe({ reviewer }) {
           <div>
             <label className="fld-label">Location</label>
             <div className="mini-map">
-              <MapContainer center={center} zoom={10} className="mini-map-inner" scrollWheelZoom>
+              <MapContainer center={center} zoom={10} className="mini-map-inner" scrollWheelZoom zoomAnimation={false}>
                 {base && <TileLayer url={base.url} attribution={base.attribution ?? ''} maxZoom={18} />}
                 <LocationPicker pos={pos} setPos={setPos} />
               </MapContainer>
