@@ -1,5 +1,5 @@
 import {
-  CLASSIFICATION_SCORES, DAMAGE_LABEL, OBSERVATION_TYPES, OBSERVATION_LABEL, SOURCE_LABEL,
+  CLASSIFICATION_SCORES, DAMAGE_LABEL, OBSERVATION_TYPES, OBSERVATION_LABEL, SOURCE_LABEL, HEIGHT_CLASSES,
 } from '../../lib/constantsLfe.js';
 import { emptyFilter, filterActive } from '../../lib/filterLfe.js';
 
@@ -26,6 +26,11 @@ export default function FilterBarLfe({ filter, setFilter, shown, total, view, se
       <select value={filter.obs} onChange={set('obs')} title="Observation type">
         <option value="">Any type</option>
         {OBSERVATION_TYPES.map((t) => <option key={t} value={t}>{OBSERVATION_LABEL[t]}</option>)}
+      </select>
+
+      <select value={filter.height} onChange={set('height')} title="Building height class">
+        <option value="">Any height</option>
+        {HEIGHT_CLASSES.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
       </select>
 
       {!hideSource && (

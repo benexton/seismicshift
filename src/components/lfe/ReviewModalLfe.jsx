@@ -7,6 +7,8 @@ import RecordFieldsLfe, { fieldsPatch } from './RecordFieldsLfe.jsx';
 import Zoomable from '../Zoomable.jsx';
 import AttachmentAdderLfe from './AttachmentAdderLfe.jsx';
 import MergeModalLfe from './MergeModalLfe.jsx';
+import StreetviewFieldLfe from './StreetviewFieldLfe.jsx';
+import { uploadImage } from '../../lib/mediaLfe.js';
 import { coordError } from '../../lib/coordsLfe.js';
 
 /**
@@ -25,6 +27,7 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
   const [merging, setMerging] = useState(false);
   const [attachPending, setAttachPending] = useState(false);
   const [pendingWarn, setPendingWarn] = useState(false);
+  const [streetviewFile, setStreetviewFile] = useState(null);
 
   useEffect(() => {
     const onKey = (e) => e.key === 'Escape' && guardedClose();
@@ -52,11 +55,12 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
     }
   }
 
-  function patch() {
+  function patch(streetviewUrl) {
     return {
       ...fieldsPatch(v),
       engineer_notes: notes || null,
       location_precision: movedLocation ? 'exact' : record.location_precision,
+      ...(streetviewUrl ? { streetview_url: streetviewUrl } : {}),
     };
   }
 
@@ -66,10 +70,12 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
     setBusy(true); setErr('');
     try {
       await persistLocationIfMoved();
-      const p = patch();
+      const streetviewUrl = streetviewFile ? await uploadImage(streetviewFile) : null;
+      const p = patch(streetviewUrl);
       const { error } = await supabaseLfe.from('triage_records').update(p).eq('id', record.id);
       if (error) throw error;
       setBusy(false);
+      setStreetviewFile(null);
       onSavedDraft?.(record.id, { ...p, ...(movedLocation ? { latitude: Number(lat), longitude: Number(lng) } : {}) });
       onClose();
     } catch (ex) { setBusy(false); setErr(`Save failed: ${ex.message ?? ex}`); }
@@ -81,8 +87,9 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
     setBusy(true); setErr('');
     try {
       await persistLocationIfMoved();
+      const streetviewUrl = streetviewFile ? await uploadImage(streetviewFile) : null;
       const { error } = await supabaseLfe.from('triage_records').update({
-        ...patch(), status: newStatus, reviewed_by: reviewer, reviewed_at: new Date().toISOString(),
+        ...patch(streetviewUrl), status: newStatus, reviewed_by: reviewer, reviewed_at: new Date().toISOString(),
       }).eq('id', record.id);
       if (error) throw error;
       setBusy(false);
@@ -137,6 +144,12 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
           </div>
         )}
 
+        <div className="reminder-banner">
+          Before proceeding, check the <b>Triaged sites</b> tab for a match to this record. If it's
+          already been verified there, use <b>Merge</b> below to fold this information into the
+          existing site instead of approving it as a new one.
+        </div>
+
         <div className="body">
           <div>
             <span className="src-badge" style={{ borderColor: srcColor, color: srcColor }}>
@@ -154,9 +167,8 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
               <Zoomable className="media" src={record.media_url} alt="Source media" />
             ) : <p className="muted">No primary media.</p>}
 
-            {record.streetview_url && (
-              <p className="kv"><b>Street View:</b> <a href={record.streetview_url} target="_blank" rel="noreferrer">screenshot</a></p>
-            )}
+            <StreetviewFieldLfe url={record.streetview_url} file={streetviewFile} onFile={setStreetviewFile} />
+
             {record.source_text_en && (
               <div className="caption-block">
                 <p className="kv"><b>Post text{record.source_text_en !== record.source_text ? ' (translated)' : ''}:</b> {record.source_text_en}</p>

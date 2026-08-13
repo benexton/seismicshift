@@ -1096,9 +1096,11 @@ function AdminWorkspace({ signOut }) {
         <button className="signout" onClick={signOut}>Sign out</button>
       </div>
       <div className="tab-body">
-        {tab === 'create' && <CreateEventPanel onCreated={loadEvents} />}
-        {tab === 'manage' && <ManageEventsPanel events={events} loading={loadingEvents} onChanged={loadEvents} />}
-        {tab === 'provision' && <ProvisionUsersPanel events={events} />}
+        <div className="panel-scroll">
+          {tab === 'create' && <CreateEventPanel onCreated={loadEvents} />}
+          {tab === 'manage' && <ManageEventsPanel events={events} loading={loadingEvents} onChanged={loadEvents} />}
+          {tab === 'provision' && <ProvisionUsersPanel events={events} />}
+        </div>
       </div>
     </div>
   );
