@@ -142,11 +142,9 @@ function FitToData({ records }) {
     if (!records.length) return;
     try {
       // Leaflet caches its container's pixel size and only re-measures it on
-      // an explicit invalidateSize() call (or a window resize event) - if
-      // this runs before that cache has ever been refreshed for the
-      // container's real, final mobile-layout size, getSize() below could
-      // read stale (from an earlier, differently-sized layout pass), and the
-      // height-fit loop further down would then be chasing the wrong target.
+      // an explicit invalidateSize() call (or a window resize event) - a
+      // one-off re-measure here before fitBounds keeps the size it works
+      // from as current as possible for this single pass.
       map.invalidateSize();
 
       // records' longitudes are already normalised for the antimeridian
@@ -169,23 +167,22 @@ function FitToData({ records }) {
 
       // Re-fit using latitude as the primary constraint instead, stepping
       // in one zoom level at a time until the data's own latitude range
-      // would no longer fit the available height - i.e. the map fills top
-      // to bottom, the same way fitBounds already fills left to right.
-      // Some markers may then need a horizontal pan to reach, which beats a
-      // mostly-grey map on load.
+      // would no longer fit 85% of the available height (short of 100% as
+      // slack for getSize() being an imperfect reading, not a guaranteed-
+      // accurate one). Some markers may then need a horizontal pan to reach,
+      // which beats a mostly-grey map on load.
       const lats = records.map((r) => r.latitude);
       const latMin = Math.min(...lats);
       const latMax = Math.max(...lats);
       const centerLng = map.getCenter().lng;
-      const availablePxHeight = size.y - PAD * 2;
+      const availablePxHeight = (size.y - PAD * 2) * 0.85;
       const baseZoom = map.getZoom();
       // Capped a few levels above fitBounds' own zoom - a real fix for the
-      // grey space, but not so unbounded that a bad container-size read (the
-      // container hasn't finished settling into its final mobile layout, an
-      // ancestor briefly reporting the wrong height, etc.) could run this all
-      // the way to maxZoom on a single point with no markers on screen.
+      // grey space, but not so unbounded that a bad container-size read
+      // could run this all the way to maxZoom on a single point with no
+      // markers on screen.
       let zoom = baseZoom;
-      while (zoom < Math.min(baseZoom + 6, 14)) {
+      while (zoom < Math.min(baseZoom + 4, 14)) {
         const nextHeight = Math.abs(
           map.project([latMax, centerLng], zoom + 1).y - map.project([latMin, centerLng], zoom + 1).y
         );
