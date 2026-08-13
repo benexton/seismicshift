@@ -15,7 +15,11 @@ const SUPA = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const DATA_URL = `${SUPA}/storage/v1/object/public/observation-media/public/kumamoto-2026-public.json`;
 const CENTER = [32.79, 130.74];
 const ZOOM = 10;
-const GSI_URL = 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg';
+const BASEMAPS = {
+  photo: { label: 'GSI Aerial (seamless photo)', url: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg' },
+  pale:  { label: 'GSI Pale', url: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png' },
+  std:   { label: 'GSI Standard', url: 'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png' },
+};
 const GSI_ATTR = '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noreferrer">地理院タイル (GSI Japan)</a>';
 
 const DISCLAIMERS = [
@@ -114,6 +118,7 @@ export default function PublicView() {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(emptyFilter);
   const [view, setView] = useState('map');
+  const [basemap, setBasemap] = useState('photo');
 
   useEffect(() => {
     fetch(DATA_URL)
@@ -140,6 +145,8 @@ export default function PublicView() {
     );
   }
 
+  const base = BASEMAPS[basemap];
+
   return (
     <div className="public-wrap">
       <header className="public-head">
@@ -155,9 +162,15 @@ export default function PublicView() {
       {view === 'map' ? (
         <div className="public-map-area">
           <MapContainer center={CENTER} zoom={ZOOM} className="triage-map" scrollWheelZoom>
-            <TileLayer url={GSI_URL} attribution={GSI_ATTR} maxZoom={18} />
+            <TileLayer url={base.url} attribution={GSI_ATTR} maxZoom={18} />
             <ClusterGroup records={mapRecords} renderMarker={renderMarker} />
           </MapContainer>
+          <div className="map-controls">
+            <label htmlFor="pub-bm">Basemap (GSI)</label>
+            <select id="pub-bm" value={basemap} onChange={(e) => setBasemap(e.target.value)}>
+              {Object.entries(BASEMAPS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </div>
           <div className="map-legend">
             <div className="legend-title">Classification</div>
             {[0, 1, 2, 3, 4, 5].map((s) => (

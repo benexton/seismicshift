@@ -10,7 +10,11 @@ import {
 import { uploadImage, uploadFile } from '../lib/media.js';
 import { coordError, isFarFromEvent } from '../lib/coords.js';
 
-const GSI_PHOTO = 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg';
+const BASEMAPS = {
+  photo: { label: 'GSI Aerial (seamless photo)', url: 'https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg' },
+  pale:  { label: 'GSI Pale', url: 'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png' },
+  std:   { label: 'GSI Standard', url: 'https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png' },
+};
 const GSI_ATTRIB =
   '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noreferrer">地理院タイル (GSI Japan)</a>';
 const CENTER = [32.79, 130.74];
@@ -30,6 +34,7 @@ function LocationPicker({ pos, setPos }) {
  */
 export default function ManualInput({ reviewer }) {
   const [pos, setPos] = useState(null);
+  const [basemap, setBasemap] = useState('photo');
   const [obsType, setObsType] = useState('building');
   const [region, setRegion] = useState('');
   const [address, setAddress] = useState('');
@@ -141,9 +146,15 @@ export default function ManualInput({ reviewer }) {
             <label className="fld-label">Location</label>
             <div className="mini-map">
               <MapContainer center={CENTER} zoom={10} className="mini-map-inner" scrollWheelZoom>
-                <TileLayer url={GSI_PHOTO} attribution={GSI_ATTRIB} maxZoom={18} />
+                <TileLayer url={BASEMAPS[basemap].url} attribution={GSI_ATTRIB} maxZoom={18} />
                 <LocationPicker pos={pos} setPos={setPos} />
               </MapContainer>
+              <div className="map-controls">
+                <label htmlFor="mi-bm">Basemap (GSI)</label>
+                <select id="mi-bm" value={basemap} onChange={(e) => setBasemap(e.target.value)}>
+                  {Object.entries(BASEMAPS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
             </div>
             <p className="muted small">
               {pos && pos[0] != null && pos[1] != null

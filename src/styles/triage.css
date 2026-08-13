@@ -124,7 +124,7 @@ body {
 /* ---- Manual input --------------------------------------------------------- */
 .manual-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .fld-label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
-.mini-map { height: 380px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.mini-map { position: relative; height: 380px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
 .mini-map-inner { height: 100%; width: 100%; }
 .manual-form .field { margin: 0 0 10px; }
 .manual-form label, .modal .field label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
