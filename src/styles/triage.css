@@ -139,6 +139,14 @@ body {
 .map-area { position: relative; flex: 1 1 auto; min-height: 0; }
 .record-table-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; background: #fff; }
 .triage-map { height: 100%; width: 100%; }
+/* Leaflet tile-seam fix: adjacent tile <img> elements can leave a hairline
+   sub-pixel gap at certain zoom/scale factors, letting the page background
+   show through as a faint grid - most visible over uniform-colour tiles
+   like ocean. Not specific to any one basemap (it's a rendering artifact,
+   not tile content), so this is unscoped rather than tied to one preset.
+   Slightly oversizing each tile so neighbours overlap by a sub-pixel margin
+   hides the seam. */
+.leaflet-tile-container img { width: 100.5%; height: 100.5%; }
 .map-controls {
   position: absolute; top: 12px; right: 12px; z-index: 1000;
   background: rgba(255,255,255,0.95); border: 1px solid #d0d5dd; border-radius: 8px;
