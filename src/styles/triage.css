@@ -443,11 +443,14 @@ body {
    area (map, table, modals) already scrolls itself. */
 .public-wrap { position: fixed; inset: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 .public-head { flex: 0 0 auto; display: flex; flex-wrap: wrap; row-gap: 8px; align-items: center; gap: 14px; padding: 12px 18px; background: #fff; border-bottom: 3px solid #8A1538; }
-.public-logo { height: 46px; width: auto; }
+.public-logo { height: 58px; width: auto; }
 .public-head-title { flex: 0 0 auto; }
 .public-head h1 { font-size: 18px; margin: 0; color: #8A1538; white-space: nowrap; }
 .public-head p { margin: 3px 0 0; font-size: 13px; color: #555; }
-.public-head-controls { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+/* flex-wrap rather than a fixed breakpoint - phone screen widths vary too
+   much to pin an exact cutoff, so whichever of select/Map-Table/Filters
+   doesn't fit just drops to its own row instead of being clipped off-screen. */
+.public-head-controls { flex: 0 0 auto; display: flex; flex-wrap: wrap; row-gap: 6px; align-items: center; gap: 8px; }
 .public-event-select { flex: 0 0 auto; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
 .beta-tag { background: #8A1538; color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; }
 /* Filter bar nested inside the public header blends into that one bar
@@ -476,16 +479,27 @@ body {
   .filters-toggle.active { border-color: #8A1538; color: #8A1538; }
   .public-head .filter-bar { display: none; flex-basis: 100%; }
   .public-head .filter-bar.open { display: flex; }
+  /* Capped rather than left to its natural (event-name-dependent) width, so
+     Map/Table and Filters reliably have room beside it - the flex-wrap on
+     .public-head-controls is only the backup for whatever still doesn't fit. */
+  .public-event-select { flex: 0 1 50%; min-width: 0; max-width: 50%; }
 }
 
 @media (max-width: 480px) {
   .public-head { padding: 10px 12px; gap: 8px 10px; }
-  .public-logo { height: 34px; }
-  .public-head-title { min-width: 0; }
-  .public-head h1 { font-size: 14px; line-height: 1.2; white-space: normal; }
-  .public-head p { font-size: 11px; }
+  .public-logo { height: 44px; }
+  /* Title and subtitle flow as one continuous piece of text rather than
+     stacking as separate lines - h1/p go inline (not flex) so "Verified
+     sites - Beta" wraps in wherever there's room at the end of the title,
+     same as any other run of text, instead of always starting its own line.
+     flex:1 1 0% (not auto) on the title block itself is still needed so it
+     sits beside the logo rather than being pushed to its own row below it -
+     flex-basis:auto would size it to its unwrapped content width first and
+     wrap the whole block if that didn't fit next to the logo. */
+  .public-head-title { flex: 1 1 0%; min-width: 0; }
+  .public-head h1 { display: inline; font-size: 14px; line-height: 1.5; white-space: normal; }
+  .public-head p { display: inline; margin: 0 0 0 8px; font-size: 11px; }
   .public-head-controls { flex-basis: 100%; }
-  .public-event-select { flex: 1 1 auto; min-width: 0; }
   .view-toggle, .view-toggle button { flex: 0 0 auto; font-size: 12px; }
   .view-toggle button { padding: 6px 9px; }
 }
