@@ -185,17 +185,17 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
     children.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { after: 40 },
       children: [new ImageRun({ data: logo.data, type: logo.type, transformation: { width: 140, height: 56 } })] }));
   }
-  children.push(new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: 'LEARNING FROM EARTHQUAKES', bold: true, color: MAROON_LT, size: 20, font: BODY, characterSpacing: 30 })] }));
+  children.push(new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: 'EARTHQUAKE RECONNAISSANCE PROGRAMME', bold: true, color: MAROON_LT, size: 20, font: BODY, characterSpacing: 30 })] }));
   children.push(new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: 'Significant Event Report', bold: true, color: MAROON, size: 48, font: BODY })] }));
   children.push(new Paragraph({ spacing: { after: 160 }, border: { bottom: { style: BorderStyle.SINGLE, size: 18, color: MAROON } },
-    children: [new TextRun({ text: `VERT ${meta.eventName || 'Event'} - Version ${meta.version || '1.0'}`, color: MAROON, size: 30, font: BODY })] }));
+    children: [new TextRun({ text: `ERP ${meta.eventName || 'Event'} - Version ${meta.version || '1.0'}`, color: MAROON, size: 30, font: BODY })] }));
   children.push(metaTable([
     ['Report issued', now],
     ['Magnitude (Mw)', phOr(meta.magnitude)], ['Depth (km)', phOr(meta.depth)],
     ['Location (geographical)', phOr(meta.locationName)], ['Location (lat/long)', phOr(meta.locationLatLong)],
     ['Time and date', phOr(meta.eventDatetime)], ['Faulting mechanism', phOr(meta.faulting)],
     ['Maximum Modified Mercalli Intensity', phOr(meta.maxMMI)], ['Tsunami alert issued', phOr(meta.tsunami)],
-    ['VERT deployment', phOr(meta.vertDeployment)], ['Physical mission deployment', phOr(meta.physicalMissionDeployment)],
+    ['ERP deployment', phOr(meta.vertDeployment)], ['Physical mission deployment', phOr(meta.physicalMissionDeployment)],
   ]));
   children.push(heading(2, 'Contributors to this report'));
   if (meta.contributors) {
@@ -335,14 +335,14 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
   children.push(new Table({ width: { size: TABLE_W, type: WidthType.DXA }, borders: allBorders, rows: [invHead, ...invRows] }));
 
   const runHeader = new Header({ children: [new Paragraph({ alignment: AlignmentType.RIGHT, border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: RULE } },
-    children: [new TextRun({ text: `Learning from Earthquakes - VERT ${meta.eventName || ''} (V${meta.version || '1.0'})`, color: LIGHTGREY, size: 16, font: BODY })] })] });
+    children: [new TextRun({ text: `Earthquake Reconnaissance Programme - ERP ${meta.eventName || ''} (V${meta.version || '1.0'})`, color: LIGHTGREY, size: 16, font: BODY })] })] });
   const runFooter = new Footer({ children: [new Paragraph({ border: { top: { style: BorderStyle.SINGLE, size: 4, color: RULE } },
     children: [new TextRun({ text: 'In-Confidence', color: LIGHTGREY, size: 16, font: BODY }),
       new TextRun({ text: '          Page ', color: LIGHTGREY, size: 16, font: BODY }),
       new TextRun({ children: [PageNumber.CURRENT], color: LIGHTGREY, size: 16, font: BODY })] })] });
 
   const doc = new Document({
-    creator: 'VERT Triage Hub', title: `VERT ${meta.eventName || 'Event'} Report`,
+    creator: 'ERP Triage Hub', title: `ERP ${meta.eventName || 'Event'} Report`,
     sections: [{
       properties: { titlePage: true, page: { size: { width: 11906, height: 16838 }, margin: { top: 1440, bottom: 1440, left: 1440, right: 1440 } } },
       headers: { default: runHeader, first: new Header({ children: [new Paragraph({ children: [] })] }) },

@@ -9,12 +9,12 @@ import { emptyFilter, filterActive } from '../../lib/filterLfe.js';
  * parent over that tab's own records only. The observation-type filter
  * matches a record if its (multi-select) types include the chosen value.
  */
-export default function FilterBarLfe({ filter, setFilter, shown, total, view, setView, hideSource }) {
+export default function FilterBarLfe({ filter, setFilter, shown, total, view, setView, hideSource, className }) {
   const set = (key) => (e) => setFilter((f) => ({ ...f, [key]: e.target.value }));
   const active = filterActive(filter);
 
   return (
-    <div className="filter-bar">
+    <div className={`filter-bar${className ? ` ${className}` : ''}`}>
       <input className="filter-q" type="text" placeholder="Search region, building, address, notes..."
         value={filter.q} onChange={set('q')} />
 

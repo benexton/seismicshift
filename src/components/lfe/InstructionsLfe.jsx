@@ -11,13 +11,13 @@ export default function InstructionsLfe({ onGoTo }) {
   return (
     <div className="panel-scroll">
       <div className="panel-inner instructions">
-        <h1>LFE triage - how it works</h1>
+        <h1>ERP triage - how it works</h1>
         <p>
           This tool gathers post-earthquake observations for this event from
           social media (Bluesky) and news feeds, gives each a first-pass AI
           assessment, and asks volunteer engineers to verify them. Verified
-          observations build up into a Learning from Earthquakes draft
-          report. Here is the workflow.
+          observations build up into an Earthquake Reconnaissance Programme
+          draft report. Here is the workflow.
         </p>
 
         <h2>1. Triage queue - the main task</h2>
@@ -94,8 +94,8 @@ export default function InstructionsLfe({ onGoTo }) {
         <p>
           The <Go tab="report">Report generator</Go> holds the event details
           (magnitude, epicentre, and so on, entered once) and turns all approved
-          observations into a Learning from Earthquakes draft you can download and
-          finish offline.
+          observations into an Earthquake Reconnaissance Programme draft you can
+          download and finish offline.
         </p>
 
         <p className="muted" style={{ marginTop: 24 }}>

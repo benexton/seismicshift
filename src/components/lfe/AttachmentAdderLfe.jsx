@@ -9,11 +9,17 @@ import Zoomable from '../Zoomable.jsx';
  * onPendingChange so it can warn before the record is closed. Existing
  * attachments can be deleted with a confirmation step.
  */
-export default function AttachmentAdderLfe({ recordId, reviewer, onPendingChange }) {
+export default function AttachmentAdderLfe({
+  recordId, reviewer, onPendingChange, primaryMediaUrl, primarySourceUrl, onPrimaryChanged,
+}) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [images, setImages] = useState([]);
+  const [imgSourceUrl, setImgSourceUrl] = useState('');
+  const [imgSourceNa, setImgSourceNa] = useState(false);
   const [files, setFiles] = useState([]);
+  const [fileSourceUrl, setFileSourceUrl] = useState('');
+  const [fileSourceNa, setFileSourceNa] = useState(false);
   const [link, setLink] = useState('');
   const [note, setNote] = useState('');
   const [imgKey, setImgKey] = useState(0);
@@ -21,6 +27,14 @@ export default function AttachmentAdderLfe({ recordId, reviewer, onPendingChange
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [confirmDel, setConfirmDel] = useState(null);
+  const [confirmPrimary, setConfirmPrimary] = useState(null);
+  // Set when "Make primary" is clicked on an older attachment that has
+  // neither a source_url nor source_na - added/imported before this was
+  // required, so the same choice gets asked retroactively before it can
+  // become the record's primary photo.
+  const [needsSourceFor, setNeedsSourceFor] = useState(null);
+  const [needsSourceUrl, setNeedsSourceUrl] = useState('');
+  const [needsSourceNa, setNeedsSourceNa] = useState(false);
 
   // report staged (unsaved) selections to the parent
   useEffect(() => { onPendingChange?.(images.length > 0 || files.length > 0); }, [images, files]); // eslint-disable-line
@@ -29,7 +43,7 @@ export default function AttachmentAdderLfe({ recordId, reviewer, onPendingChange
     setLoading(true);
     const { data, error } = await supabaseLfe
       .from('record_attachments')
-      .select('id, media_url, source_url, file_url, file_name, note, added_by, created_at')
+      .select('id, media_url, source_url, source_na, file_url, file_name, note, added_by, created_at')
       .eq('record_id', recordId)
       .order('created_at', { ascending: true });
     setLoading(false);
@@ -50,31 +64,37 @@ export default function AttachmentAdderLfe({ recordId, reviewer, onPendingChange
   }
 
   async function addImages() {
-    if (!images.length) return;
+    if (!images.length || (!imgSourceNa && !imgSourceUrl.trim())) return;
     setBusy(true); setErr('');
     try {
       const urls = [];
       for (const f of images) urls.push(await uploadImage(f, `${recordId}/`));
-      await insertRows(urls.map((u) => ({ record_id: recordId, media_url: u, added_by: reviewer })));
-      setImages([]); setImgKey((k) => k + 1);
+      await insertRows(urls.map((u) => ({
+        record_id: recordId, media_url: u, added_by: reviewer,
+        source_url: imgSourceNa ? null : imgSourceUrl.trim(), source_na: imgSourceNa,
+      })));
+      setImages([]); setImgKey((k) => k + 1); setImgSourceUrl(''); setImgSourceNa(false);
     } catch (ex) { setErr(`Upload failed: ${ex.message ?? ex}`); } finally { setBusy(false); }
   }
-  function discardImages() { setImages([]); setImgKey((k) => k + 1); }
+  function discardImages() { setImages([]); setImgKey((k) => k + 1); setImgSourceUrl(''); setImgSourceNa(false); }
 
   async function addFiles() {
-    if (!files.length) return;
+    if (!files.length || (!fileSourceNa && !fileSourceUrl.trim())) return;
     setBusy(true); setErr('');
     try {
       const rows = [];
       for (const f of files) {
         const url = await uploadFile(f, `${recordId}/`);
-        rows.push({ record_id: recordId, file_url: url, file_name: f.name, added_by: reviewer });
+        rows.push({
+          record_id: recordId, file_url: url, file_name: f.name, added_by: reviewer,
+          source_url: fileSourceNa ? null : fileSourceUrl.trim(), source_na: fileSourceNa,
+        });
       }
       await insertRows(rows);
-      setFiles([]); setFileKey((k) => k + 1);
+      setFiles([]); setFileKey((k) => k + 1); setFileSourceUrl(''); setFileSourceNa(false);
     } catch (ex) { setErr(`Upload failed: ${ex.message ?? ex}`); } finally { setBusy(false); }
   }
-  function discardFiles() { setFiles([]); setFileKey((k) => k + 1); }
+  function discardFiles() { setFiles([]); setFileKey((k) => k + 1); setFileSourceUrl(''); setFileSourceNa(false); }
 
   async function addLink() {
     const v = link.trim(); if (!v) return;
@@ -91,6 +111,64 @@ export default function AttachmentAdderLfe({ recordId, reviewer, onPendingChange
     setBusy(false); setConfirmDel(null);
     if (error) return setErr(`Could not delete this attachment. (${error.message})`);
     load();
+  }
+
+  // Swapping in an attachment's photo as the record's primary. If that
+  // attachment also carries its own source link (different from the current
+  // primary one), the caller decides whether to bring that along too, rather
+  // than silently mismatching a new photo against the old source - hence the
+  // confirm step below instead of a plain toggle. Older attachments with
+  // neither a source_url nor source_na (added before either was required)
+  // get asked for one now, before they can become the primary photo.
+  function requestPrimary(a) {
+    if (!a.media_url || a.media_url === primaryMediaUrl) return;
+    if (!a.source_url && !a.source_na) { setNeedsSourceFor(a); return; }
+    if (a.source_url && a.source_url !== primarySourceUrl) setConfirmPrimary(a);
+    else setPrimary(a, false);
+  }
+
+  async function resolveMissingSourceAndContinue() {
+    if (!needsSourceFor || (!needsSourceNa && !needsSourceUrl.trim())) return;
+    setBusy(true); setErr('');
+    try {
+      const patch = { source_url: needsSourceNa ? null : needsSourceUrl.trim(), source_na: needsSourceNa };
+      const { error } = await supabaseLfe.from('record_attachments').update(patch).eq('id', needsSourceFor.id);
+      if (error) throw error;
+      const updated = { ...needsSourceFor, ...patch };
+      setItems((its) => its.map((it) => (it.id === updated.id ? updated : it)));
+      setNeedsSourceFor(null); setNeedsSourceUrl(''); setNeedsSourceNa(false);
+      if (updated.source_url && updated.source_url !== primarySourceUrl) setConfirmPrimary(updated);
+      else setPrimary(updated, false);
+    } catch (ex) { setErr(`Could not save source. (${ex.message ?? ex})`); }
+    finally { setBusy(false); }
+  }
+
+  async function setPrimary(a, alsoSwapSource) {
+    setBusy(true); setErr(''); setConfirmPrimary(null);
+    try {
+      const patch = { media_url: a.media_url };
+      if (alsoSwapSource) patch.source_url = a.source_url;
+      const { error: e1 } = await supabaseLfe.from('triage_records').update(patch).eq('id', recordId);
+      if (e1) throw e1;
+
+      // The outgoing primary photo/link moves into this attachment's slot
+      // instead of being discarded - if nothing is left on the row after
+      // that (it only ever held this one photo), delete it rather than
+      // leaving an empty husk.
+      const leftoverMedia = primaryMediaUrl ?? null;
+      const leftoverSource = alsoSwapSource ? (primarySourceUrl ?? null) : a.source_url;
+      if (!leftoverMedia && !leftoverSource && !a.file_url && !a.note) {
+        const { error: e2 } = await supabaseLfe.from('record_attachments').delete().eq('id', a.id);
+        if (e2) throw e2;
+      } else {
+        const attPatch = { media_url: leftoverMedia, ...(alsoSwapSource ? { source_url: leftoverSource } : {}) };
+        const { error: e2 } = await supabaseLfe.from('record_attachments').update(attPatch).eq('id', a.id);
+        if (e2) throw e2;
+      }
+      await load();
+      onPrimaryChanged?.(patch);
+    } catch (ex) { setErr(`Could not set as primary. (${ex.message ?? ex})`); }
+    finally { setBusy(false); }
   }
 
   return (
@@ -112,20 +190,58 @@ export default function AttachmentAdderLfe({ recordId, reviewer, onPendingChange
                   </button>
                 )}
                 {a.source_url && <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>}
+                {!a.source_url && a.source_na && <span className="muted small">No source (N/A)</span>}
                 {a.note && <p className="note">{a.note}</p>}
               </div>
               <div className="attach-meta">
                 <span className="by">added by {a.added_by ?? 'unknown'}</span>
-                {confirmDel === a.id ? (
+                {needsSourceFor?.id === a.id || confirmPrimary?.id === a.id ? null : confirmDel === a.id ? (
                   <span className="del-confirm">
                     Delete?
                     <button className="mini danger" onClick={() => doDelete(a.id)} disabled={busy}>Yes</button>
                     <button className="mini" onClick={() => setConfirmDel(null)} disabled={busy}>No</button>
                   </span>
                 ) : (
-                  <button className="mini danger" onClick={() => setConfirmDel(a.id)}>Delete</button>
+                  <>
+                    {a.media_url && a.media_url !== primaryMediaUrl && (
+                      <button className="mini" onClick={() => requestPrimary(a)} disabled={busy}>Make primary</button>
+                    )}
+                    <button className="mini danger" onClick={() => setConfirmDel(a.id)}>Delete</button>
+                  </>
                 )}
               </div>
+              {/* Full-width blocks rather than squeezed into .attach-meta's
+                  narrow row - that column is only wide enough for a couple
+                  of short buttons, not a whole form. */}
+              {needsSourceFor?.id === a.id && (
+                <div className="source-prompt">
+                  <p>No source on file for this photo.</p>
+                  <div className="link-add">
+                    <input type="text" value={needsSourceUrl} onChange={(e) => setNeedsSourceUrl(e.target.value)}
+                      placeholder="Source URL..." disabled={needsSourceNa} />
+                    <label className="check-label small">
+                      <input type="checkbox" checked={needsSourceNa}
+                        onChange={(e) => { setNeedsSourceNa(e.target.checked); if (e.target.checked) setNeedsSourceUrl(''); }} />
+                      N/A
+                    </label>
+                  </div>
+                  <div className="source-prompt-actions">
+                    <button className="mini" onClick={() => { setNeedsSourceFor(null); setNeedsSourceUrl(''); setNeedsSourceNa(false); }} disabled={busy}>Cancel</button>
+                    <button className="mini" onClick={resolveMissingSourceAndContinue}
+                      disabled={busy || (!needsSourceNa && !needsSourceUrl.trim())}>Continue</button>
+                  </div>
+                </div>
+              )}
+              {confirmPrimary?.id === a.id && (
+                <div className="source-prompt">
+                  <p>Also make this the primary source link?</p>
+                  <div className="source-prompt-actions">
+                    <button className="mini" onClick={() => setConfirmPrimary(null)} disabled={busy}>Cancel</button>
+                    <button className="mini" onClick={() => setPrimary(a, false)} disabled={busy}>Just the photo</button>
+                    <button className="mini" onClick={() => setPrimary(a, true)} disabled={busy}>Yes, both</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -135,11 +251,22 @@ export default function AttachmentAdderLfe({ recordId, reviewer, onPendingChange
         <label>Add images</label>
         <div className="link-add">
           <input key={imgKey} type="file" accept="image/*" multiple onChange={(e) => setImages(Array.from(e.target.files ?? []))} />
-          <button type="button" className="mini" onClick={addImages} disabled={busy || !images.length}>
+          <button type="button" className="mini" onClick={addImages} disabled={busy || !images.length || (!imgSourceNa && !imgSourceUrl.trim())}>
             Add {images.length > 1 ? `${images.length} images` : 'image'}
           </button>
           {images.length > 0 && <button type="button" className="mini" onClick={discardImages} disabled={busy}>Discard</button>}
         </div>
+        {images.length > 0 && (
+          <div className="link-add" style={{ marginTop: 6 }}>
+            <input type="text" value={imgSourceUrl} onChange={(e) => setImgSourceUrl(e.target.value)}
+              placeholder="Source URL for these image(s)..." disabled={imgSourceNa} />
+            <label className="check-label small">
+              <input type="checkbox" checked={imgSourceNa}
+                onChange={(e) => { setImgSourceNa(e.target.checked); if (e.target.checked) setImgSourceUrl(''); }} />
+              N/A
+            </label>
+          </div>
+        )}
         {images.length > 0 && <span className="unsaved-hint">{images.length} image(s) selected but not added yet.</span>}
       </div>
 
@@ -147,11 +274,22 @@ export default function AttachmentAdderLfe({ recordId, reviewer, onPendingChange
         <label>Add files (PDF, docs, etc.)</label>
         <div className="link-add">
           <input key={fileKey} type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
-          <button type="button" className="mini" onClick={addFiles} disabled={busy || !files.length}>
+          <button type="button" className="mini" onClick={addFiles} disabled={busy || !files.length || (!fileSourceNa && !fileSourceUrl.trim())}>
             Add {files.length > 1 ? `${files.length} files` : 'file'}
           </button>
           {files.length > 0 && <button type="button" className="mini" onClick={discardFiles} disabled={busy}>Discard</button>}
         </div>
+        {files.length > 0 && (
+          <div className="link-add" style={{ marginTop: 6 }}>
+            <input type="text" value={fileSourceUrl} onChange={(e) => setFileSourceUrl(e.target.value)}
+              placeholder="Source URL for these file(s)..." disabled={fileSourceNa} />
+            <label className="check-label small">
+              <input type="checkbox" checked={fileSourceNa}
+                onChange={(e) => { setFileSourceNa(e.target.checked); if (e.target.checked) setFileSourceUrl(''); }} />
+              N/A
+            </label>
+          </div>
+        )}
         {files.length > 0 && <span className="unsaved-hint">{files.length} file(s) selected but not added yet.</span>}
       </div>
 
