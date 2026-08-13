@@ -147,11 +147,9 @@ body {
 .map-controls label { display: block; font-weight: 600; margin: 0 0 2px; }
 .map-controls select { width: 100%; padding: 4px; border-radius: 6px; border: 1px solid #ccc; }
 .map-controls .count { margin-top: 8px; color: var(--muted); }
-.map-legend {
-  position: absolute; bottom: 20px; left: 12px; z-index: 1000;
-  background: rgba(255,255,255,0.95); border: 1px solid #d0d5dd; border-radius: 8px;
-  padding: 8px 10px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.12);
-}
+/* Nested inside .map-controls (top-right basemap panel) rather than its own
+   floating box, so the basemap picker and legend read as one panel. */
+.map-legend { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; }
 .map-legend .legend-title { font-weight: 700; margin-bottom: 2px; }
 .map-legend .row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
 .map-legend .dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; background: #999; }
@@ -167,6 +165,10 @@ body {
 .modal .head h2 { margin: 0; font-size: 18px; }
 .modal .head .x { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted); }
 .modal .body { padding: 16px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+/* Grid items don't shrink below their content's intrinsic width by default -
+   an unbroken string (a long URL in engineer_notes, say) forces its cell,
+   and with it the whole grid/modal, wider than intended instead of wrapping. */
+.modal .body > * { min-width: 0; }
 .modal .body img.media { width: 100%; border-radius: 10px; border: 1px solid var(--border); margin: 8px 0; }
 .modal .kv { font-size: 13px; margin: 5px 0; }
 .modal .kv b { color: var(--muted); font-weight: 600; }
@@ -376,6 +378,16 @@ body {
 .attach-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px dashed #e5e7eb; padding-top: 6px; }
 .del-confirm { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #9f1239; }
 .mini.danger { color: #b42318; border-color: #f2c2bd; }
+/* Attachment prompts (missing source, primary-swap confirm) that need more
+   than a couple of short buttons - full-width block below the meta row
+   instead of squeezed into it, since that column is often only ~200px. */
+.source-prompt {
+  display: flex; flex-direction: column; gap: 6px; padding: 8px 10px;
+  background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; font-size: 12px; color: #9f1239;
+}
+.source-prompt p { margin: 0; font-weight: 600; }
+.source-prompt .link-add { margin: 0; }
+.source-prompt-actions { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
 .unsaved-hint { display: block; font-size: 11px; color: #92400e; margin-top: 4px; }
 .pending-warn { margin: 0 20px; padding: 8px 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; color: #991b1b; font-size: 13px; font-weight: 600; }
 .check-label { gap: 10px; }
@@ -420,21 +432,108 @@ body {
 .report-ph { background: #fcf3d6; border-left: 4px solid #e0a93a; color: #8a6d1b; font-style: italic; font-size: 13px; padding: 8px 12px; margin: 8px 0 14px; border-radius: 0 6px 6px 0; }
 
 /* ---- public read-only viewer -------------------------------------------- */
-.public-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; }
-.public-head { flex: 0 0 auto; display: flex; align-items: center; gap: 14px; padding: 12px 18px; background: #fff; border-bottom: 3px solid #8A1538; }
+/* position:fixed rather than absolute: absolute is anchored to this box's
+   containing block, which on some mobile browsers can end up a hair taller
+   than the true visible viewport while the address bar is settling (the
+   containing block chain doesn't necessarily track the visual viewport the
+   same way fixed positioning does). fixed + inset:0 anchors directly to the
+   visual viewport, matching .disclaimer-backdrop/.modal-backdrop below,
+   which don't show this problem. overflow:hidden stays as a second line of
+   defence - nothing here should ever need page-level scroll, each inner
+   area (map, table, modals) already scrolls itself. */
+.public-wrap { position: fixed; inset: 0; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+.public-head { flex: 0 0 auto; display: flex; flex-wrap: wrap; row-gap: 8px; align-items: center; gap: 14px; padding: 12px 18px; background: #fff; border-bottom: 3px solid #8A1538; }
 .public-logo { height: 46px; width: auto; }
-.public-head h1 { font-size: 18px; margin: 0; color: #8A1538; }
+.public-head-title { flex: 0 0 auto; }
+.public-head h1 { font-size: 18px; margin: 0; color: #8A1538; white-space: nowrap; }
 .public-head p { margin: 3px 0 0; font-size: 13px; color: #555; }
+.public-head-controls { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; }
+.public-event-select { flex: 0 0 auto; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
 .beta-tag { background: #8A1538; color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; }
+/* Filter bar nested inside the public header blends into that one bar
+   instead of showing as a separate card below it - frees up a full row for
+   the map. */
+.public-head .filter-bar { flex: 1 1 320px; margin: 0; padding: 0; border: none; background: transparent; }
+
+/* Below this width the filter bar would rather wrap onto 2-3 rows of its own
+   than sit next to the event selector, eating map height for no benefit -
+   collapse it behind an explicit toggle instead, on both "smaller desktop"
+   and mobile widths. Above it, filters stay inline as before and the toggle
+   button itself never appears. */
+.filters-toggle { display: none; }
+/* Same idea, same breakpoint: FilterBarLfe already renders its own
+   Map/Table toggle at the end of the (desktop-only-visible) filter row, next
+   to the site count - this copy exists purely so Map/Table stays reachable
+   once that row collapses behind Filters. */
+.public-head-controls .mobile-view-toggle { display: none; }
+@media (max-width: 1024px) {
+  .public-head-controls .mobile-view-toggle { display: inline-flex; }
+  .filters-toggle {
+    display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto;
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: #fff; font-size: 13px; font-weight: 600; color: #333; cursor: pointer;
+  }
+  .filters-toggle.active { border-color: #8A1538; color: #8A1538; }
+  .public-head .filter-bar { display: none; flex-basis: 100%; }
+  .public-head .filter-bar.open { display: flex; }
+}
+
+@media (max-width: 480px) {
+  .public-head { padding: 10px 12px; gap: 8px 10px; }
+  .public-logo { height: 34px; }
+  .public-head-title { min-width: 0; }
+  .public-head h1 { font-size: 14px; line-height: 1.2; white-space: normal; }
+  .public-head p { font-size: 11px; }
+  .public-head-controls { flex-basis: 100%; }
+  .public-event-select { flex: 1 1 auto; min-width: 0; }
+  .view-toggle, .view-toggle button { flex: 0 0 auto; font-size: 12px; }
+  .view-toggle button { padding: 6px 9px; }
+}
 .public-map-area { position: relative; flex: 1 1 auto; min-height: 0; }
 .public-banner {
   position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 1000;
   background: rgba(138,21,56,0.95); color: #fff; border-radius: 8px;
-  padding: 10px 18px; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.2);
-  max-width: 90%; text-align: center;
+  padding: 10px 34px 10px 18px; font-size: 13px; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  max-width: 90%; text-align: center; text-wrap: balance;
+}
+.public-banner-close {
+  position: absolute; top: 4px; right: 6px; background: none; border: none; color: #fff;
+  font-size: 18px; line-height: 1; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; opacity: 0.85;
+}
+.public-banner-close:hover { opacity: 1; background: rgba(255,255,255,0.15); }
+
+/* Basemap + classification panel: on a phone this would otherwise sit over
+   a big chunk of the small map, so it collapses behind a toggle the same
+   way the filter bar does. Scoped to .public-map-area only - .map-controls
+   is shared with the triage admin map views, which stay as-is. */
+.map-panel-toggle { display: none; }
+@media (max-width: 640px) {
+  /* Pushed below the zoom controls and the basemap-toggle chip (both of
+     which sit in the top ~44px) rather than squeezed between them - full
+     width reads better than a narrow banner fighting for the same strip. */
+  .public-banner { top: 56px; max-width: calc(100% - 24px); font-size: 12px; padding: 8px 30px 8px 12px; }
+  .map-panel-toggle {
+    display: inline-flex; position: absolute; top: 12px; right: 12px; z-index: 1001;
+    padding: 6px 12px; border: 1px solid #d0d5dd; border-radius: 8px;
+    background: rgba(255,255,255,0.95); font-size: 13px; font-weight: 600; color: #333; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  }
+  .public-map-area .map-controls { display: none; }
+  .public-map-area .map-controls.open {
+    display: block; top: 52px; max-width: calc(100% - 24px); max-height: calc(100% - 104px); overflow: auto;
+  }
 }
 
-.disclaimer-backdrop { position: fixed; inset: 0; background: rgba(20,10,15,0.62); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+/* height is redundant with inset:0 on desktop, but on mobile Safari/Chrome
+   a plain 100vh (what inset:0 falls back to) sizes fixed elements against
+   the tallest possible viewport - including the area the address bar can
+   retract into - not what's actually visible, so a vertically centered
+   child sits high with dead space below it. 100dvh tracks the real visible
+   viewport; the 100vh line is the fallback for browsers without dvh support. */
+.disclaimer-backdrop {
+  position: fixed; inset: 0; height: 100vh; height: 100dvh;
+  background: rgba(20,10,15,0.62); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px;
+}
 .disclaimer { background: #fff; max-width: 560px; width: 100%; border-radius: 14px; padding: 24px 26px; box-shadow: 0 20px 60px rgba(0,0,0,.35); max-height: 90vh; overflow: auto; }
 .disclaimer-logo { height: 40px; margin-bottom: 8px; }
 .disclaimer h2 { color: #8A1538; margin: 0 0 10px; font-size: 20px; }
@@ -444,12 +543,13 @@ body {
 /* ---- public detail card formatting -------------------------------------- */
 .pub-detail .pub-media { display: block; width: 100%; max-height: 340px; object-fit: contain; background: #f4f6f8; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 14px; }
 .pub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; }
+.pub-grid > * { min-width: 0; }
 @media (max-width: 560px) { .pub-grid { grid-template-columns: 1fr; } }
 .pub-kv { display: flex; flex-direction: column; gap: 1px; padding: 7px 0; border-bottom: 1px solid #f1eef0; }
 .pub-k { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: #9E2A3F; }
-.pub-v { font-size: 14px; color: #222; }
+.pub-v { font-size: 14px; color: #222; overflow-wrap: anywhere; }
 .pub-notes { margin-top: 14px; }
-.pub-notes p { margin: 2px 0 0; font-size: 14px; line-height: 1.5; }
+.pub-notes p { margin: 2px 0 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .pub-links { display: flex; gap: 16px; margin-top: 14px; }
 .pub-links a { font-size: 13px; font-weight: 600; }
 .pub-sub { font-size: 14px; color: #8A1538; margin: 16px 0 6px; }

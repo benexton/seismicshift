@@ -54,6 +54,7 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
       const p = {
         ...fieldsPatch(v), engineer_notes: notes || null, location_precision: movedLocation ? 'exact' : record.location_precision,
         ...(streetviewUrl ? { streetview_url: streetviewUrl } : {}),
+        ...(record.source_type === 'human' ? { source_url: v.source_url?.trim() || null } : {}),
       };
       const { error } = await supabaseLfe.from('triage_records').update(p).eq('id', record.id);
       if (error) throw error;
@@ -84,7 +85,7 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
             <span className="obs-badge">{observationTypesLabel(record.observation_types)}</span>{' '}
             <span className="obs-badge">{SOURCE_LABEL[record.source_type] ?? 'Other'}</span>
 
-            {record.media_url && <Zoomable className="media" src={record.media_url} alt="Primary" />}
+            {v.media_url && <Zoomable className="media" src={v.media_url} alt="Primary" />}
             <StreetviewFieldLfe url={record.streetview_url} file={streetviewFile} onFile={setStreetviewFile} />
             {record.source_text_en && (
               <div className="caption-block">
@@ -99,9 +100,20 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
             )}
             <p className="kv"><b>Provenance:</b> {provenanceLabel(record)}</p>
             <p className="kv"><b>Verified by:</b> {record.reviewed_by ?? '-'}</p>
-            {record.source_url && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
+            {record.source_type === 'human' ? (
+              <div className="field">
+                <label>Primary source link</label>
+                <input type="text" value={v.source_url ?? ''} onChange={set('source_url')} placeholder="https://..." />
+              </div>
+            ) : (
+              v.source_url && <p className="kv"><b>Source:</b> <a href={v.source_url} target="_blank" rel="noreferrer">link</a></p>
+            )}
 
-            <AttachmentAdderLfe recordId={record.id} reviewer={reviewer} onPendingChange={setAttachPending} />
+            <AttachmentAdderLfe
+              recordId={record.id} reviewer={reviewer} onPendingChange={setAttachPending}
+              primaryMediaUrl={v.media_url} primarySourceUrl={v.source_url}
+              onPrimaryChanged={(patch) => setV((m) => ({ ...m, ...patch }))}
+            />
           </div>
 
           <div>

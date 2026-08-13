@@ -37,7 +37,7 @@ function EventList({ reviewer, signOut }) {
     <div className="triage-shell">
       <div className="tabs">
         <LfeNavGroup />
-        <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6, color: '#cdd6e4' }}>LFE</span>
+        <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6, color: '#cdd6e4' }}>ERP</span>
         <span className="tab-spacer" />
         <span className="signout">{reviewer}</span>
         <button className="signout" onClick={signOut}>Sign out</button>
@@ -49,7 +49,7 @@ function EventList({ reviewer, signOut }) {
             {loading && <p className="muted">Loading...</p>}
             {err && <p className="err">{err}</p>}
             {!loading && memberships.length === 0 && !err && (
-              <p className="muted">You are not assigned to any events yet. Contact your LFE admin.</p>
+              <p className="muted">You are not assigned to any events yet. Contact your ERP admin.</p>
             )}
             {memberships.length > 0 && (
               <ul className="event-list">

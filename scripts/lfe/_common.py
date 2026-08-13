@@ -67,6 +67,18 @@ def sb_patch(path: str, params: dict, body: dict) -> None:
         raise SystemExit(f"PATCH {path} failed [{r.status_code}]: {r.text[:300]}")
 
 
+def sb_post(path: str, body: dict, params: dict | None = None) -> list[dict]:
+    r = requests.post(
+        f"{SUPABASE_URL}/rest/v1/{path}",
+        headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
+                 "Content-Type": "application/json", "Prefer": "return=representation"},
+        params=params, data=json.dumps(body), timeout=REQUEST_TIMEOUT,
+    )
+    if not r.ok:
+        raise SystemExit(f"POST {path} failed [{r.status_code}]: {r.text[:300]}")
+    return r.json()
+
+
 def resolve_events(event_slug: str | None) -> list[dict]:
     """Return the events to process: one specific event by slug, or every
     status='active' event when no slug is given - so the same script works

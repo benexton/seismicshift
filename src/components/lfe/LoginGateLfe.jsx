@@ -49,7 +49,7 @@ export default function LoginGateLfe({ children }) {
     return (
       <div className="login-wrap">
         <div className="card">
-          <h2>LFE volunteer sign-in</h2>
+          <h2>ERP volunteer sign-in</h2>
           <p className="muted">Sign in to access this event's triage workspace.</p>
           <form onSubmit={signIn}>
             <label htmlFor="email">Email</label>
@@ -64,7 +64,7 @@ export default function LoginGateLfe({ children }) {
             {err && <p className="err">{err}</p>}
           </form>
           <p className="hint">
-            Accounts are provisioned by an LFE admin. Contact your team lead if
+            Accounts are provisioned by an ERP admin. Contact your team lead if
             you need access.
           </p>
         </div>

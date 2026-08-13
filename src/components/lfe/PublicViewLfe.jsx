@@ -6,7 +6,7 @@ import FilterBarLfe from './FilterBarLfe.jsx';
 import RecordTableLfe from './RecordTableLfe.jsx';
 import Zoomable from '../Zoomable.jsx';
 import { downloadFile } from '../../lib/mediaLfe.js';
-import { emptyFilter, matchesFilter } from '../../lib/filterLfe.js';
+import { emptyFilter, matchesFilter, filterActive } from '../../lib/filterLfe.js';
 import {
   DAMAGE_COLOR, DAMAGE_LABEL, observationTypesLabel, HEIGHT_CLASSES, cap, fmtDate, BASEMAP_PRESETS,
 } from '../../lib/constantsLfe.js';
@@ -32,7 +32,7 @@ const DISCLAIMERS = [
     title: 'Before you continue - please read',
     body: (
       <>
-        <p><b>This is a Beta tool.</b> This Virtual Earthquake Reconnaissance Team (VERT) triage tool is under active development and is intended to eventually be hosted on the NZSEE website.</p>
+        <p><b>This is a Beta tool.</b> This NZ Earthquake Reconnaissance Programme (ERP) triage tool is under active development and is intended to eventually be hosted on the NZSEE website.</p>
         <p>Observations were captured within a short time frame following each event. NZSEE volunteers have made every effort to triage the information accurately, and copyright has been attributed where possible. Please contact NZSEE for any corrections or amendments.</p>
         <p>This work does <b>not</b> represent the work of Seismic Shift or the views of the company. The Seismic Shift website is being used only to host this beta version of the tool during development.</p>
         <p>All information is preliminary and provided as-is, without warranty. It should not be relied upon for engineering, insurance, safety, or commercial decisions.</p>
@@ -69,6 +69,12 @@ function PublicDetail({ site, onClose }) {
           <button className="x" onClick={onClose} aria-label="Close">×</button>
         </div>
         <div className="body pub-detail">
+          {site.country === 'Venezuela' && (
+            <div className="report-ph" style={{ fontStyle: 'normal', margin: '0 0 14px', gridColumn: '1 / -1' }}>
+              This record is from before NZSEE ERP started using this platform - some information may still be
+              held in other locations. Please speak to NZSEE ERP if you are seeking more information on this location.
+            </div>
+          )}
           {site.media_url && <Zoomable className="pub-media" src={site.media_url} alt="Site photo" />}
 
           <div className="pub-grid">
@@ -124,18 +130,121 @@ function PublicDetail({ site, onClose }) {
 // events" view into a single event, or between two different events.
 function FitToData({ records }) {
   const map = useMap();
+  // A plain records.length dependency misses a refit whenever two different
+  // filtered sets happen to share the same count (e.g. switching between two
+  // events with an equal number of sites, or a filter swap that trades one
+  // matching record for another) - the map would silently keep the previous
+  // framing. Keying off the actual set of ids catches every real change;
+  // site_id is only unique within one event, so it's paired with the event
+  // slug for the combined "all events" view.
+  const key = records.map((r) => `${r.eventSlug ?? ''}:${r.id}`).join(',');
   useEffect(() => {
     if (!records.length) return;
     try {
-      map.fitBounds(records.map((r) => [r.latitude, r.longitude]), { padding: [40, 40], maxZoom: 14 });
+      // Leaflet caches its container's pixel size and only re-measures it on
+      // an explicit invalidateSize() call (or a window resize event) - if
+      // this runs before that cache has ever been refreshed for the
+      // container's real, final mobile-layout size, getSize() below could
+      // read stale (from an earlier, differently-sized layout pass), and the
+      // height-fit loop further down would then be chasing the wrong target.
+      map.invalidateSize();
+
+      // records' longitudes are already normalised for the antimeridian
+      // (see mapRecords in PublicViewLfe) - markers and this fit need to
+      // agree on the same shifted-or-not values, so that normalisation
+      // happens once, upstream, rather than separately in here.
+      const PAD = 40;
+      map.fitBounds(records.map((r) => [r.latitude, r.longitude]), { padding: [PAD, PAD], maxZoom: 14 });
+
+      // fitBounds picks the zoom driven by whichever axis needs more
+      // zoom-out - for a Pacific-rim dataset that's almost always the wide
+      // longitude spread (e.g. Japan to Venezuela is ~165deg). On a
+      // landscape screen that's still a sensible view of the whole dataset,
+      // but on a portrait/mobile screen it leaves the much narrower latitude
+      // spread using only a sliver of the available height (or pushes past
+      // Web Mercator's +-85deg limit into visibly empty grey) - so this only
+      // applies when the map is taller than it is wide.
+      const size = map.getSize();
+      if (size.y <= size.x) return;
+
+      // Re-fit using latitude as the primary constraint instead, stepping
+      // in one zoom level at a time until the data's own latitude range
+      // would no longer fit the available height - i.e. the map fills top
+      // to bottom, the same way fitBounds already fills left to right.
+      // Some markers may then need a horizontal pan to reach, which beats a
+      // mostly-grey map on load.
+      const lats = records.map((r) => r.latitude);
+      const latMin = Math.min(...lats);
+      const latMax = Math.max(...lats);
+      const centerLng = map.getCenter().lng;
+      const availablePxHeight = size.y - PAD * 2;
+      const baseZoom = map.getZoom();
+      // Capped a few levels above fitBounds' own zoom - a real fix for the
+      // grey space, but not so unbounded that a bad container-size read (the
+      // container hasn't finished settling into its final mobile layout, an
+      // ancestor briefly reporting the wrong height, etc.) could run this all
+      // the way to maxZoom on a single point with no markers on screen.
+      let zoom = baseZoom;
+      while (zoom < Math.min(baseZoom + 6, 14)) {
+        const nextHeight = Math.abs(
+          map.project([latMax, centerLng], zoom + 1).y - map.project([latMin, centerLng], zoom + 1).y
+        );
+        if (nextHeight > availablePxHeight) break;
+        zoom += 1;
+      }
+      map.setView([(latMin + latMax) / 2, centerLng], zoom);
     } catch { /* ignore */ }
-  }, [records.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
+
+// Leaflet sizes its map to whatever its container's pixel height was at
+// mount and never re-checks on its own - it has no way to know the CSS
+// layout changed. On mobile the container often grows after mount (the
+// browser's address bar retracting as the page settles, or the on-screen
+// keyboard/orientation changing), and Leaflet doesn't repaint into that new
+// space - it's left as the container's plain grey background, above or
+// below the tiles. invalidateSize() forces Leaflet to re-measure and redraw.
+// A ResizeObserver on the actual container catches every real size change
+// directly, rather than window/visualViewport resize events, which mobile
+// browsers don't fire consistently for an address-bar-driven resize - the
+// container's own box is the one thing guaranteed to reflect what actually
+// happened, whatever the cause.
+function InvalidateOnResize() {
+  const map = useMap();
+  useEffect(() => {
+    const invalidate = () => map.invalidateSize();
+    const t = setTimeout(invalidate, 250);
+    const ro = new ResizeObserver(invalidate);
+    ro.observe(map.getContainer());
+    return () => {
+      clearTimeout(t);
+      ro.disconnect();
+    };
+  }, [map]);
   return null;
 }
 
 function getInitialSlug() {
   if (typeof window === 'undefined') return '';
   return new URLSearchParams(window.location.search).get('event') ?? '';
+}
+
+function getInitialView() {
+  if (typeof window === 'undefined') return 'map';
+  return new URLSearchParams(window.location.search).get('view') === 'table' ? 'table' : 'map';
+}
+
+// Reproduces exactly what someone was looking at from a shared link - which
+// event, map or table, and the search/damage/type/etc. filters all read back
+// out of the same params they're written to below.
+function getInitialFilter() {
+  if (typeof window === 'undefined') return emptyFilter;
+  const p = new URLSearchParams(window.location.search);
+  return {
+    q: p.get('q') ?? '', damage: p.get('damage') ?? '', obs: p.get('obs') ?? '',
+    source: p.get('source') ?? '', nonstructural: p.get('nonstructural') ?? '', height: p.get('height') ?? '',
+  };
 }
 
 export default function PublicViewLfe() {
@@ -149,9 +258,39 @@ export default function PublicViewLfe() {
   const [allSitesLoading, setAllSitesLoading] = useState(false);
   const [step, setStep] = useState(0);
   const [selected, setSelected] = useState(null);
-  const [filter, setFilter] = useState(emptyFilter);
-  const [view, setView] = useState('map');
+  const [filter, setFilter] = useState(getInitialFilter);
+  const [view, setView] = useState(getInitialView);
   const [basemap, setBasemap] = useState('');
+  // Below the filters-toggle breakpoint (see triage.css) the filter bar
+  // starts collapsed - opening it is a deliberate tap, not something that
+  // should eat half the screen on load.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Basemap + classification panel starts collapsed on narrow screens too
+  // (see triage.css) - on a phone it would otherwise sit over a big chunk of
+  // the map.
+  const [mapPanelOpen, setMapPanelOpen] = useState(false);
+  // A one-time dismiss for the "showing every site" banner - read once,
+  // then out of the way, rather than sitting over the map every visit.
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+
+  // Keeps the URL reproducing exactly what's on screen - event, map/table,
+  // and every filter - so a shared link (or the back button) lands the
+  // visitor on the same view instead of just the selected event. replaceState
+  // rather than pushState: filter keystrokes shouldn't spam browser history.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const sp = url.searchParams;
+    const setOrDelete = (key, val) => { if (val) sp.set(key, val); else sp.delete(key); };
+    setOrDelete('event', slug);
+    setOrDelete('view', view !== 'map' ? view : '');
+    setOrDelete('q', filter.q?.trim());
+    setOrDelete('damage', filter.damage);
+    setOrDelete('obs', filter.obs);
+    setOrDelete('source', filter.source);
+    setOrDelete('nonstructural', filter.nonstructural);
+    setOrDelete('height', filter.height);
+    window.history.replaceState(null, '', url);
+  }, [slug, view, filter]);
 
   useEffect(() => {
     // Deliberately does not auto-select the first event when no ?event= is
@@ -160,7 +299,7 @@ export default function PublicViewLfe() {
     // links (?event=slug) still go straight to that event as before.
     fetch(INDEX_URL)
       .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
-      .then((idx) => setEvents(idx?.events ?? []))
+      .then((idx) => setEvents([...(idx?.events ?? [])].sort((a, b) => new Date(b.event_datetime ?? 0) - new Date(a.event_datetime ?? 0))))
       .catch(() => setEventsErr('The list of public events could not be loaded yet. Please check back shortly.'))
       .finally(() => setEventsLoading(false));
   }, []);
@@ -184,7 +323,7 @@ export default function PublicViewLfe() {
     setAllSitesLoading(true);
     Promise.all(events.map((ev) => fetch(`${BUCKET_BASE}/public/${ev.slug}.json`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => (d?.sites ?? []).map((s) => ({ ...s, eventSlug: ev.slug, eventName: ev.name })))
+      .then((d) => (d?.sites ?? []).map((s) => ({ ...s, eventSlug: ev.slug, eventName: ev.name, country: ev.country })))
       .catch(() => [])))
       .then((lists) => { if (!cancelled) setAllSites(lists.flat()); })
       .finally(() => { if (!cancelled) setAllSitesLoading(false); });
@@ -194,15 +333,29 @@ export default function PublicViewLfe() {
   function selectEvent(newSlug) {
     setSlug(newSlug);
     if (!newSlug) { setData(null); setErr(''); }
-    const url = new URL(window.location.href);
-    if (newSlug) url.searchParams.set('event', newSlug); else url.searchParams.delete('event');
-    window.history.replaceState(null, '', url);
   }
 
-  const activeSites = slug ? (data?.sites ?? []) : (allSites ?? []);
+  const activeSites = slug
+    ? (data?.sites ?? []).map((s) => ({ ...s, country: data?.event?.country }))
+    : (allSites ?? []);
   const sites = useMemo(() => activeSites.filter((s) => s.lat != null && s.lng != null), [activeSites]);
   const filtered = useMemo(() => sites.filter((s) => matchesFilter(s, filter)), [sites, filter]);
-  const mapRecords = useMemo(() => filtered.map((s) => ({ ...s, id: s.site_id, latitude: s.lat, longitude: s.lng })), [filtered]);
+  // Sites split across the antimeridian (e.g. Japan at ~140 and Venezuela at
+  // ~-67) need their longitude shifted the same way for the markers as for
+  // the map's fitted view - Leaflet's coordinate space is continuous and
+  // unwrapped, so a marker plotted at the raw -67 while the viewport is
+  // centred near the shifted +216 sits nearly a full world width from centre
+  // (only visible in a repeated copy of the map way off to the side). Both
+  // have to agree on the same shifted-or-not longitude for every record.
+  const mapRecords = useMemo(() => {
+    const raw = filtered.map((s) => ({ ...s, id: s.site_id, latitude: s.lat, longitude: s.lng }));
+    if (raw.length < 2) return raw;
+    const lngs = raw.map((r) => r.longitude);
+    const spread = (arr) => Math.max(...arr) - Math.min(...arr);
+    const shifted = lngs.map((lng) => (lng < 0 ? lng + 360 : lng));
+    if (spread(shifted) >= spread(lngs)) return raw;
+    return raw.map((r, i) => ({ ...r, longitude: shifted[i] }));
+  }, [filtered]);
 
   const basemapOptions = useMemo(() => {
     if (!slug) return DEFAULT_BASEMAP_OPTIONS;
@@ -239,60 +392,79 @@ export default function PublicViewLfe() {
     <div className="public-wrap">
       <header className="public-head">
         <img className="public-logo" src="/NZSEELogo.png" alt="NZSEE" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-        <div>
-          <h1>Virtual Earthquake Reconnaissance Team</h1>
-          <p>
-            <select value={slug} onChange={(e) => selectEvent(e.target.value)} disabled={eventsLoading || events.length === 0}>
-              <option value="">Select an event...</option>
-              {events.map((ev) => <option key={ev.slug} value={ev.slug}>{ev.name}</option>)}
-            </select>
-            {' '}· Verified sites · <span className="beta-tag">Beta</span>
-          </p>
+        <div className="public-head-title">
+          <h1>NZ Earthquake Reconnaissance Programme</h1>
+          <p>Verified sites · <span className="beta-tag">Beta</span></p>
         </div>
+        <div className="public-head-controls">
+          <select className="public-event-select" value={slug} onChange={(e) => selectEvent(e.target.value)} disabled={eventsLoading || events.length === 0}>
+            <option value="">All events</option>
+            {events.map((ev) => <option key={ev.slug} value={ev.slug}>{ev.name}</option>)}
+          </select>
+          {/* Mobile/narrower-desktop only (see triage.css) - filters are
+              collapsed behind the Filters toggle there, so Map/Table needs
+              its own always-visible spot. On wide desktop this is hidden;
+              FilterBarLfe renders the same toggle at the end of its own row,
+              next to the site count, instead. */}
+          <span className="view-toggle mobile-view-toggle">
+            <button className={view === 'map' ? 'active' : ''} onClick={() => setView('map')}>Map</button>
+            <button className={view === 'table' ? 'active' : ''} onClick={() => setView('table')}>Table</button>
+          </span>
+          {!(!slug && eventsLoading) && (
+            <button type="button" className={`filters-toggle${filterActive(filter) ? ' active' : ''}`} onClick={() => setFiltersOpen((o) => !o)}>
+              Filters{filterActive(filter) ? ' •' : ''}
+            </button>
+          )}
+        </div>
+        {!(!slug && eventsLoading) && (
+          <FilterBarLfe
+            className={filtersOpen ? 'open' : ''}
+            filter={filter} setFilter={setFilter} shown={filtered.length} total={sites.length} view={view} setView={setView} hideSource
+          />
+        )}
       </header>
 
       {!slug && eventsLoading ? (
         <p className="muted" style={{ padding: 20 }}>Loading all events. This may take some time.</p>
-      ) : (
-        <>
-          <FilterBarLfe filter={filter} setFilter={setFilter} shown={filtered.length} total={sites.length} view={view} setView={setView} hideSource />
-
-          {view === 'map' ? (
-            <div className="public-map-area">
-              {!slug && (
-                <div className="public-banner">
-                  {eventsErr
-                    ? eventsErr
-                    : events.length === 0
-                      ? 'No public events yet. Please check back shortly.'
-                      : allSitesLoading
-                        ? 'Loading the full dataset of all events and verified sites. This may take some time.'
-                        : 'Showing every verified site across all events - select a specific event from the dropdown above to focus on just that one.'}
-                </div>
-              )}
-              <MapContainer center={[0, 0]} zoom={2} className="triage-map" scrollWheelZoom>
-                {base && <TileLayer url={base.url} attribution={base.attribution ?? ''} maxZoom={18} />}
-                <FitToData records={mapRecords} />
-                <ClusterGroup records={mapRecords} renderMarker={renderMarker} />
-              </MapContainer>
-              <div className="map-controls">
-                <label htmlFor="pub-bm">Basemap</label>
-                <select id="pub-bm" value={basemap} onChange={(e) => setBasemap(e.target.value)}>
-                  {basemapOptions.map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                </select>
-              </div>
-              <div className="map-legend">
-                <div className="legend-title">Classification</div>
-                {[0, 1, 2, 3, 4, 5].map((s) => (
-                  <div className="row" key={s}><span className="dot" style={{ background: DAMAGE_COLOR[s] }} />{DAMAGE_LABEL[s]}</div>
-                ))}
-                <div className="count">{err ? err : `${filtered.length} verified site(s)`}{slug && data?.generatedAt && !err ? ` · updated ${fmtDate(data.generatedAt)}` : ''}</div>
-              </div>
+      ) : view === 'map' ? (
+        <div className="public-map-area">
+          {!slug && !bannerDismissed && !mapPanelOpen && (
+            <div className="public-banner">
+              <button type="button" className="public-banner-close" onClick={() => setBannerDismissed(true)} aria-label="Dismiss">×</button>
+              {eventsErr
+                ? eventsErr
+                : events.length === 0
+                  ? 'No public events yet. Please check back shortly.'
+                  : allSitesLoading
+                    ? 'Loading the full dataset of all events and verified sites. This may take some time.'
+                    : 'Showing every verified site across all events - select a specific event from the dropdown above to focus on just that one.'}
             </div>
-          ) : (
-            <RecordTableLfe records={filtered} mode="public" onOpen={setSelected} />
           )}
-        </>
+          <MapContainer center={[0, 180]} zoom={2} className="triage-map" scrollWheelZoom>
+            {base && <TileLayer url={base.url} attribution={base.attribution ?? ''} maxZoom={18} />}
+            <FitToData records={mapRecords} />
+            <InvalidateOnResize />
+            <ClusterGroup records={mapRecords} renderMarker={renderMarker} />
+          </MapContainer>
+          <button type="button" className="map-panel-toggle" onClick={() => setMapPanelOpen((o) => !o)}>
+            {mapPanelOpen ? 'Hide map settings' : 'Basemap & legend'}
+          </button>
+          <div className={`map-controls${mapPanelOpen ? ' open' : ''}`}>
+            <label htmlFor="pub-bm">Basemap</label>
+            <select id="pub-bm" value={basemap} onChange={(e) => setBasemap(e.target.value)}>
+              {basemapOptions.map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+            <div className="map-legend">
+              <div className="legend-title">Classification</div>
+              {[0, 1, 2, 3, 4, 5].map((s) => (
+                <div className="row" key={s}><span className="dot" style={{ background: DAMAGE_COLOR[s] }} />{DAMAGE_LABEL[s]}</div>
+              ))}
+            </div>
+            <div className="count">{err ? err : `${filtered.length} verified site(s)`}{slug && data?.generatedAt && !err ? ` · updated ${fmtDate(data.generatedAt)}` : ''}</div>
+          </div>
+        </div>
+      ) : (
+        <RecordTableLfe records={filtered} mode="public" onOpen={setSelected} />
       )}
 
       {step < DISCLAIMERS.length && (

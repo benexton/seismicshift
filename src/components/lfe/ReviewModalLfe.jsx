@@ -61,6 +61,7 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
       engineer_notes: notes || null,
       location_precision: movedLocation ? 'exact' : record.location_precision,
       ...(streetviewUrl ? { streetview_url: streetviewUrl } : {}),
+      ...(record.source_type === 'human' ? { source_url: v.source_url?.trim() || null } : {}),
     };
   }
 
@@ -163,8 +164,8 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
             )}
             {record.location_precision === 'approximate' && <span className="approx-badge">approx. location</span>}
 
-            {record.media_url ? (
-              <Zoomable className="media" src={record.media_url} alt="Source media" />
+            {v.media_url ? (
+              <Zoomable className="media" src={v.media_url} alt="Source media" />
             ) : <p className="muted">No primary media.</p>}
 
             <StreetviewFieldLfe url={record.streetview_url} file={streetviewFile} onFile={setStreetviewFile} />
@@ -191,9 +192,20 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
               {record.ai_confidence != null && `(${Math.round(record.ai_confidence * 100)}%)`} · {record.ai_model ?? '-'}
             </p>
             <p className="kv"><b>Provenance:</b> {provenanceLabel(record)}</p>
-            {record.source_url && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
+            {record.source_type === 'human' ? (
+              <div className="field">
+                <label>Primary source link</label>
+                <input type="text" value={v.source_url ?? ''} onChange={set('source_url')} placeholder="https://..." />
+              </div>
+            ) : (
+              v.source_url && <p className="kv"><b>Source:</b> <a href={v.source_url} target="_blank" rel="noreferrer">link</a></p>
+            )}
 
-            <AttachmentAdderLfe recordId={record.id} reviewer={reviewer} onPendingChange={setAttachPending} />
+            <AttachmentAdderLfe
+              recordId={record.id} reviewer={reviewer} onPendingChange={setAttachPending}
+              primaryMediaUrl={v.media_url} primarySourceUrl={v.source_url}
+              onPrimaryChanged={(patch) => setV((m) => ({ ...m, ...patch }))}
+            />
           </div>
 
           <div>

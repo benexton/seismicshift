@@ -1,7 +1,7 @@
 # LFE platform migrations
 
 Run these against the new, separate LFE Supabase project only - never against
-the Kumamoto project. Run in numeric order (`0001` through `0035`), e.g. via
+the Kumamoto project. Run in numeric order (`0001` through `0036`), e.g. via
 the Supabase SQL editor or `supabase db push`. `0021` and `0022` are security
 fixes from a post-launch review (a client-writable report-conclusions column
 and an overly broad storage policy) - run them even if `0001`-`0020` are
@@ -45,7 +45,11 @@ adds `vert_deployment` and `physical_mission_deployment` to `event_meta` -
 two more report characteristics-table fields matching the VERT report
 template - and backfills `vert_deployment = 'Active'` on existing rows.
 `0035` seeds Colombia, researched the same way as `0033`. Requires `0032`;
-run once only.
+run once only. `0036` adds `record_attachments.source_na` - lets a reviewer
+mark an image/file attachment as having no applicable source URL (rather
+than just leaving it blank), so a missing source_url is unambiguously
+"checked, none exists" vs. "not filled in yet". Defaults to `false` on
+existing rows.
 
 After running them:
 1. Create a real user in that project's Auth dashboard.

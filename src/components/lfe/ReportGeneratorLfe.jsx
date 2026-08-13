@@ -19,7 +19,7 @@ const META_FIELDS = [
   ['faulting', 'Faulting mechanism'],
   ['max_mmi', 'Maximum MMI'],
   ['tsunami', 'Tsunami alert'],
-  ['vert_deployment', 'VERT deployment'],
+  ['vert_deployment', 'ERP deployment'],
   ['physical_mission_deployment', 'Physical mission deployment'],
 ];
 
@@ -131,7 +131,7 @@ export default function ReportGeneratorLfe() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `LFE_${(event?.name || 'event').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.docx`;
+      a.download = `ERP_${(event?.name || 'event').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.docx`;
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
     } catch (ex) {
@@ -245,9 +245,9 @@ export default function ReportGeneratorLfe() {
       </div>
 
       <div className="report-doc">
-        <div className="report-eyebrow">LEARNING FROM EARTHQUAKES</div>
+        <div className="report-eyebrow">EARTHQUAKE RECONNAISSANCE PROGRAMME</div>
         <div className="report-title">Significant Event Report</div>
-        <div className="report-sub">VERT {event?.name || 'Event'} - Version {meta.version || '1.0'}</div>
+        <div className="report-sub">ERP {event?.name || 'Event'} - Version {meta.version || '1.0'}</div>
 
         <table className="report-metatable">
           <tbody>
@@ -257,7 +257,7 @@ export default function ReportGeneratorLfe() {
               ['Location (lat/long)', event?.epicentre_lat != null ? `${event.epicentre_lat}, ${event.epicentre_lng}` : ''],
               ['Time and date', event?.event_datetime ? fmtDate(event.event_datetime) : ''], ['Faulting mechanism', meta.faulting],
               ['Maximum Modified Mercalli Intensity', meta.max_mmi], ['Tsunami alert issued', meta.tsunami],
-              ['VERT deployment', meta.vert_deployment], ['Physical mission deployment', meta.physical_mission_deployment],
+              ['ERP deployment', meta.vert_deployment], ['Physical mission deployment', meta.physical_mission_deployment],
             ].map(([k, v]) => (<tr key={k}><th>{k}</th><td>{phOr(v)}</td></tr>))}
           </tbody>
         </table>
