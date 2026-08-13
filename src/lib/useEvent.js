@@ -1,5 +1,6 @@
 import { createContext, createElement, useContext, useEffect, useState } from 'react';
 import { supabaseLfe } from './supabaseLfe.js';
+import { BASEMAP_PRESETS } from './constantsLfe.js';
 
 // Loads one events row (by slug) plus its event_meta row once, and provides
 // them via context so any component in the triage workspace can read the
@@ -42,9 +43,16 @@ export function useEvent() {
   return ctx;
 }
 
-// [[key, {label, url, attribution}], ...] for a basemap <select>.
+// [[key, {label, url, attribution}], ...] for a basemap <select>. The admin
+// panel only ever saves a single preset onto event.basemap, so that one is
+// listed first (keeping it the default selection) and the rest of
+// BASEMAP_PRESETS is appended - otherwise the picker would only ever offer
+// one map type to switch between.
 export function basemapEntries(event) {
-  return Object.entries(event?.basemap ?? {});
+  const chosen = Object.entries(event?.basemap ?? {});
+  const chosenKeys = new Set(chosen.map(([k]) => k));
+  const rest = Object.entries(BASEMAP_PRESETS).filter(([k]) => !chosenKeys.has(k));
+  return [...chosen, ...rest];
 }
 
 export function mapCenterOf(event) {

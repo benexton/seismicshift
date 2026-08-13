@@ -206,8 +206,14 @@ export default function PublicViewLfe() {
 
   const basemapOptions = useMemo(() => {
     if (!slug) return DEFAULT_BASEMAP_OPTIONS;
-    const evOptions = Object.entries(data?.event?.basemap ?? {});
-    return evOptions.length ? evOptions : DEFAULT_BASEMAP_OPTIONS;
+    // The admin panel only ever saves one preset onto event.basemap, so it's
+    // listed first (keeping it the default selection) with the rest of
+    // BASEMAP_PRESETS appended - otherwise there'd only ever be one map type
+    // to switch between.
+    const chosen = Object.entries(data?.event?.basemap ?? {});
+    const chosenKeys = new Set(chosen.map(([k]) => k));
+    const rest = Object.entries(BASEMAP_PRESETS).filter(([k]) => !chosenKeys.has(k));
+    return [...chosen, ...rest];
   }, [slug, data]);
   useEffect(() => {
     setBasemap(basemapOptions[0]?.[0] ?? '');
