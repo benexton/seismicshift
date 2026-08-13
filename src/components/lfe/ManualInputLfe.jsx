@@ -31,9 +31,9 @@ export default function ManualInputLfe({ reviewer }) {
   const options = useMemo(() => basemapEntries(event), [event]);
   const { center } = mapCenterOf(event);
   const epicentre = epicentreOf(event);
-  const base = options[0]?.[1];
 
   const [pos, setPos] = useState(null);
+  const [basemap, setBasemap] = useState(options[0]?.[0] ?? '');
   const [obsTypes, setObsTypes] = useState(['building']);
   const [typeDetails, setTypeDetailsState] = useState({});
   const [region, setRegion] = useState('');
@@ -164,6 +164,8 @@ export default function ManualInputLfe({ reviewer }) {
 
   function submitAnother() { setSubmittedSite(null); }
 
+  const base = options.find(([k]) => k === basemap)?.[1];
+
   return (
     <div className="panel-scroll">
       <div className="panel-inner">
@@ -190,6 +192,12 @@ export default function ManualInputLfe({ reviewer }) {
                 {base && <TileLayer url={base.url} attribution={base.attribution ?? ''} maxZoom={18} />}
                 <LocationPicker pos={pos} setPos={setPos} />
               </MapContainer>
+              <div className="map-controls">
+                <label htmlFor="mi-bm">Basemap</label>
+                <select id="mi-bm" value={basemap} onChange={(e) => setBasemap(e.target.value)}>
+                  {options.map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
             </div>
             <p className="muted small">
               {pos && pos[0] != null && pos[1] != null

@@ -20,9 +20,12 @@ const BUCKET_BASE = `${SUPA}/storage/v1/object/public/lfe-observation-media`;
 const INDEX_URL = `${BUCKET_BASE}/public/events-index.json`;
 
 // Used for the combined "all events" view, which has no single event to take
-// a basemap preset from - esri_world_imagery, not gsi_photo, since GSI's
-// aerial tiles only cover Japan and would render blank everywhere else.
-const DEFAULT_BASEMAP = BASEMAP_PRESETS.esri_world_imagery;
+// a basemap preset from - esri_world_imagery and osm, not gsi_photo, since
+// GSI's aerial tiles only cover Japan and would render blank everywhere else.
+const DEFAULT_BASEMAP_OPTIONS = [
+  ['esri_world_imagery', BASEMAP_PRESETS.esri_world_imagery],
+  ['osm', BASEMAP_PRESETS.osm],
+];
 
 const DISCLAIMERS = [
   {
@@ -148,6 +151,7 @@ export default function PublicViewLfe() {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState(emptyFilter);
   const [view, setView] = useState('map');
+  const [basemap, setBasemap] = useState('');
 
   useEffect(() => {
     // Deliberately does not auto-select the first event when no ?event= is
@@ -200,8 +204,15 @@ export default function PublicViewLfe() {
   const filtered = useMemo(() => sites.filter((s) => matchesFilter(s, filter)), [sites, filter]);
   const mapRecords = useMemo(() => filtered.map((s) => ({ ...s, id: s.site_id, latitude: s.lat, longitude: s.lng })), [filtered]);
 
-  const basemapOptions = Object.entries(data?.event?.basemap ?? {});
-  const base = (slug && basemapOptions[0]?.[1]) || DEFAULT_BASEMAP;
+  const basemapOptions = useMemo(() => {
+    if (!slug) return DEFAULT_BASEMAP_OPTIONS;
+    const evOptions = Object.entries(data?.event?.basemap ?? {});
+    return evOptions.length ? evOptions : DEFAULT_BASEMAP_OPTIONS;
+  }, [slug, data]);
+  useEffect(() => {
+    setBasemap(basemapOptions[0]?.[0] ?? '');
+  }, [basemapOptions]);
+  const base = basemapOptions.find(([k]) => k === basemap)?.[1] ?? basemapOptions[0]?.[1];
 
   function renderMarker(s, pos, key, solo) {
     return (
@@ -258,6 +269,12 @@ export default function PublicViewLfe() {
                 <FitToData records={mapRecords} />
                 <ClusterGroup records={mapRecords} renderMarker={renderMarker} />
               </MapContainer>
+              <div className="map-controls">
+                <label htmlFor="pub-bm">Basemap</label>
+                <select id="pub-bm" value={basemap} onChange={(e) => setBasemap(e.target.value)}>
+                  {basemapOptions.map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
               <div className="map-legend">
                 <div className="legend-title">Classification</div>
                 {[0, 1, 2, 3, 4, 5].map((s) => (
