@@ -139,14 +139,19 @@ body {
 .map-area { position: relative; flex: 1 1 auto; min-height: 0; }
 .record-table-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; background: #fff; }
 .triage-map { height: 100%; width: 100%; }
-/* Leaflet tile-seam fix: adjacent tile <img> elements can leave a hairline
-   sub-pixel gap at certain zoom/scale factors, letting the page background
-   show through as a faint grid - most visible over uniform-colour tiles
-   like ocean. Not specific to any one basemap (it's a rendering artifact,
-   not tile content), so this is unscoped rather than tied to one preset.
-   Slightly oversizing each tile so neighbours overlap by a sub-pixel margin
-   hides the seam. */
-.leaflet-tile-container img { width: 100.5%; height: 100.5%; }
+/* Leaflet tile-seam fix: adjacent tile <img> elements can show a hairline
+   grid between them - most visible over uniform-colour tiles like ocean.
+   Not specific to any one basemap (a rendering artifact, not tile
+   content), so this is unscoped rather than tied to one preset, and
+   reproducible on more than one machine here, so not one person's GPU/
+   browser either. Oversizing each tile (the other commonly-suggested fix)
+   was tried and made this worse, not better - forcing the browser to
+   upscale a 256px source image introduces its own resampling artefact at
+   the edges. backface-visibility:hidden is the other established fix for
+   this exact Leaflet issue: it changes how the browser rounds each tile's
+   transform: translate3d(...) position, which is what actually produces
+   the gap, without touching the image's rendered size at all. */
+.leaflet-tile { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 .map-controls {
   position: absolute; top: 12px; right: 12px; z-index: 1000;
   background: rgba(255,255,255,0.95); border: 1px solid #d0d5dd; border-radius: 8px;
