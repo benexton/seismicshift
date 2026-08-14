@@ -4,7 +4,7 @@
 //
 // EARTHQUAKE: NZS 3604's seismic bracing demand for a given house is driven
 // by the code's own EQ zone factor (zone 1 = 0.2, zone 2 = 0.3, zone 3 =
-// 0.45) and is otherwise identical for any two towns in the same zone. So
+// 0.46) and is otherwise identical for any two towns in the same zone. So
 // the baseline EQ figure is a single reference-house number per zone, scaled
 // proportionally from Christchurch's curated zone-2 example (1000 BU,
 // whole-house) via the town's eqZoneFactor. Like the curated data, it does
