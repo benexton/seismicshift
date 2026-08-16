@@ -71,11 +71,11 @@ const howCards = [
 ]
 
 const stats = {
-  label: "Design study: Canterbury Solar Panel Installation on Existing Building",
+  label: "Case study: Canterbury Solar Panel Installation on Existing Building",
   items: [
     { stat: "4",     label: "Quake Defender® devices" },
     { stat: "10t",   label: "Extra weight able to be added to the structure by using Quake Defender®" },
-    { stat: ">50%",  label: "Seismic force reduction target" },
+    { stat: ">100%", label: "NBS target after solar panel installation" },
     { stat: "±50mm", label: "System movement" },
   ],
 }
@@ -129,7 +129,7 @@ const stats = {
   <!-- Helper cards -->
   <section class="w-full bg-slate-50 py-12 border-t border-slate-100">
     <div class="max-w-7xl mx-auto px-6 md:px-16">
-      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">How can Quake Defender help you?</h2>
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-10 md:mb-16">How can Quake Defender help you?</h2>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
         {helperCards.map(card => (
           <ImageCard client:visible title={card.title} img={card.img} body={card.body} />
@@ -141,7 +141,7 @@ const stats = {
   <!-- How it works -->
   <section class="w-full bg-white py-12 border-t border-slate-100">
     <div class="max-w-7xl mx-auto px-6 md:px-16">
-      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">How it works.</h2>
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-10 md:mb-16">How it works.</h2>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 lg:gap-10">
         {howCards.map(card => card.type === 'video'
           ? <VideoCard client:visible title={card.title} vimeo={card.vimeo} translate={card.translate} />
@@ -154,7 +154,7 @@ const stats = {
   <!-- Stats / Case study -->
   <section class="w-full bg-slate-50 py-8 md:py-12 border-t border-slate-100">
     <div class="max-w-7xl mx-auto px-6 md:px-16">
-      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-8 md:mb-12">The Seismic Shift.</h2>
+      <h2 class="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 mb-10 md:mb-16">The Seismic Shift.</h2>
       <div class="md:grid md:grid-cols-2 md:gap-8 lg:gap-10 space-y-4 md:space-y-0">
         <div class="bg-white px-6 py-4 md:px-8 md:py-5 lg:px-10 lg:py-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm flex flex-col h-[220px] md:h-[240px] lg:h-[280px]">
           <div class="flex-1 flex items-center pb-3 md:pb-4">
