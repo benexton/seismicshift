@@ -41,7 +41,12 @@ export default function VideoCard({ title, vimeo, translate }) {
       if (e.source !== iframeRef.current?.contentWindow) return
       try {
         const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
-        if (data.event === 'finish') {
+        if (data.event === 'ready') {
+          // The player only starts sending play/pause/timeupdate once we've
+          // subscribed, and it can't receive that subscription until it's
+          // actually ready - the iframe's own onLoad fires too early for this.
+          ;['play', 'pause', 'finish', 'timeupdate'].forEach(event => postToPlayer('addEventListener', event))
+        } else if (data.event === 'finish') {
           setPlaying(false); setActive(false)
         } else if (data.event === 'play') {
           setPaused(false)
@@ -72,10 +77,6 @@ export default function VideoCard({ title, vimeo, translate }) {
     window.addEventListener('scroll', check, { passive: true })
     return () => window.removeEventListener('scroll', check)
   }, [])
-
-  const handleIframeLoad = () => {
-    ;['play', 'pause', 'finish', 'timeupdate'].forEach(event => postToPlayer('addEventListener', event))
-  }
 
   const togglePlayPause = (e) => {
     e.stopPropagation()
@@ -125,7 +126,6 @@ export default function VideoCard({ title, vimeo, translate }) {
         <div className="absolute inset-0 w-full h-full overflow-hidden">
           <iframe
             ref={iframeRef}
-            onLoad={handleIframeLoad}
             src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0&api=1&controls=0`}
             className="absolute top-1/2 left-1/2 pointer-events-none"
             style={{ border: 0, width: '158%', height: '158%', transform: videoTransform }}
