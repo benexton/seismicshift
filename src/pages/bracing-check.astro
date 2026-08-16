@@ -1,6 +1,5 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
-import BracingCheck from '../components/BracingCheck.jsx'
 
 const BRAND = '#17638f'
 ---
@@ -19,23 +18,46 @@ const BRAND = '#17638f'
         </span>
       </div>
 
-      <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tighter text-slate-900 mb-6">
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tighter text-slate-900 mb-10">
         Building codes are designed to save lives.<br />
         <span style={`color:${BRAND}`}>What would it take to save your home too?</span>
       </h1>
 
-      <div class="mt-10">
-        <BracingCheck client:load />
-      </div>
-    </div>
-  </section>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <a
+          href="/bracing-check/homeowner/"
+          class="group text-left rounded-3xl border-2 border-slate-100 bg-white hover:border-[#17638f]/40 hover:shadow-md transition motion-reduce:transition-none p-7 md:p-9 focus:outline-none focus:ring-2 focus:ring-[#17638f]/30"
+        >
+          <p class="text-xs font-black uppercase tracking-widest mb-3" style={`color:${BRAND}`}>Homeowner</p>
+          <h2 class="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 leading-tight mb-2">
+            I&rsquo;m looking to build a home
+          </h2>
+          <p class="text-slate-500 text-base leading-relaxed">
+            Get a provisional, location-based indication - no bracing figures needed.
+          </p>
+          <span class="inline-flex items-center gap-2 mt-5 text-sm font-bold tracking-wide" style={`color:${BRAND}`}>
+            Get started
+            <span aria-hidden="true" class="inline-block transition motion-reduce:transition-none group-hover:translate-x-0.5">&rarr;</span>
+          </span>
+        </a>
 
-  <section class="w-full bg-slate-50 border-t border-slate-100 py-16">
-    <div class="max-w-7xl mx-auto px-6 md:px-16">
-      <p class="text-xs font-black text-slate-500 mb-3">Disclaimer</p>
-      <p class="text-sm text-slate-400 leading-relaxed">
-        This indicates relative demand, not a design specification. Any build requires specific engineering design. Preliminary information only, not professional engineering, legal, or insurance advice. Figures shown throughout this page are illustrative placeholders, not final figures. The moderate, high and extreme shift bands are illustrative cutoffs, not final thresholds. Worked-example bracing units for the curated locations, and baseline estimates for every other location, are placeholders too, not location-specific NZS 3604 calculations. The SR337 uplift factor is set from Seismic Shift's own models; the basis will be published separately.
-      </p>
+        <a
+          href="/bracing-check/designer/"
+          class="group text-left rounded-3xl border-2 border-slate-100 bg-white hover:border-[#17638f]/40 hover:shadow-md transition motion-reduce:transition-none p-7 md:p-9 focus:outline-none focus:ring-2 focus:ring-[#17638f]/30"
+        >
+          <p class="text-xs font-black uppercase tracking-widest mb-3" style={`color:${BRAND}`}>Designer</p>
+          <h2 class="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 leading-tight mb-2">
+            I&rsquo;m a designer working on a new home or renovation project
+          </h2>
+          <p class="text-slate-500 text-base leading-relaxed">
+            Enter your NZS 3604 bracing units for the specific picture on your site.
+          </p>
+          <span class="inline-flex items-center gap-2 mt-5 text-sm font-bold tracking-wide" style={`color:${BRAND}`}>
+            Get started
+            <span aria-hidden="true" class="inline-block transition motion-reduce:transition-none group-hover:translate-x-0.5">&rarr;</span>
+          </span>
+        </a>
+      </div>
     </div>
   </section>
 </BaseLayout>

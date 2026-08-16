@@ -137,6 +137,21 @@ const stats = {
           <ImageCard client:visible title={card.title} img={card.img} body={card.body} containImage={card.containImage} />
         ))}
       </div>
+
+      <div class="mt-10 md:mt-12 rounded-3xl border border-slate-100 bg-white shadow-sm p-7 md:p-9 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div>
+          <p class="text-xs font-black uppercase tracking-widest mb-2" style={`color:${BRAND}`}>Not sure where you stand?</p>
+          <h3 class="text-xl md:text-2xl font-black tracking-tighter text-slate-900 mb-2">See how much bracing your home might need first.</h3>
+          <p class="text-slate-500 text-base leading-relaxed max-w-xl">
+            Try our free bracing resilience check to get a provisional, location-based indication before you talk to us about FrontFoot®.
+          </p>
+        </div>
+        <a href="/bracing-check/"
+          class="inline-flex items-center justify-center gap-2 text-white px-6 py-3 text-sm font-bold tracking-wide rounded-full shadow-md hover:opacity-90 transition motion-reduce:transition-none shrink-0"
+          style={`background-color:${BRAND}`}>
+          Try the bracing check <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
     </div>
   </section>
 

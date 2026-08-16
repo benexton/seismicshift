@@ -8,6 +8,7 @@ const isActive = (path: string) =>
 const productLinks = [
   { href: '/quake-defender/', label: 'Quake Defender®', sub: 'Commercial & Industrial' },
   { href: '/frontfoot/',      label: 'FrontFoot®',      sub: 'Residential Homes' },
+  { href: '/bracing-check/',  label: 'Bracing Resilience Check', sub: 'Free NZS 3604 bracing tool' },
   { href: '/frontfoot-plinth/', label: 'FrontFoot® Plinth', sub: 'Data Centres & Critical Assets' },
 ]
 ---
@@ -28,7 +29,7 @@ const productLinks = [
         <div class="relative group">
           <button
             class="flex items-center gap-1 px-3 py-1.5 rounded-full border-2 font-bold text-xs tracking-wide transition-all duration-200"
-            style={isActive('/quake-defender') || isActive('/frontfoot') || isActive('/frontfoot-plinth')
+            style={isActive('/quake-defender') || isActive('/frontfoot') || isActive('/bracing-check') || isActive('/frontfoot-plinth')
               ? `border-color:${BRAND};background-color:#eef1f3;color:${BRAND}`
               : 'border-color:#cbd5e1;background-color:white;color:#475569'}
             aria-haspopup="true">

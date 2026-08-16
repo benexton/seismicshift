@@ -159,8 +159,6 @@ export function classifyShiftBand(H: number): ShiftBand {
 export interface HomeownerInput {
   /** Real hazard-shift ratio H for this location and site class. */
   H: number;
-  /** Location-linked governance hint: is wind the likely governing action for a typical house here? Omit when not known for this location. */
-  windLikelyGoverns?: boolean;
 }
 
 export interface HomeownerResult {
@@ -176,23 +174,17 @@ export interface HomeownerResult {
 }
 
 export function getHomeownerResult(input: HomeownerInput): HomeownerResult {
-  const { H, windLikelyGoverns } = input;
+  const { H } = input;
   const pct = Math.round((H - 1) * 100);
   const band = classifyShiftBand(H);
 
   const hazardComparison = pct > 0
-    ? `roughly ${pct}% higher than what NZS 3604 requires, just to achieve minimum performance`
-    : `no higher than what NZS 3604 requires to achieve minimum performance`;
+    ? `roughly ${pct}% higher than what NZS 3604 already requires, just to achieve minimum performance`
+    : `no higher than what NZS 3604 already requires to achieve minimum performance`;
 
   const windGovernance =
-    windLikelyGoverns === undefined
-      ? "Whether wind or earthquake loads are higher on this site depends on your specific design. " +
-        "Your actual design numbers will confirm which one matters most."
-      : windLikelyGoverns
-        ? "For a typical house here, wind loads are likely already higher than earthquake loads, " +
-          "so the practical increase may be small. Your actual design numbers will confirm."
-        : "For a typical house here, earthquake loads are likely higher than wind, so this is " +
-          "worth taking seriously. Your actual design numbers will confirm.";
+    "Consider speaking with your designer about what a low damage outcome might look like for your project. " +
+    "They can input the design numbers into the designer tab of this tool for a more detailed consideration.";
 
   return {
     hazardShiftStatement:
