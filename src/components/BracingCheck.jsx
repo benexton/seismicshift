@@ -3,21 +3,13 @@ import {
   computeDesignerResult,
   getHomeownerResult,
 } from '../lib/bracingChecker'
-import { getBracingLocation } from '../lib/bracingLocations'
 import { LOCATION_HAZARDS, LOCATION_HAZARDS_BY_NAME, SITE_CLASS_LABELS, DEFAULT_SITE_CLASS } from '../lib/locationHazard'
 import { getTownChartStats } from '../lib/townDemand'
 
 const BRAND = '#17638f'
-const BRAND_TINT = '#eef1f3'
 const EQ = '#c07c1c'
-const EQ_TINT = '#f6edd9'
-const EQ_INK = '#8a5a12'
-const ALERT = '#a23b23'
-const ALERT_TINT = '#f6e2dc'
 const INK = '#0f172a'
 const MARGIN = '#16a34a'
-const NONE_SHIFT = '#475569'
-const NONE_SHIFT_TINT = '#f1f5f9'
 
 // Town-comparison chart only: a self-contained blue gradient (dark to
 // light), deliberately distinct from the black/blue/green key used in the
@@ -46,13 +38,6 @@ const DEFAULT_LOCATION = 'Christchurch'
 
 const FIELD_CLASS =
   'w-full text-[0.98rem] font-medium text-slate-900 px-3.5 py-2.5 border-2 border-slate-200 rounded-xl bg-white focus:outline-none focus:border-[#17638f] focus:ring-2 focus:ring-[#17638f]/20 transition motion-reduce:transition-none'
-
-const BAND_STYLE = {
-  none: { color: NONE_SHIFT, backgroundColor: NONE_SHIFT_TINT },
-  moderate: { color: BRAND, backgroundColor: BRAND_TINT },
-  high: { color: EQ_INK, backgroundColor: EQ_TINT },
-  extreme: { color: ALERT, backgroundColor: ALERT_TINT },
-}
 
 function LocationField({ label, valueKey, onSelect }) {
   const [query, setQuery] = useState('')
@@ -578,14 +563,12 @@ function DesignerMode({ locationKey, setLocationKey, siteClass, setSiteClass }) 
 }
 
 function HomeownerMode({ locationKey, setLocationKey, siteClass, setSiteClass }) {
-  const locationBu = getBracingLocation(locationKey)
   const hazard = LOCATION_HAZARDS_BY_NAME[locationKey]
 
   const result = useMemo(
-    () => getHomeownerResult({ H: hazard.H[siteClass], windLikelyGoverns: locationBu?.windLikelyGoverns }),
-    [hazard, siteClass, locationBu]
+    () => getHomeownerResult({ H: hazard.H[siteClass] }),
+    [hazard, siteClass]
   )
-  const bandStyle = BAND_STYLE[result.band]
   const statementParts = result.hazardShiftStatement.split(/(roughly \d+%)/)
 
   return (
@@ -606,7 +589,7 @@ function HomeownerMode({ locationKey, setLocationKey, siteClass, setSiteClass })
       </p>
 
       <p className="text-2xl md:text-4xl lg:text-5xl font-black tracking-tighter text-slate-900 leading-tight mt-8">
-        Meeting only that minimum can still leave a home <b style={{ color: BRAND }}>needing extensive repairs</b> - independent research suggests <b style={{ color: BRAND }}>around 50% more bracing</b> is needed to limit that damage.
+        Meeting only that minimum can still leave a home <b style={{ color: BRAND }}>needing extensive repairs</b> - independent research suggests <b style={{ color: BRAND }}>around 50% more bracing</b> is needed to limit damage.
       </p>
 
       <details className="mt-5 group">
@@ -621,14 +604,7 @@ function HomeownerMode({ locationKey, setLocationKey, siteClass, setSiteClass })
         </p>
       </details>
 
-      <span
-        className="inline-flex items-center gap-1.5 text-xs font-extrabold px-3.5 py-1.5 rounded-full mt-5"
-        style={bandStyle}
-      >
-        {result.bandLabel}
-      </span>
-
-      <p className="text-base md:text-lg text-slate-600 leading-relaxed mt-4">{result.governanceFlavour}</p>
+      <p className="text-base md:text-lg text-slate-600 leading-relaxed mt-5">{result.governanceFlavour}</p>
 
       <a
         href="/contact/"
@@ -755,7 +731,7 @@ function TownComparisonChart({ selectedLocation, siteClass, setSiteClass }) {
         How does your town or city stack up against others?
       </h2>
       <p className="text-sm text-slate-400 mb-5">
-        Here is a selection of towns and cities across New Zealand, ranked by low damage target - largest first. Black is NZS 3604&rsquo;s own demand for that town&rsquo;s earthquake zone; blue, where present, is how much higher TS 1170.5:2025 pushes that for this specific town; green is the added SR337 margin on top, to reach a low damage outcome rather than just the life-safety minimum. Figures are unitless - useful only for comparing towns relative to each other, not as bracing units.
+        Here is a selection of towns and cities across New Zealand, and their relative seismic risk for a NZS 3604 structure - largest first. Dark blue is NZS 3604&rsquo;s own demand for that town&rsquo;s earthquake zone; mid blue, where present, is how much higher the latest hazard modelling (TS 1170.5:2025) pushes that for this specific town; light blue is the added SR337 margin on top, considering what might be required to reach a low damage outcome rather than just the life-safety minimum. Figures are unitless - useful only for comparing towns relative to each other, not as bracing units.
       </p>
 
       <SiteClassField value={siteClass} onChange={setSiteClass} />
@@ -785,51 +761,7 @@ function TownComparisonChart({ selectedLocation, siteClass, setSiteClass }) {
   )
 }
 
-function PathChoice({ onChoose }) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <button
-        type="button"
-        onClick={() => onChoose('homeowner')}
-        className="group text-left rounded-3xl border-2 border-slate-100 bg-white hover:border-[#17638f]/40 hover:shadow-md transition motion-reduce:transition-none p-7 md:p-9 focus:outline-none focus:ring-2 focus:ring-[#17638f]/30"
-      >
-        <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: BRAND }}>Homeowner</p>
-        <h2 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 leading-tight mb-2">
-          I&rsquo;m looking to build a home
-        </h2>
-        <p className="text-slate-500 text-base leading-relaxed">
-          Get a provisional, location-based indication - no bracing figures needed.
-        </p>
-        <span className="inline-flex items-center gap-2 mt-5 text-sm font-bold tracking-wide" style={{ color: BRAND }}>
-          Get started
-          <span aria-hidden="true" className="inline-block transition motion-reduce:transition-none group-hover:translate-x-0.5">&rarr;</span>
-        </span>
-      </button>
-
-      <button
-        type="button"
-        onClick={() => onChoose('designer')}
-        className="group text-left rounded-3xl border-2 border-slate-100 bg-white hover:border-[#17638f]/40 hover:shadow-md transition motion-reduce:transition-none p-7 md:p-9 focus:outline-none focus:ring-2 focus:ring-[#17638f]/30"
-      >
-        <p className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: BRAND }}>Designer</p>
-        <h2 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 leading-tight mb-2">
-          I&rsquo;m a designer working on a new home or renovation project
-        </h2>
-        <p className="text-slate-500 text-base leading-relaxed">
-          Enter your NZS 3604 bracing units for the specific picture on your site.
-        </p>
-        <span className="inline-flex items-center gap-2 mt-5 text-sm font-bold tracking-wide" style={{ color: BRAND }}>
-          Get started
-          <span aria-hidden="true" className="inline-block transition motion-reduce:transition-none group-hover:translate-x-0.5">&rarr;</span>
-        </span>
-      </button>
-    </div>
-  )
-}
-
-export default function BracingCheck() {
-  const [mode, setMode] = useState(null)
-
+export default function BracingCheck({ mode }) {
   // Designer and homeowner tabs each keep their own location/site-class
   // state, so the two tabs stay independent - but within a tab, the same
   // state feeds both the calculator's toggle and the comparison graph's
@@ -839,19 +771,14 @@ export default function BracingCheck() {
   const [homeownerLocationKey, setHomeownerLocationKey] = useState(DEFAULT_LOCATION)
   const [homeownerSiteClass, setHomeownerSiteClass] = useState(DEFAULT_SITE_CLASS)
 
-  if (mode === null) {
-    return <PathChoice onChoose={setMode} />
-  }
-
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setMode(null)}
+      <a
+        href="/bracing-check/"
         className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-700 transition motion-reduce:transition-none mb-6"
       >
         <span aria-hidden="true">&larr;</span> Choose a different path
-      </button>
+      </a>
 
       <div className="rounded-3xl border border-slate-100 shadow-sm bg-white overflow-hidden">
         <div className="p-6 md:p-9">
@@ -874,14 +801,13 @@ export default function BracingCheck() {
         <FrontFootCta />
       </div>
 
-      {mode === 'designer' && (
+      {mode === 'designer' ? (
         <TownComparisonChart
           selectedLocation={designerLocationKey}
           siteClass={designerSiteClass}
           setSiteClass={setDesignerSiteClass}
         />
-      )}
-      {mode === 'homeowner' && (
+      ) : (
         <TownComparisonChart
           selectedLocation={homeownerLocationKey}
           siteClass={homeownerSiteClass}

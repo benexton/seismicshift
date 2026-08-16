@@ -1,0 +1,41 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import BracingCheck from '../../components/BracingCheck.jsx'
+
+const BRAND = '#17638f'
+---
+
+<BaseLayout
+  title="Bracing Resilience Check for Homeowners | Seismic Shift"
+  description="See how much bracing above the NZS 3604:2011 minimum a stay-livable home needs on your site, and where wind loads already have you covered."
+  canonicalPath="/bracing-check/homeowner/"
+>
+  <section class="w-full bg-white py-16">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <p class="text-xs font-black uppercase tracking-widest text-slate-400">Bracing resilience check</p>
+        <span class="shrink-0 text-[0.62rem] font-black uppercase tracking-widest text-[#c07c1c] bg-[#f6edd9] border border-[#e6d3a8] rounded-full px-2.5 py-1">
+          Prototype: illustrative figures
+        </span>
+      </div>
+
+      <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tighter text-slate-900 mb-6">
+        Building codes are designed to save lives.<br />
+        <span style={`color:${BRAND}`}>What would it take to save your home too?</span>
+      </h1>
+
+      <div class="mt-10">
+        <BracingCheck client:load mode="homeowner" />
+      </div>
+    </div>
+  </section>
+
+  <section class="w-full bg-slate-50 border-t border-slate-100 py-16">
+    <div class="max-w-7xl mx-auto px-6 md:px-16">
+      <p class="text-xs font-black text-slate-500 mb-3">Disclaimer</p>
+      <p class="text-sm text-slate-400 leading-relaxed">
+        This tool indicates relative demand, not a design specification. Any build requires specific engineering consideration. Preliminary information only, not professional engineering, legal, or insurance advice. Figures shown throughout this page are illustrative placeholders, not final figures. The moderate, high and extreme shift bands are illustrative cutoffs, not final thresholds. Worked-example bracing units for the curated locations, and baseline estimates for every other location, are placeholders too, not location-specific NZS 3604 calculations. The SR337 uplift factor is set from the recommendations in BRANZ SR337 for what it might take to achieve a low damage outcome.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
