@@ -11,7 +11,11 @@ const PlayIcon = ({ className }) => (
 
 function VideoPlayer({ mobile = false }) {
   const [playing, setPlaying] = useState(false)
-  const [paused, setPaused] = useState(false)
+  // Starts true (not just "not yet confirmed playing") because autoplay is
+  // frequently blocked by the browser when unmuted - with Vimeo's own
+  // controls hidden, this is what keeps our play button on screen as a
+  // fallback instead of leaving a frozen, unclickable-looking frame.
+  const [paused, setPaused] = useState(true)
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const [scrubbing, setScrubbing] = useState(false)
@@ -25,7 +29,7 @@ function VideoPlayer({ mobile = false }) {
   }
 
   useEffect(() => {
-    if (!playing) { setPaused(false); setProgress(0); setDuration(0) }
+    if (!playing) { setPaused(true); setProgress(0); setDuration(0) }
   }, [playing])
 
   useEffect(() => {
