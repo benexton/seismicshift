@@ -13,9 +13,10 @@ import { coordError } from '../../lib/coordsLfe.js';
 /**
  * Detail view for a triaged (Approved) site. Same editing as the review panel:
  * all attribute fields, coordinates, notes, and attachments (add multiple
- * images, links, notes). Changes save in place.
+ * images, links, notes). Changes save in place. Unverify (confirmed) sends
+ * the site back to the Unverified queue for re-review.
  */
-export default function SiteDetailModalLfe({ record, reviewer, others = [], onClose, onSaved }) {
+export default function SiteDetailModalLfe({ record, reviewer, others = [], onClose, onSaved, onUnverified }) {
   const [v, setV] = useState({ ...record });
   const [notes, setNotes] = useState(record.engineer_notes ?? '');
   const [lat, setLat] = useState(record.latitude ?? '');
@@ -23,6 +24,7 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [status, setStatus] = useState(null);
+  const [confirmUnverify, setConfirmUnverify] = useState(false);
   const [attachPending, setAttachPending] = useState(false);
   const [pendingWarn, setPendingWarn] = useState(false);
   const [streetviewFile, setStreetviewFile] = useState(null);
@@ -63,6 +65,19 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
       setStatus({ kind: 'ok', msg: 'Saved.' });
       onSaved?.(record.id, { ...p, ...(movedLocation ? { latitude: Number(lat), longitude: Number(lng) } : {}) });
     } catch (ex) { setBusy(false); setErr(`Save failed: ${ex.message ?? ex}`); }
+  }
+
+  async function unverify() {
+    if (blockedByPending()) return;
+    setBusy(true); setErr('');
+    try {
+      const { error } = await supabaseLfe.from('triage_records')
+        .update({ status: 'Unverified', reviewed_by: null, reviewed_at: null })
+        .eq('id', record.id);
+      if (error) throw error;
+      setBusy(false);
+      onUnverified?.(record.id);
+    } catch (ex) { setBusy(false); setErr(`Unverify failed: ${ex.message ?? ex}`); }
   }
 
   const aiColor = DAMAGE_COLOR[record.damage_score] ?? '#9e9e9e';
@@ -132,12 +147,22 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
         {err && <p className="status-line err">{err}</p>}
         {pendingWarn && <p className="pending-warn">You have unsaved images or files. Click Add to save them, or Discard, before leaving this record.</p>}
 
-        <div className="foot">
-          <button className="btn secondary" onClick={guardedClose} disabled={busy}>Close</button>
-          <span className="grow" />
-          {status && <span className={`status-line ${status.kind}`} style={{ alignSelf: 'center' }}>{status.msg}</span>}
-          <button className="btn" onClick={save} disabled={busy}>{busy ? 'Saving...' : 'Save changes'}</button>
-        </div>
+        {confirmUnverify ? (
+          <div className="foot confirm">
+            <span className="confirm-text">Unverify this site? It will drop back into the Unverified queue for re-review.</span>
+            <span className="grow" />
+            <button className="btn secondary" onClick={() => setConfirmUnverify(false)} disabled={busy}>Keep it</button>
+            <button className="btn-reject" onClick={unverify} disabled={busy}>{busy ? 'Unverifying...' : 'Yes, unverify'}</button>
+          </div>
+        ) : (
+          <div className="foot">
+            <button className="btn secondary" onClick={guardedClose} disabled={busy}>Close</button>
+            <button className="btn-reject" onClick={() => { if (!blockedByPending()) setConfirmUnverify(true); }} disabled={busy}>Unverify</button>
+            <span className="grow" />
+            {status && <span className={`status-line ${status.kind}`} style={{ alignSelf: 'center' }}>{status.msg}</span>}
+            <button className="btn" onClick={save} disabled={busy}>{busy ? 'Saving...' : 'Save changes'}</button>
+          </div>
+        )}
       </div>
     </div>
   );
