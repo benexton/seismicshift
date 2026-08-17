@@ -1,9 +1,47 @@
-import React, { Suspense, useRef, useState, useEffect } from 'react'
+import React, { Suspense, useRef, useState, useEffect, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, useGLTF, Stage } from '@react-three/drei'
+import * as THREE from 'three'
+
+// These models export their repeated small parts (bolts/fasteners) using
+// the glTF EXT_mesh_gpu_instancing extension, which three.js loads as a
+// THREE.InstancedMesh. Some Android GPU drivers mishandle instanced
+// rendering - the per-instance transforms come out corrupted/unstable,
+// which renders as a chaotic jumble of misplaced black geometry jittering
+// every frame. Desktop and iPhone GPUs render the same instances fine.
+// Unpacking each InstancedMesh into plain, separately-positioned Mesh
+// clones after load sidesteps GPU instancing entirely.
+function deinstance(scene) {
+  const clone = scene.clone(true)
+  const instanced = []
+  clone.traverse((node) => { if (node.isInstancedMesh) instanced.push(node) })
+
+  for (const node of instanced) {
+    const group = new THREE.Group()
+    group.name = node.name
+    group.position.copy(node.position)
+    group.quaternion.copy(node.quaternion)
+    group.scale.copy(node.scale)
+
+    const m = new THREE.Matrix4()
+    for (let i = 0; i < node.count; i++) {
+      node.getMatrixAt(i, m)
+      const mesh = new THREE.Mesh(node.geometry, node.material)
+      mesh.matrixAutoUpdate = false
+      mesh.matrix.copy(m)
+      group.add(mesh)
+    }
+
+    node.parent.add(group)
+    node.parent.remove(node)
+  }
+
+  return clone
+}
 
 function Model({ src, rotation, scale, mouse }) {
   const { scene } = useGLTF(src)
+  const deinstanced = useMemo(() => deinstance(scene), [scene])
   const groupRef = useRef()
 
   useFrame(() => {
@@ -16,7 +54,7 @@ function Model({ src, rotation, scale, mouse }) {
 
   return (
     <group ref={groupRef} rotation={rotation} scale={scale}>
-      <primitive object={scene} />
+      <primitive object={deinstanced} />
     </group>
   )
 }
