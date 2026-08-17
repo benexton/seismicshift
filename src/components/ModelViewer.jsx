@@ -114,12 +114,25 @@ export default function ModelViewer({
         onPointerMove={() => setHint(false)}
         {...trackMouse}
       >
-        <Canvas shadows camera={camera}>
+        <Canvas camera={camera}>
           <Suspense fallback={null}>
+            {/* Stage defaults to a "contact" shadow catcher, which patches
+                Three.js's depth-material shader via string-replacement
+                (onBeforeCompile) then renders it as a blurred, semi-
+                transparent plane. That string patch is matched against the
+                compiled GLSL boilerplate, which some Android GPU shader
+                compilers format just differently enough to break - when it
+                silently fails to match, what's left is the raw, fully
+                opaque depth visualization instead of a soft shadow, which
+                is why this rendered as a huge solid-black wedge on Android
+                while looking fine on iPhone. Disabling shadows sidesteps
+                that fragile technique entirely (also drops the "contact"
+                keyword's boolean, which is what implicitly turned on
+                shadow-casting/receiving in the first place). */}
             <Stage
+              shadows={false}
               environment={environment}
               intensity={intensity}
-              contactShadow={{ opacity: 0.5, blur: 2 }}
               center={{ disableY: false }}
             >
               <Model src={src} scale={scale} rotation={rotation} mouse={mouseRef} />
