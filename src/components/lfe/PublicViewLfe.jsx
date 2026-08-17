@@ -7,6 +7,8 @@ import RecordTableLfe from './RecordTableLfe.jsx';
 import Zoomable from '../Zoomable.jsx';
 import { downloadFile } from '../../lib/mediaLfe.js';
 import { emptyFilter, matchesFilter, filterActive } from '../../lib/filterLfe.js';
+import { epicentreMetaOf } from '../../lib/useEvent.js';
+import EpicentreMarker, { LegendStar } from './EpicentreMarker.jsx';
 import {
   DAMAGE_COLOR, DAMAGE_LABEL, observationTypesLabel, HEIGHT_CLASSES, cap, fmtDate, BASEMAP_PRESETS,
 } from '../../lib/constantsLfe.js';
@@ -338,22 +340,51 @@ export default function PublicViewLfe() {
     : (allSites ?? []);
   const sites = useMemo(() => activeSites.filter((s) => s.lat != null && s.lng != null), [activeSites]);
   const filtered = useMemo(() => sites.filter((s) => matchesFilter(s, filter)), [sites, filter]);
-  // Sites split across the antimeridian (e.g. Japan at ~140 and Venezuela at
-  // ~-67) need their longitude shifted the same way for the markers as for
-  // the map's fitted view - Leaflet's coordinate space is continuous and
-  // unwrapped, so a marker plotted at the raw -67 while the viewport is
-  // centred near the shifted +216 sits nearly a full world width from centre
-  // (only visible in a repeated copy of the map way off to the side). Both
-  // have to agree on the same shifted-or-not longitude for every record.
-  const mapRecords = useMemo(() => {
+
+  // Epicentre stars are event-level, not filtered like sites, and tagged to
+  // whichever event(s) are actually in view: just the selected event's own
+  // epicentre when one is chosen, or every public event's epicentre at once
+  // in the combined "All events" view (mirroring how that view already
+  // plots every public event's sites together).
+  const rawEpicentres = useMemo(() => {
+    if (slug) {
+      const e = epicentreMetaOf(data?.event);
+      return e ? [{ ...e, key: slug }] : [];
+    }
+    return events.map((ev) => {
+      const e = epicentreMetaOf(ev);
+      return e ? { ...e, key: ev.slug } : null;
+    }).filter(Boolean);
+  }, [slug, data, events]);
+
+  // Sites (and epicentres) split across the antimeridian (e.g. Japan at ~140
+  // and Venezuela at ~-67) need their longitude shifted the same way for the
+  // markers as for the map's fitted view - Leaflet's coordinate space is
+  // continuous and unwrapped, so a marker plotted at the raw -67 while the
+  // viewport is centred near the shifted +216 sits nearly a full world width
+  // from centre (only visible in a repeated copy of the map way off to the
+  // side). Every marker - site or epicentre - has to agree on the same
+  // shifted-or-not longitude, so the shift decision is made once across both.
+  const { mapRecords, mapEpicentres } = useMemo(() => {
     const raw = filtered.map((s) => ({ ...s, id: s.site_id, latitude: s.lat, longitude: s.lng }));
-    if (raw.length < 2) return raw;
-    const lngs = raw.map((r) => r.longitude);
+    const allLngs = [...raw.map((r) => r.longitude), ...rawEpicentres.map((e) => e.lng)];
+    if (allLngs.length < 2) return { mapRecords: raw, mapEpicentres: rawEpicentres };
     const spread = (arr) => Math.max(...arr) - Math.min(...arr);
-    const shifted = lngs.map((lng) => (lng < 0 ? lng + 360 : lng));
-    if (spread(shifted) >= spread(lngs)) return raw;
-    return raw.map((r, i) => ({ ...r, longitude: shifted[i] }));
-  }, [filtered]);
+    const shiftedAll = allLngs.map((lng) => (lng < 0 ? lng + 360 : lng));
+    const doShift = spread(shiftedAll) < spread(allLngs);
+    const shift = (lng) => (doShift && lng < 0 ? lng + 360 : lng);
+    return {
+      mapRecords: raw.map((r) => ({ ...r, longitude: shift(r.longitude) })),
+      mapEpicentres: rawEpicentres.map((e) => ({ ...e, lng: shift(e.lng) })),
+    };
+  }, [filtered, rawEpicentres]);
+
+  // Epicentres included so the fitted view actually shows them, not just
+  // whatever sites happen to be nearby.
+  const fitTargets = useMemo(() => [
+    ...mapRecords,
+    ...mapEpicentres.map((e) => ({ latitude: e.lat, longitude: e.lng, id: `epi-${e.key}`, eventSlug: e.key })),
+  ], [mapRecords, mapEpicentres]);
 
   const basemapOptions = useMemo(() => {
     if (!slug) return DEFAULT_BASEMAP_OPTIONS;
@@ -448,9 +479,10 @@ export default function PublicViewLfe() {
               animating smoothly. */}
           <MapContainer center={[0, 180]} zoom={2} className="triage-map" scrollWheelZoom zoomAnimation={false}>
             {base && <TileLayer url={base.url} attribution={base.attribution ?? ''} maxZoom={18} />}
-            <FitToData records={mapRecords} />
+            <FitToData records={fitTargets} />
             <InvalidateOnResize />
             <ClusterGroup records={mapRecords} renderMarker={renderMarker} />
+            {mapEpicentres.map((e) => <EpicentreMarker key={e.key} info={{ ...e, lat: e.lat, lng: e.lng }} />)}
           </MapContainer>
           <button type="button" className="map-panel-toggle" onClick={() => setMapPanelOpen((o) => !o)}>
             {mapPanelOpen ? 'Hide map settings' : 'Basemap & legend'}
@@ -465,6 +497,9 @@ export default function PublicViewLfe() {
               {[0, 1, 2, 3, 4, 5].map((s) => (
                 <div className="row" key={s}><span className="dot" style={{ background: DAMAGE_COLOR[s] }} />{DAMAGE_LABEL[s]}</div>
               ))}
+              {mapEpicentres.length > 0 && (
+                <div className="row" style={{ marginTop: 4 }}><LegendStar />Epicentre</div>
+              )}
             </div>
             <div className="count">{err ? err : `${filtered.length} verified site(s)`}{slug && data?.generatedAt && !err ? ` · updated ${fmtDate(data.generatedAt)}` : ''}</div>
           </div>

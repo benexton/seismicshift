@@ -579,4 +579,25 @@ body {
 .pub-notes p { margin: 2px 0 0; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; }
 .pub-links { display: flex; gap: 16px; margin-top: 14px; }
 .pub-links a { font-size: 13px; font-weight: 600; }
+
+/* ---- epicentre marker ------------------------------------------------------
+   Deliberately not a coloured dot like a site: a star (the standard
+   seismological symbol for an epicentre) with a pulsing ring, so it reads as
+   the origin point rather than one more observation. */
+.epicentre-icon { position: relative; width: 28px; height: 28px; }
+.epicentre-pulse {
+  position: absolute; top: 50%; left: 50%; width: 28px; height: 28px;
+  margin: -14px 0 0 -14px; border-radius: 50%;
+  border: 2px solid rgba(180, 35, 24, .55);
+  animation: epicentre-pulse 1.8s ease-out infinite;
+  pointer-events: none;
+}
+.epicentre-star { position: relative; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+@keyframes epicentre-pulse {
+  0% { transform: scale(.6); opacity: .9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.epicentre-tip b { display: block; margin-bottom: 2px; }
+.legend-star { display: inline-flex; align-items: center; justify-content: center; width: 12px; height: 12px; }
+.modal .body.epicentre-detail { display: block; }
 .pub-sub { font-size: 14px; color: #8A1538; margin: 16px 0 6px; }

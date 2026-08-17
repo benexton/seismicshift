@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { supabaseLfe, LFE_RECORD_COLUMNS } from '../../lib/supabaseLfe.js';
-import { useEvent, basemapEntries, mapCenterOf } from '../../lib/useEvent.js';
+import { useEvent, basemapEntries, mapCenterOf, epicentreMetaOf } from '../../lib/useEvent.js';
 import {
   DAMAGE_COLOR, DAMAGE_LABEL, CLASSIFICATION_SCORES, SOURCE_LABEL, observationTypesLabel,
 } from '../../lib/constantsLfe.js';
@@ -11,6 +11,7 @@ import FilterBarLfe from './FilterBarLfe.jsx';
 import RecordTableLfe from './RecordTableLfe.jsx';
 import { emptyFilter, matchesFilter } from '../../lib/filterLfe.js';
 import SiteDetailModalLfe from './SiteDetailModalLfe.jsx';
+import EpicentreMarker, { LegendStar } from './EpicentreMarker.jsx';
 
 function FitToData({ records }) {
   const map = useMap();
@@ -30,10 +31,11 @@ function FitToData({ records }) {
  * enrich it.
  */
 export default function TriagedSitesLfe({ reviewer, othersByRecord, setActiveRecord }) {
-  const { event } = useEvent();
+  const { event, meta } = useEvent();
   const eventId = event?.id;
   const options = useMemo(() => basemapEntries(event), [event]);
   const { center, zoom } = mapCenterOf(event);
+  const epicentre = useMemo(() => epicentreMetaOf(event, meta), [event, meta]);
 
   const [records, setRecords] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -87,6 +89,9 @@ export default function TriagedSitesLfe({ reviewer, othersByRecord, setActiveRec
   }
 
   const base = options.find(([k]) => k === basemap)?.[1];
+  const fitTargets = useMemo(() => (
+    epicentre ? [...filtered, { latitude: epicentre.lat, longitude: epicentre.lng }] : filtered
+  ), [filtered, epicentre]);
 
   return (
     <div className="triage-wrap">
@@ -96,8 +101,9 @@ export default function TriagedSitesLfe({ reviewer, othersByRecord, setActiveRec
         <div className="map-area">
           <MapContainer center={center} zoom={zoom} className="triage-map" scrollWheelZoom zoomAnimation={false}>
             {base && <TileLayer url={base.url} attribution={base.attribution ?? ''} maxZoom={18} />}
-            <FitToData records={filtered} />
+            <FitToData records={fitTargets} />
             <ClusterGroup records={filtered} renderMarker={renderMarker} />
+            <EpicentreMarker info={epicentre} />
           </MapContainer>
 
           <div className="map-controls">
@@ -123,6 +129,12 @@ export default function TriagedSitesLfe({ reviewer, othersByRecord, setActiveRec
               <span className="dot ring" style={{ borderColor: '#7c3aed' }} />
               In use by someone
             </div>
+            {epicentre && (
+              <div className="row" style={{ marginTop: 4 }}>
+                <LegendStar />
+                Epicentre
+              </div>
+            )}
           </div>
         </div>
       ) : (

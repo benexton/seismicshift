@@ -60,6 +60,26 @@ def delete_object(path: str) -> None:
         print(f"  ! could not delete {path}: [{d.status_code}] {d.text[:200]}")
 
 
+# Epicentre + characteristics, flattened onto one dict so the frontend's
+# epicentreMetaOf() can read them the same way whether they came from this
+# static export or live off events/event_meta in the authenticated workspace
+# (see src/lib/useEvent.js). Included in both the per-event snapshot and the
+# events-index manifest, so "All events" on the public map can plot every
+# event's epicentre star, not just the currently-selected one.
+def epicentre_fields(event: dict, meta: dict) -> dict:
+    return {
+        "epicentre_lat": event.get("epicentre_lat"),
+        "epicentre_lng": event.get("epicentre_lng"),
+        "usgs_event_id": event.get("usgs_event_id"),
+        "location_name": meta.get("location_name"),
+        "magnitude": meta.get("magnitude"),
+        "depth": meta.get("depth"),
+        "max_mmi": meta.get("max_mmi"),
+        "faulting": meta.get("faulting"),
+        "tsunami": meta.get("tsunami"),
+    }
+
+
 def export_event(event: dict) -> dict | None:
     slug = event["slug"]
     if not event.get("is_public"):
@@ -68,6 +88,8 @@ def export_event(event: dict) -> dict | None:
         return None
 
     event_id = event["id"]
+    meta_rows = sb_get("event_meta", {"select": "*", "event_id": f"eq.{event_id}"})
+    meta = meta_rows[0] if meta_rows else {}
     records = sb_get("triage_records", {"select": REC_COLS, "event_id": f"eq.{event_id}", "status": "eq.Approved", "merged_into": "is.null"})
     ids = [r["id"] for r in records]
     attachments: dict[str, list] = {}
@@ -100,8 +122,10 @@ def export_event(event: dict) -> dict | None:
         "event": {
             "name": event.get("name") or slug,
             "country": event.get("country"),
+            "event_datetime": event.get("event_datetime"),
             "mapCenter": event.get("map_center"),
             "basemap": event.get("basemap"),
+            **epicentre_fields(event, meta),
         },
         "count": len(sites),
         "sites": sites,
@@ -113,6 +137,7 @@ def export_event(event: dict) -> dict | None:
         "name": event.get("name") or slug,
         "country": event.get("country"),
         "event_datetime": event.get("event_datetime"),
+        **epicentre_fields(event, meta),
     }
 
 
