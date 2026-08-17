@@ -154,41 +154,41 @@ export default function TriageMapLfe({ reviewer, othersByRecord, setActiveRecord
           {dupCount > 0 && <span style={{ color: '#e11d48' }}> · {dupCount} possible duplicate(s)</span>}
           {err && <span style={{ color: '#b42318' }}> · {err}</span>}
         </div>
-      </div>
 
-      <div className="map-legend">
-        <div className="legend-title">Classification (fill)</div>
-        {CLASSIFICATION_SCORES.map((s) => (
-          <div className="row" key={s}>
-            <span className="dot" style={{ background: DAMAGE_COLOR[s] }} />
-            {DAMAGE_LABEL[s]}
-          </div>
-        ))}
-        <div className="legend-title" style={{ marginTop: 6 }}>Source (ring)</div>
-        {Object.entries(SOURCE_LABEL).map(([k, label]) => (
-          <div className="row" key={k}>
-            <span className="dot ring" style={{ borderColor: SOURCE_COLOR[k] }} />
-            {label}
-          </div>
-        ))}
-        <div className="row" style={{ marginTop: 4 }}>
-          <span className="dot ring" style={{ borderColor: '#e11d48', borderStyle: 'dashed' }} />
-          Possible duplicate
-        </div>
-        <div className="row">
-          <span className="dot ring" style={{ borderColor: '#7c3aed' }} />
-          In use by someone
-        </div>
-        <div className="row">
-          <span className="dot ring" style={{ borderColor: '#f59e0b', borderStyle: 'dashed' }} />
-          AI-estimated location - needs confirmation
-        </div>
-        {epicentre && (
+        <div className="map-legend">
+          <div className="legend-title">Classification (fill)</div>
+          {CLASSIFICATION_SCORES.map((s) => (
+            <div className="row" key={s}>
+              <span className="dot" style={{ background: DAMAGE_COLOR[s] }} />
+              {DAMAGE_LABEL[s]}
+            </div>
+          ))}
+          <div className="legend-title" style={{ marginTop: 6 }}>Source (ring)</div>
+          {Object.entries(SOURCE_LABEL).map(([k, label]) => (
+            <div className="row" key={k}>
+              <span className="dot ring" style={{ borderColor: SOURCE_COLOR[k] }} />
+              {label}
+            </div>
+          ))}
           <div className="row" style={{ marginTop: 4 }}>
-            <LegendStar />
-            Epicentre
+            <span className="dot ring" style={{ borderColor: '#e11d48', borderStyle: 'dashed' }} />
+            Possible duplicate
           </div>
-        )}
+          <div className="row">
+            <span className="dot ring" style={{ borderColor: '#7c3aed' }} />
+            In use by someone
+          </div>
+          <div className="row">
+            <span className="dot ring" style={{ borderColor: '#f59e0b', borderStyle: 'dashed' }} />
+            AI-estimated location - needs confirmation
+          </div>
+          {epicentre && (
+            <div className="row" style={{ marginTop: 4 }}>
+              <LegendStar />
+              Mainshock epicentre
+            </div>
+          )}
+        </div>
       </div>
       </div>
       ) : (

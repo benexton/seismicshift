@@ -498,7 +498,7 @@ export default function PublicViewLfe() {
                 <div className="row" key={s}><span className="dot" style={{ background: DAMAGE_COLOR[s] }} />{DAMAGE_LABEL[s]}</div>
               ))}
               {mapEpicentres.length > 0 && (
-                <div className="row" style={{ marginTop: 4 }}><LegendStar />Epicentre</div>
+                <div className="row" style={{ marginTop: 4 }}><LegendStar />Mainshock epicentre</div>
               )}
             </div>
             <div className="count">{err ? err : `${filtered.length} verified site(s)`}{slug && data?.generatedAt && !err ? ` · updated ${fmtDate(data.generatedAt)}` : ''}</div>

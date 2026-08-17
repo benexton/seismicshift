@@ -115,26 +115,26 @@ export default function TriagedSitesLfe({ reviewer, othersByRecord, setActiveRec
               {loading ? 'Loading sites...' : `${filtered.length} shown`}
               {err && <span style={{ color: '#b42318' }}> · {err}</span>}
             </div>
-          </div>
 
-          <div className="map-legend">
-            <div className="legend-title">Classification (fill)</div>
-            {CLASSIFICATION_SCORES.map((s) => (
-              <div className="row" key={s}>
-                <span className="dot" style={{ background: DAMAGE_COLOR[s] }} />
-                {DAMAGE_LABEL[s]}
-              </div>
-            ))}
-            <div className="row" style={{ marginTop: 4 }}>
-              <span className="dot ring" style={{ borderColor: '#7c3aed' }} />
-              In use by someone
-            </div>
-            {epicentre && (
+            <div className="map-legend">
+              <div className="legend-title">Classification (fill)</div>
+              {CLASSIFICATION_SCORES.map((s) => (
+                <div className="row" key={s}>
+                  <span className="dot" style={{ background: DAMAGE_COLOR[s] }} />
+                  {DAMAGE_LABEL[s]}
+                </div>
+              ))}
               <div className="row" style={{ marginTop: 4 }}>
-                <LegendStar />
-                Epicentre
+                <span className="dot ring" style={{ borderColor: '#7c3aed' }} />
+                In use by someone
               </div>
-            )}
+              {epicentre && (
+                <div className="row" style={{ marginTop: 4 }}>
+                  <LegendStar />
+                  Mainshock epicentre
+                </div>
+              )}
+            </div>
           </div>
         </div>
       ) : (
