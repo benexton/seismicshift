@@ -63,3 +63,28 @@ export function mapCenterOf(event) {
 export function epicentreOf(event) {
   return { lat: event?.epicentre_lat ?? null, lng: event?.epicentre_lng ?? null };
 }
+
+// Normalises epicentre + characteristics into one shape for EpicentreMarker,
+// regardless of source: the live Supabase workspace has them split across
+// `events` (lat/lng/name/datetime) and `event_meta` (magnitude/depth/...),
+// while the public JSON export flattens everything onto a single `event`
+// object - so `meta` is optional and its fields are only consulted when
+// present, falling back to the same-named field directly on `event`.
+export function epicentreMetaOf(event, meta) {
+  const lat = event?.epicentre_lat ?? null;
+  const lng = event?.epicentre_lng ?? null;
+  if (lat == null || lng == null) return null;
+  return {
+    lat, lng,
+    name: event?.name ?? null,
+    country: event?.country ?? null,
+    datetime: event?.event_datetime ?? null,
+    usgsEventId: event?.usgs_event_id ?? null,
+    locationName: meta?.location_name ?? event?.location_name ?? null,
+    magnitude: meta?.magnitude ?? event?.magnitude ?? null,
+    depth: meta?.depth ?? event?.depth ?? null,
+    maxMmi: meta?.max_mmi ?? event?.max_mmi ?? null,
+    faulting: meta?.faulting ?? event?.faulting ?? null,
+    tsunami: meta?.tsunami ?? event?.tsunami ?? null,
+  };
+}
