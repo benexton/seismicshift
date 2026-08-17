@@ -65,7 +65,7 @@ export default function EpicentreMarker({ info }) {
         eventHandlers={{ click: () => setOpen(true) }}>
         <Tooltip direction="top" offset={[0, -12]}>
           <div className="epicentre-tip">
-            <b>Epicentre{info.name ? ` · ${info.name}` : ''}</b>
+            <b>Mainshock epicentre{info.name ? ` · ${info.name}` : ''}</b>
             {summary && <div>{summary}</div>}
           </div>
         </Tooltip>
@@ -75,7 +75,7 @@ export default function EpicentreMarker({ info }) {
         <div className="modal-backdrop" onClick={() => setOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="head">
-              <h2>Epicentre{info.name ? ` · ${info.name}` : ''}</h2>
+              <h2>Mainshock epicentre{info.name ? ` · ${info.name}` : ''}</h2>
               <button className="x" onClick={() => setOpen(false)} aria-label="Close">×</button>
             </div>
             <div className="body epicentre-detail">
