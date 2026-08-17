@@ -9,62 +9,36 @@ const PlayIcon = ({ className }) => (
 )
 
 /**
- * Props: title, vimeo (full URL), translate (CSS transform string)
+ * Props: title, vimeo (full URL)
  */
-export default function VideoCard({ title, vimeo, translate }) {
+export default function VideoCard({ title, vimeo }) {
   const [active, setActive] = useState(false)
   const [playing, setPlaying] = useState(false)
-  // Starts true (not just "not yet confirmed playing") because autoplay is
-  // frequently blocked by the browser when unmuted - with Vimeo's own
-  // controls hidden, this is what keeps our play button on screen as a
-  // fallback instead of leaving a frozen, unclickable-looking frame.
-  const [paused, setPaused] = useState(true)
-  const [progress, setProgress] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [scrubbing, setScrubbing] = useState(false)
   const cardRef = useRef(null)
   const iframeRef = useRef(null)
-  const seekBarRef = useRef(null)
   const vimeoId = vimeo ? vimeo.split('/').pop() : null
-  const videoTransform = translate || 'translate(-50%, -50%)'
 
-  const postToPlayer = (method, value) => {
-    const win = iframeRef.current?.contentWindow
-    if (!win) return
-    win.postMessage(JSON.stringify(value === undefined ? { method } : { method, value }), '*')
-  }
-
-  // Reset local playback state whenever the player is unmounted (finished,
-  // scrolled out of view on mobile, etc.) so the next play starts clean.
-  useEffect(() => {
-    if (!playing) { setPaused(true); setProgress(0); setDuration(0) }
-  }, [playing])
-
+  // Hiding Vimeo's own controls (and cropping the video to zoom past them) is
+  // a paid-plan feature Vimeo can silently ignore, and we have no way to tell
+  // from here whether that's the case - so instead of fighting that, the
+  // iframe is sized to exactly match this card. Vimeo's native control bar
+  // (play/pause/seek/volume/fullscreen) then renders in full, uncropped, and
+  // is the only thing that needs to work reliably.
   useEffect(() => {
     const handleMessage = (e) => {
       if (e.source !== iframeRef.current?.contentWindow) return
       try {
         const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
         if (data.event === 'ready') {
-          // The player only starts sending play/pause/timeupdate once we've
-          // subscribed, and it can't receive that subscription until it's
-          // actually ready - the iframe's own onLoad fires too early for this.
-          ;['play', 'pause', 'finish', 'timeupdate'].forEach(event => postToPlayer('addEventListener', event))
+          iframeRef.current.contentWindow.postMessage(JSON.stringify({ method: 'addEventListener', value: 'finish' }), '*')
         } else if (data.event === 'finish') {
           setPlaying(false); setActive(false)
-        } else if (data.event === 'play') {
-          setPaused(false)
-        } else if (data.event === 'pause') {
-          setPaused(true)
-        } else if (data.event === 'timeupdate' && data.data) {
-          setDuration(data.data.duration || 0)
-          if (!scrubbing && data.data.duration) setProgress(data.data.seconds / data.data.duration)
         }
       } catch {}
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [scrubbing])
+  }, [])
 
   useEffect(() => {
     if (window.innerWidth >= 1024) return
@@ -82,91 +56,22 @@ export default function VideoCard({ title, vimeo, translate }) {
     return () => window.removeEventListener('scroll', check)
   }, [])
 
-  const togglePlayPause = (e) => {
-    e.stopPropagation()
-    postToPlayer(paused ? 'play' : 'pause')
-  }
-
-  const seekFractionFromClientX = (clientX) => {
-    if (!seekBarRef.current) return null
-    const rect = seekBarRef.current.getBoundingClientRect()
-    return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
-  }
-
-  const handleSeekPointerDown = (e) => {
-    e.stopPropagation()
-    if (!duration) return
-    setScrubbing(true)
-    const fraction = seekFractionFromClientX(e.clientX)
-    if (fraction !== null) setProgress(fraction)
-  }
-
-  useEffect(() => {
-    if (!scrubbing) return
-    const handleMove = (e) => {
-      const fraction = seekFractionFromClientX(e.clientX)
-      if (fraction !== null) setProgress(fraction)
-    }
-    const handleUp = (e) => {
-      const fraction = seekFractionFromClientX(e.clientX)
-      if (fraction !== null) postToPlayer('setCurrentTime', fraction * duration)
-      setScrubbing(false)
-    }
-    window.addEventListener('pointermove', handleMove)
-    window.addEventListener('pointerup', handleUp)
-    return () => {
-      window.removeEventListener('pointermove', handleMove)
-      window.removeEventListener('pointerup', handleUp)
-    }
-  }, [scrubbing, duration])
-
   return (
     <div
       ref={cardRef}
-      className="rounded-3xl border border-slate-100 shadow-sm overflow-hidden relative h-[220px] lg:h-[280px]"
+      className="rounded-3xl border border-slate-100 shadow-sm overflow-hidden relative h-[220px] lg:h-[280px] bg-slate-900"
       onMouseEnter={() => setActive(true)}
     >
       {playing && vimeoId ? (
-        <div className="absolute inset-0 w-full h-full overflow-hidden">
-          <iframe
-            ref={iframeRef}
-            src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0&api=1&controls=0`}
-            className="absolute top-1/2 left-1/2 pointer-events-none"
-            style={{ border: 0, width: '158%', height: '158%', transform: videoTransform }}
-            allow="autoplay; fullscreen; picture-in-picture"
-            title={title}
-          />
-          {/* Native Vimeo controls are hidden (controls=0) since the zoomed-in
-              crop needed to fill this frame also crops the control bar itself.
-              Click anywhere to toggle play/pause instead, with a dedicated
-              seek bar below that isn't affected by that crop. */}
-          <button
-            type="button"
-            aria-label={paused ? 'Play video' : 'Pause video'}
-            onClick={togglePlayPause}
-            className="absolute inset-0 w-full h-full cursor-pointer bg-transparent border-0 p-0 appearance-none"
-          >
-            {paused && (
-              <span className="absolute inset-0 flex items-center justify-center">
-                <span className="w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
-                  <PlayIcon className="w-5 h-5 lg:w-6 lg:h-6 ml-0.5" />
-                </span>
-              </span>
-            )}
-          </button>
-          <div
-            ref={seekBarRef}
-            onPointerDown={handleSeekPointerDown}
-            className="group/seek absolute bottom-0 left-0 right-0 h-4 flex items-end cursor-pointer"
-          >
-            <div className="relative w-full h-1 group-hover/seek:h-1.5 bg-white/25 transition-all">
-              <div
-                className="absolute inset-y-0 left-0 bg-white"
-                style={{ width: `${Math.min(100, progress * 100)}%` }}
-              />
-            </div>
-          </div>
-        </div>
+        <iframe
+          ref={iframeRef}
+          src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0&api=1`}
+          className="absolute inset-0 w-full h-full"
+          style={{ border: 0 }}
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          title={title}
+        />
       ) : (
         <>
           <img
