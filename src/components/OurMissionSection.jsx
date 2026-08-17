@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 
 const BRAND = '#17638f'
 const VIMEO_ID = '1218774206'
+const VIDEO_RATIO = 1280 / 720 // confirmed via Vimeo's api/v2/video/{id}.json
 
 const PlayIcon = ({ className }) => (
   <svg className={className} fill={BRAND} viewBox="0 0 20 20">
@@ -9,25 +10,64 @@ const PlayIcon = ({ className }) => (
   </svg>
 )
 
+// Reserve this much height at the card's bottom for Vimeo's native control
+// bar strip - the click-to-toggle overlay stops above it so the seek bar
+// stays reachable instead of one full-card overlay swallowing every click.
+const CONTROL_STRIP_PX = 40
+
 function VideoPlayer({ mobile = false }) {
   const [playing, setPlaying] = useState(false)
+  const [paused, setPaused] = useState(true)
+  const [coverSize, setCoverSize] = useState(null)
+  const cardRef = useRef(null)
   const iframeRef = useRef(null)
 
-  // Hiding Vimeo's own controls (and cropping the video to zoom past them) is
-  // a paid-plan feature Vimeo can silently ignore, and we have no way to tell
-  // from here whether that's the case - so instead of fighting that, the
-  // iframe is sized to exactly match this card. Vimeo's native control bar
-  // then renders in full, uncropped, and is the only thing that needs to
-  // work reliably.
+  const postToPlayer = (method, value) => {
+    const win = iframeRef.current?.contentWindow
+    if (!win) return
+    win.postMessage(JSON.stringify(value === undefined ? { method } : { method, value }), '*')
+  }
+
+  // The card's own width is fluid (a percentage of the grid column on
+  // desktop, the full column on mobile), so even though it's set up close
+  // to the video's real 16:9 ratio, it rarely matches exactly - Vimeo then
+  // letterboxes internally by whatever the gap is. This computes the actual
+  // cover-crop size in JS instead, same idea as object-fit: cover but for
+  // an iframe (which has no such CSS property), so the video always fills
+  // the card completely with zero letterboxing.
+  useEffect(() => {
+    if (!playing) return
+    const update = () => {
+      const card = cardRef.current
+      if (!card) return
+      const cw = card.clientWidth
+      const ch = card.clientHeight
+      const cardRatio = cw / ch
+      const size = VIDEO_RATIO > cardRatio
+        ? { width: ch * VIDEO_RATIO, height: ch }
+        : { width: cw, height: cw / VIDEO_RATIO }
+      setCoverSize(size)
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [playing])
+
+  useEffect(() => {
+    if (!playing) { setCoverSize(null); setPaused(true) }
+  }, [playing])
+
   useEffect(() => {
     const handleMessage = (e) => {
       if (e.source !== iframeRef.current?.contentWindow) return
       try {
         const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
         if (data.event === 'ready') {
-          iframeRef.current.contentWindow.postMessage(JSON.stringify({ method: 'addEventListener', value: 'finish' }), '*')
-        } else if (data.event === 'finish') {
-          setPlaying(false)
+          ;['play', 'pause'].forEach(event => postToPlayer('addEventListener', event))
+        } else if (data.event === 'play') {
+          setPaused(false)
+        } else if (data.event === 'pause') {
+          setPaused(true)
         }
       } catch {}
     }
@@ -35,16 +75,37 @@ function VideoPlayer({ mobile = false }) {
     return () => window.removeEventListener('message', handleMessage)
   }, [])
 
+  const togglePlayPause = (e) => {
+    e.stopPropagation()
+    postToPlayer(paused ? 'play' : 'pause')
+  }
+
   const playerBody = playing ? (
-    <iframe
-      ref={iframeRef}
-      src={`https://player.vimeo.com/video/${VIMEO_ID}?autoplay=1&autopause=0&api=1`}
-      className={`absolute inset-0 w-full h-full ${mobile ? 'rounded-2xl' : 'rounded-3xl'}`}
-      style={{ border: 0 }}
-      allow="autoplay; fullscreen; picture-in-picture"
-      allowFullScreen
-      title="Seismic Shift Story"
-    />
+    <>
+      {coverSize && (
+        <iframe
+          ref={iframeRef}
+          src={`https://player.vimeo.com/video/${VIMEO_ID}?autoplay=1&autopause=0&api=1`}
+          className="absolute top-1/2 left-1/2"
+          style={{
+            border: 0,
+            width: `${coverSize.width}px`,
+            height: `${coverSize.height}px`,
+            transform: 'translate(-50%, -50%)',
+          }}
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          title="Seismic Shift Story"
+        />
+      )}
+      <button
+        type="button"
+        aria-label={paused ? 'Play video' : 'Pause video'}
+        onClick={togglePlayPause}
+        className="absolute inset-x-0 top-0 cursor-pointer bg-transparent border-0 p-0 appearance-none"
+        style={{ bottom: `${CONTROL_STRIP_PX}px` }}
+      />
+    </>
   ) : (
     <>
       <img src={`https://vumbnail.com/${VIMEO_ID}.jpg`} alt="Seismic Shift Story"
@@ -61,14 +122,14 @@ function VideoPlayer({ mobile = false }) {
 
   if (mobile) {
     return (
-      <div className="w-full mb-4 rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-slate-900 relative" style={{ aspectRatio: '16/9' }}>
+      <div ref={cardRef} className="w-full mb-4 rounded-2xl overflow-hidden shadow-sm border border-slate-200 bg-slate-900 relative" style={{ aspectRatio: '16/9' }}>
         {playerBody}
       </div>
     )
   }
 
   return (
-    <div className="absolute top-0 left-0 w-[90%] h-72 bg-slate-900 rounded-3xl border border-slate-200 overflow-hidden shadow-md z-10 group">
+    <div ref={cardRef} className="absolute top-0 left-0 w-[90%] h-72 bg-slate-900 rounded-3xl border border-slate-200 overflow-hidden shadow-md z-10 group">
       {playerBody}
     </div>
   )
