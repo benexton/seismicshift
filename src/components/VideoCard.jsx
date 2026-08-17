@@ -13,17 +13,19 @@ const PlayIcon = ({ className }) => (
  * e.g. 1920/1080 - confirmed per-video via Vimeo's api/v2/video/{id}.json,
  * NOT the oEmbed endpoint, which returned inaccurate values for these clips)
  */
+// Reserve this much height at the card's bottom for Vimeo's native control
+// bar strip - the click-to-toggle overlay stops above it so the seek bar,
+// volume, and fullscreen buttons (whichever survive the horizontal crop)
+// stay reachable, instead of one full-card overlay swallowing every click.
+const CONTROL_STRIP_PX = 40
+
 export default function VideoCard({ title, vimeo, videoRatio = 16 / 9 }) {
   const [active, setActive] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [paused, setPaused] = useState(true)
-  const [progress, setProgress] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [scrubbing, setScrubbing] = useState(false)
   const [coverSize, setCoverSize] = useState(null)
   const cardRef = useRef(null)
   const iframeRef = useRef(null)
-  const seekBarRef = useRef(null)
   const vimeoId = vimeo ? vimeo.split('/').pop() : null
 
   const postToPlayer = (method, value) => {
@@ -37,6 +39,10 @@ export default function VideoCard({ title, vimeo, videoRatio = 16 / 9 }) {
   // video, sometimes wider), so a fixed CSS zoom can't reliably cover it.
   // This computes the correct cover-crop size in JS instead, same idea as
   // object-fit: cover but for an iframe (which has no such CSS property).
+  // The crop is centered horizontally, so it also crops the control bar's
+  // play/pause button (at its far left) along with the fullscreen/volume
+  // buttons (far right) - only the middle scrubber reliably survives. The
+  // click-to-toggle overlay below exists to cover for that.
   useEffect(() => {
     if (!playing) return
     const update = () => {
@@ -56,7 +62,7 @@ export default function VideoCard({ title, vimeo, videoRatio = 16 / 9 }) {
   }, [playing, videoRatio])
 
   useEffect(() => {
-    if (!playing) { setPaused(true); setProgress(0); setDuration(0); setCoverSize(null) }
+    if (!playing) { setCoverSize(null); setPaused(true) }
   }, [playing])
 
   useEffect(() => {
@@ -65,20 +71,17 @@ export default function VideoCard({ title, vimeo, videoRatio = 16 / 9 }) {
       try {
         const data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data
         if (data.event === 'ready') {
-          ;['play', 'pause', 'timeupdate'].forEach(event => postToPlayer('addEventListener', event))
+          ;['play', 'pause'].forEach(event => postToPlayer('addEventListener', event))
         } else if (data.event === 'play') {
           setPaused(false)
         } else if (data.event === 'pause') {
           setPaused(true)
-        } else if (data.event === 'timeupdate' && data.data) {
-          setDuration(data.data.duration || 0)
-          if (!scrubbing && data.data.duration) setProgress(data.data.seconds / data.data.duration)
         }
       } catch {}
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [scrubbing])
+  }, [])
 
   useEffect(() => {
     if (window.innerWidth >= 1024) return
@@ -96,44 +99,6 @@ export default function VideoCard({ title, vimeo, videoRatio = 16 / 9 }) {
     return () => window.removeEventListener('scroll', check)
   }, [])
 
-  const togglePlayPause = (e) => {
-    e.stopPropagation()
-    postToPlayer(paused ? 'play' : 'pause')
-  }
-
-  const seekFractionFromClientX = (clientX) => {
-    if (!seekBarRef.current) return null
-    const rect = seekBarRef.current.getBoundingClientRect()
-    return Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
-  }
-
-  const handleSeekPointerDown = (e) => {
-    e.stopPropagation()
-    if (!duration) return
-    setScrubbing(true)
-    const fraction = seekFractionFromClientX(e.clientX)
-    if (fraction !== null) setProgress(fraction)
-  }
-
-  useEffect(() => {
-    if (!scrubbing) return
-    const handleMove = (e) => {
-      const fraction = seekFractionFromClientX(e.clientX)
-      if (fraction !== null) setProgress(fraction)
-    }
-    const handleUp = (e) => {
-      const fraction = seekFractionFromClientX(e.clientX)
-      if (fraction !== null) postToPlayer('setCurrentTime', fraction * duration)
-      setScrubbing(false)
-    }
-    window.addEventListener('pointermove', handleMove)
-    window.addEventListener('pointerup', handleUp)
-    return () => {
-      window.removeEventListener('pointermove', handleMove)
-      window.removeEventListener('pointerup', handleUp)
-    }
-  }, [scrubbing, duration])
-
   return (
     <div
       ref={cardRef}
@@ -146,7 +111,7 @@ export default function VideoCard({ title, vimeo, videoRatio = 16 / 9 }) {
             <iframe
               ref={iframeRef}
               src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0&api=1`}
-              className="absolute top-1/2 left-1/2 pointer-events-none"
+              className="absolute top-1/2 left-1/2"
               style={{
                 border: 0,
                 width: `${coverSize.width}px`,
@@ -154,35 +119,17 @@ export default function VideoCard({ title, vimeo, videoRatio = 16 / 9 }) {
                 transform: 'translate(-50%, -50%)',
               }}
               allow="autoplay; fullscreen; picture-in-picture"
+              allowFullScreen
               title={title}
             />
           )}
           <button
             type="button"
             aria-label={paused ? 'Play video' : 'Pause video'}
-            onClick={togglePlayPause}
-            className="absolute inset-0 w-full h-full cursor-pointer bg-transparent border-0 p-0 appearance-none"
-          >
-            {paused && (
-              <span className="absolute inset-0 flex items-center justify-center">
-                <span className="w-14 h-14 lg:w-16 lg:h-16 rounded-full bg-white/90 flex items-center justify-center shadow-xl">
-                  <PlayIcon className="w-5 h-5 lg:w-6 lg:h-6 ml-0.5" />
-                </span>
-              </span>
-            )}
-          </button>
-          <div
-            ref={seekBarRef}
-            onPointerDown={handleSeekPointerDown}
-            className="group/seek absolute bottom-0 left-0 right-0 h-4 flex items-end cursor-pointer"
-          >
-            <div className="relative w-full h-1 group-hover/seek:h-1.5 bg-white/25 transition-all">
-              <div
-                className="absolute inset-y-0 left-0 bg-white"
-                style={{ width: `${Math.min(100, progress * 100)}%` }}
-              />
-            </div>
-          </div>
+            onClick={e => { e.stopPropagation(); postToPlayer(paused ? 'play' : 'pause') }}
+            className="absolute inset-x-0 top-0 cursor-pointer bg-transparent border-0 p-0 appearance-none"
+            style={{ bottom: `${CONTROL_STRIP_PX}px` }}
+          />
         </div>
       ) : (
         <>
