@@ -39,7 +39,7 @@ function VideoPlayer({ mobile = false }) {
     <iframe
       ref={iframeRef}
       src={`https://player.vimeo.com/video/${VIMEO_ID}?autoplay=1&autopause=0&api=1`}
-      className="absolute inset-0 w-full h-full"
+      className={`absolute inset-0 w-full h-full ${mobile ? 'rounded-2xl' : 'rounded-3xl'}`}
       style={{ border: 0 }}
       allow="autoplay; fullscreen; picture-in-picture"
       allowFullScreen
