@@ -103,9 +103,11 @@ const ogImageURL = ogImage.startsWith('http') ? ogImage : `${siteURL}${ogImage}`
       <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     )}
   </head>
-  <body class="min-h-screen bg-slate-50 font-sans text-slate-900">
+  <body class="min-h-screen bg-slate-50 font-sans text-slate-900 flex flex-col">
     <Nav />
-    <slot />
+    <main class="flex-1 flex flex-col">
+      <slot />
+    </main>
     <Footer />
   </body>
 </html>
