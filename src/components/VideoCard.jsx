@@ -63,15 +63,21 @@ export default function VideoCard({ title, vimeo }) {
       onMouseEnter={() => setActive(true)}
     >
       {playing && vimeoId ? (
-        <iframe
-          ref={iframeRef}
-          src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0&api=1`}
-          className="absolute inset-0 w-full h-full"
-          style={{ border: 0 }}
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
-          title={title}
-        />
+        <div className="absolute inset-0 flex items-center justify-center">
+          {/* Sized to the video's real aspect ratio (16:9) rather than
+              stretched to fill this card's own (non-16:9) shape - that way
+              any leftover space is an even, deliberate gap we control, not
+              wherever Vimeo happens to put its own internal letterboxing. */}
+          <iframe
+            ref={iframeRef}
+            src={`https://player.vimeo.com/video/${vimeoId}?autoplay=1&autopause=0&api=1`}
+            className="w-full aspect-video max-h-full"
+            style={{ border: 0 }}
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            title={title}
+          />
+        </div>
       ) : (
         <>
           <img
