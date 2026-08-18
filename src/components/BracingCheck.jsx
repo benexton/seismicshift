@@ -206,7 +206,7 @@ function Gauge({ eq, wind, hazardOnlyTarget, totalTarget, codeMin }) {
   const totalH = Math.max(0, B - totalY)
 
   return (
-    <svg viewBox="0 0 340 280" role="img" aria-label="Bracing demand comparison" className="w-full h-auto block">
+    <svg viewBox="0 0 340 280" role="img" aria-label="Bracing unit comparison" className="w-full h-auto block">
       {Array.from({ length: ticks + 1 }).map((_, i) => {
         const tv = (scaleMax / ticks) * i
         const ty = y(tv)
@@ -297,7 +297,7 @@ function DirectionPlot({ eq, wind, result, ready = true }) {
     <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 pb-2 min-h-[220px] flex flex-col">
       {ready ? (
         <>
-          <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">Bracing demand, whole house</p>
+          <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">Bracing units, whole house</p>
           <Gauge
             eq={eq}
             wind={wind}
@@ -334,7 +334,7 @@ function DirectionNumber({ title, result, ready = true }) {
 
   return (
     <div>
-      <p className="text-xs font-black uppercase tracking-widest text-slate-400">{title}</p>
+      <p className="text-sm font-black uppercase tracking-widest text-slate-500">{title}</p>
       {ready ? (
         <>
           <div className="flex items-baseline gap-1.5 mt-2 tabular-nums">
@@ -381,7 +381,7 @@ function CombinedPathway({ alongResult, acrossResult }) {
   if (!alongNeedsMore && !acrossNeedsMore) {
     return (
       <p className="text-base text-slate-700 leading-relaxed">
-        Wind demand already covers the increased earthquake bracing in both directions here. <strong className="text-slate-900">A code-minimum design should be sufficient</strong> for damage control on this site.
+        Wind bracing units already cover the increased earthquake bracing in both directions here. <strong className="text-slate-900">A code-minimum design should be sufficient</strong> for damage control on this site.
       </p>
     )
   }
@@ -403,7 +403,7 @@ function CombinedPathway({ alongResult, acrossResult }) {
   return (
     <div>
       <p className="text-base text-slate-700 leading-relaxed">
-        Wind demand already covers the {coveredDirection} direction, but the {shortDirection} direction needs more than the code minimum to limit damage. There are two ways to close the gap:
+        Wind bracing units already cover the {coveredDirection} direction, but the {shortDirection} direction needs more than the code minimum to limit damage. There are two ways to close the gap:
       </p>
       <GapOptions />
     </div>
@@ -466,9 +466,9 @@ function DesignerTechnicalBasis() {
                 </table>
               </div>
             </li>
-            <li>Wellington&rsquo;s real Z factor is 0.40, which falls in zone 3, so its NZS 3604 earthquake bracing demand is calculated at the zone&rsquo;s Z = 0.46 ceiling, not its actual Z = 0.40. For the purposes of the comparison with TS 1170.5:2025, the actual Z factor is used (Z = 0.40 in this case) in order to make use of any excess already allowed for in the NZS 3604 approach.</li>
+            <li>Wellington&rsquo;s real NZS 1170.5 Z factor is 0.40, which falls in zone 3, so its NZS 3604 earthquake bracing demand is calculated at the zone&rsquo;s Z = 0.46 ceiling, not its actual Z = 0.40, which means that there is a degree of conservatism built into NZS 3604 for some sites. For the purposes of the comparison with TS 1170.5:2025, the actual values for each town/city were used in order to make use of any excess already allowed for in the NZS 3604 approach.</li>
             <li>For this example, say that zone-3 earthquake bracing demand comes out to <strong className="text-slate-900">2,400 BU</strong> (whole house, along direction) - an illustrative figure for this walkthrough. Say in this example, wind demand doesn&rsquo;t exceed this, so 2,400 BU is also the code minimum bracing for that direction of the building (earthquake governs).</li>
-            <li>Calculating the TS 1170.5:2025 demand at Wellington&rsquo;s real Z = 0.40, site class C, and the relevant other assumptions consistent with the basis of NZS 3604, results in a demand value of 0.37. Comparing this to 0.28 from the table above gives a raw hazard shift of <strong className="text-slate-900">&times;1.32</strong> (132%).</li>
+            <li>Calculating the TS 1170.5:2025 demand for Wellington using assumptions consistent with the basis of NZS 3604, results in a demand value of 0.37. Comparing this to 0.28 from the table above gives a raw hazard shift of <strong className="text-slate-900">&times;1.32</strong> (132%).</li>
             <li>
               Baseline target: 2,400 &times; 1.32 = <strong className="text-slate-900">3,168 BU</strong>. Against the 2,400 BU code minimum, that&rsquo;s
               <strong style={{ color: BRAND }}> 132% of code minimum</strong> - what this site needs to keep pace with the latest seismic hazard modelling alone, before SR337.
@@ -517,7 +517,7 @@ function DesignerMode({ locationKey, setLocationKey, siteClass, setSiteClass }) 
       </div>
 
       <p className="text-sm text-slate-400 mb-6">
-        Enter the total earthquake and wind bracing units your NZS 3604:2011 calculation gives for each direction, summed across the whole house. For the purposes of this page, code minimum is taken as the larger of the wind and earthquake demands you enter below.
+        Enter the total earthquake and wind bracing units your NZS 3604:2011 calculation gives for each direction, summed across the whole house. For the purposes of this page, code minimum is taken as the larger of the wind and earthquake bracing units you enter below.
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3.5">
@@ -545,9 +545,9 @@ function DesignerMode({ locationKey, setLocationKey, siteClass, setSiteClass }) 
         </div>
 
         <div className="mt-8">
-          <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">Indicative resilience multiplier</p>
+          <h3 className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900 mb-3">Indicative resilience multiplier</h3>
           <p className="text-sm text-slate-400 mb-6">
-            There are two percentages below for each direction of the home, both shown relative to your NZS 3604 governing demand (100% = code minimum). The first shows how much higher that demand becomes once scaled for the latest seismic hazard modelling. The second takes that further, adding the SR337 margin, to show what multiple might be required to achieve a low damage outcome.
+            A figure you could consider multiplying your existing NZS 3604 bracing units by. There are two percentages below for each direction of the home, both shown relative to your NZS 3604 governing bracing units (100% = code minimum). The first shows how much higher that figure becomes once scaled for the latest seismic hazard modelling. The second takes that further, adding the SR337 margin, to show what multiple might be required to achieve a low damage outcome.
           </p>
           <div className="grid gap-8 sm:grid-cols-2 mb-6">
             <DirectionNumber title="Along" result={alongResult} ready={ready} />
