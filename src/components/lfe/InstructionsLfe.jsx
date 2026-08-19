@@ -14,8 +14,9 @@ export default function InstructionsLfe({ onGoTo }) {
         <h1>ERP triage - how it works</h1>
         <p>
           This tool gathers post-earthquake observations for this event from
-          social media (Bluesky) and news feeds, gives each a first-pass AI
-          assessment, and asks volunteer engineers to verify them. Verified
+          social media (Bluesky and X/Twitter) and news feeds, gives each a
+          first-pass AI assessment, and asks volunteer engineers to verify
+          them. Verified
           observations build up into an Earthquake Reconnaissance Programme
           draft report. Here is the workflow.
         </p>
@@ -32,7 +33,8 @@ export default function InstructionsLfe({ onGoTo }) {
           damage D0 (none) to D4 (collapse), and a distinct blue for Great
           performance, used when a structure performed notably well. The coloured
           ring around a dot shows where the observation came from: white for a
-          manual entry, blue for Bluesky, amber for news/RSS. A dashed red halo
+          manual entry, blue for Bluesky, black for X/Twitter, amber for
+          news/RSS. A dashed red halo
           means the record looks like a possible duplicate of an already-triaged
           site. Where several observations share a location they collapse into a
           numbered badge; click it to fan them out. A violet ring means someone
@@ -74,12 +76,15 @@ export default function InstructionsLfe({ onGoTo }) {
         <h2>3. Scraper keywords - the automated feed</h2>
         <p>
           The <Go tab="scraper">Scraper keywords</Go> tab controls what the
-          automated pipeline watches for this event: Bluesky search terms and
-          news/RSS feeds. Add relevant terms in the event's language(s), or a
-          campaign hashtag, and the scheduled job picks them up on its next
-          run, fetches matching posts with images, triages them, and drops
-          them into the queue. More specific place terms give better
-          automatic locations.
+          automated pipeline watches for this event: search terms (each set
+          to watch Bluesky, X/Twitter, or both) and news/RSS feeds. Add
+          relevant terms in the event's language(s), or a campaign hashtag,
+          and the scheduled job picks them up on its next run, fetches
+          matching posts with images, triages them, and drops them into the
+          queue. Posts that turn out to be a map, shakemap, or other
+          agency-generated graphic rather than an actual photo are filtered
+          out automatically before they reach the queue. More specific place
+          terms give better automatic locations.
         </p>
 
         <h2>4. Triaged sites - the verified record</h2>

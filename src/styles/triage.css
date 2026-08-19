@@ -111,12 +111,14 @@ body {
 .inline-form input { flex: 1; min-width: 220px; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 8px; }
 .two-col h3 { font-size: 15px; margin: 0 0 8px; }
+.feeds-heading { margin-top: 22px; }
 .source-row {
   display: flex; align-items: center; gap: 8px; padding: 7px 10px; margin-bottom: 6px;
   background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
 }
 .source-row.disabled { opacity: 0.5; }
 .source-row .val { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.source-row select { font-size: 12px; padding: 3px 6px; border: 1px solid var(--border); border-radius: 6px; }
 .mini { font-size: 12px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff; cursor: pointer; }
 .mini.danger { color: var(--danger); border-color: var(--danger); }
 @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
