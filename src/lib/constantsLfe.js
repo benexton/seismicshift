@@ -14,18 +14,42 @@ export {
   isDamageScore,
   CODE_ERAS,
   RETROFIT_OPTIONS,
-  SOURCE_TYPES,
-  SOURCE_LABEL,
-  SOURCE_COLOR,
   PRECISION_OPTIONS,
   LOCATION_CONFIDENCE,
   BUILDING_TYPES,
   PRIMARY_MATERIALS,
   HEIGHT_CLASSES,
   cap,
-  provenanceLabel,
   fmtDate,
 } from './constants.js';
+
+// ---- Provenance / source type (adds 'twitter', which Kumamoto's schema does
+// not accept - forked for the same reason observation types are, above) -----
+export const SOURCE_TYPES = ['human', 'bluesky', 'twitter', 'rss', 'other'];
+
+export const SOURCE_LABEL = {
+  human: 'Manual entry',
+  bluesky: 'Bluesky',
+  twitter: 'X / Twitter',
+  rss: 'News / RSS',
+  other: 'Other',
+};
+
+// Border colour used to ring each map dot by provenance.
+export const SOURCE_COLOR = {
+  human: '#ffffff',
+  bluesky: '#1185fe',
+  twitter: '#111111',
+  rss: '#f59e0b',
+  other: '#9e9e9e',
+};
+
+// Human-readable provenance including who entered a manual observation, e.g.
+// "Manual entry by Jane Smith", or just "Bluesky" / "X / Twitter" for scraped.
+export function provenanceLabel(rec) {
+  const base = SOURCE_LABEL[rec?.source_type] ?? 'Other';
+  return rec?.source_type === 'human' && rec?.submitted_by ? `${base} by ${rec.submitted_by}` : base;
+}
 
 // ---- Observation type (multi-select) ---------------------------------------
 export const OBSERVATION_TYPES = [

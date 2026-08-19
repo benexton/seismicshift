@@ -9,7 +9,7 @@ are pushed with an event_id into the new LFE Supabase project.
 
 Pipeline order (keeps LLM spend low - dedup BEFORE the model):
     1. Resolve event(s)  - one event by --event-slug, or every active event.
-    2. Load sources      - that event's enabled bluesky terms + rss feeds.
+    2. Load sources      - that event's enabled bluesky/twitter terms + rss feeds.
     3. Collect           - fetch posts/articles with images.
     4. pHash dedup        - drop near-duplicate images (Hamming 0-5).
     5. AI triage          - reads image + text, returns damage, one or more
@@ -37,9 +37,10 @@ Pipeline order (keeps LLM spend low - dedup BEFORE the model):
                             confirm or correct it rather than trust it
                             silently. Either way, a candidate more than
                             EVENT_RADIUS_KM from the event's own epicentre is
-                            rejected outright - Bluesky's search has no way
-                            to filter by where a post was sent from, so this
-                            is the practical substitute: judge the content's
+                            rejected outright - neither Bluesky's nor X's
+                            search has a way to filter by where a post was
+                            sent from, so this is the practical substitute:
+                            judge the content's
                             own resolved location against the event instead
                             of trusting keyword anchoring alone to keep
                             results on-topic. Only genuinely unlocatable or
@@ -52,6 +53,10 @@ Env vars:
     LLM_API_KEY
     NOMINATIM_UA = contact string for OSM usage policy (recommended)
     BLUESKY_IDENTIFIER, BLUESKY_APP_PASSWORD, BLUESKY_PDS (optional)
+    X_BEARER_TOKEN = app-only bearer token for X API v2 recent search (optional;
+        Twitter/X collection is skipped without it)
+    TWITTER_MAX_RESULTS = posts fetched per search term, 10-100 (default 25 -
+        kept low since pay-as-you-go X API access bills per post fetched)
     EVENT_RADIUS_KM = max distance from the event's epicentre a resolved
         location may be before it's rejected (default 500)
 
@@ -114,7 +119,7 @@ class MediaItem:
     source_url: str
     media_url: str
     text: str
-    source_type: str            # 'bluesky' | 'rss'
+    source_type: str            # 'bluesky' | 'twitter' | 'rss'
     phash: str | None = None
     lat: float | None = None
     lng: float | None = None
@@ -125,11 +130,12 @@ class MediaItem:
 
 
 # --- Load sources, scoped to one event --------------------------------------
-def load_sources(event_id: str) -> tuple[list[str], list[str]]:
+def load_sources(event_id: str) -> tuple[list[str], list[str], list[str]]:
     rows = sb_get("scraper_sources", {"select": "kind,value,enabled", "event_id": f"eq.{event_id}", "enabled": "eq.true"})
     bsky = [r["value"] for r in rows if r["kind"] == "bluesky"]
+    twitter = [r["value"] for r in rows if r["kind"] == "twitter"]
     rss = [r["value"] for r in rows if r["kind"] == "rss"]
-    return bsky, rss
+    return bsky, twitter, rss
 
 
 # --- Collectors (unchanged from Kumamoto's - source-agnostic) --------------
@@ -206,6 +212,58 @@ def collect_from_bluesky(terms: list[str], per_term: int = 100) -> list[MediaIte
             web = f"https://bsky.app/profile/{handle}/post/{rkey}" if handle and rkey else post.get("uri", "")
             text = (post.get("record", {}) or {}).get("text", "")
             items.append(MediaItem(web, media, text, "bluesky"))
+    return items
+
+
+def collect_from_twitter(terms: list[str], per_term: int = 25) -> list[MediaItem]:
+    """per_term defaults low (25, not Bluesky's 100) because the pay-as-you-go
+    X API bills per post fetched, not a flat monthly fee - keeping this
+    modest keeps a run's cost predictable. Override via TWITTER_MAX_RESULTS
+    (clamped to the API's own 10-100 range) if you want more per term."""
+    token = os.environ.get("X_BEARER_TOKEN", "")
+    if not token:
+        print("  (no X credentials) skipping X/Twitter; set X_BEARER_TOKEN to enable")
+        return []
+
+    max_results = min(100, max(10, int(os.environ.get("TWITTER_MAX_RESULTS") or per_term)))
+    headers = {"Authorization": f"Bearer {token}"}
+
+    items: list[MediaItem] = []
+    for term in terms:
+        try:
+            resp = requests.get(
+                "https://api.x.com/2/tweets/search/recent",
+                params={
+                    "query": f"({term}) has:images -is:retweet",
+                    "max_results": max_results,
+                    "expansions": "attachments.media_keys,author_id",
+                    "media.fields": "url,type",
+                    "user.fields": "username",
+                },
+                headers=headers,
+                timeout=REQUEST_TIMEOUT,
+            )
+            resp.raise_for_status()
+        except Exception as exc:  # noqa: BLE001
+            print(f"  ! twitter '{term}' failed: {exc}", file=sys.stderr)
+            continue
+
+        body = resp.json()
+        media_by_key = {m["media_key"]: m for m in (body.get("includes") or {}).get("media", [])}
+        users_by_id = {u["id"]: u for u in (body.get("includes") or {}).get("users", [])}
+
+        for tweet in body.get("data", []):
+            media_keys = (tweet.get("attachments") or {}).get("media_keys") or []
+            photo = next(
+                (media_by_key[k] for k in media_keys
+                 if k in media_by_key and media_by_key[k].get("type") == "photo"),
+                None,
+            )
+            if not photo or not photo.get("url"):
+                continue
+            username = users_by_id.get(tweet.get("author_id"), {}).get("username")
+            web = f"https://x.com/{username}/status/{tweet['id']}" if username else f"https://x.com/i/status/{tweet['id']}"
+            items.append(MediaItem(web, photo["url"], tweet.get("text", ""), "twitter"))
     return items
 
 
@@ -629,14 +687,14 @@ def process_event(event: dict) -> None:
 
     print(f"=== {name} ({event['slug']}) ===")
     print(f"[1] Loading sources (provider={LLM_PROVIDER})...")
-    bsky, rss = load_sources(event_id)
-    print(f"    {len(bsky)} bluesky term(s), {len(rss)} rss feed(s)")
-    if not (bsky or rss):
+    bsky, twitter, rss = load_sources(event_id)
+    print(f"    {len(bsky)} bluesky term(s), {len(twitter)} twitter term(s), {len(rss)} rss feed(s)")
+    if not (bsky or twitter or rss):
         print("    no sources configured; skipping")
         return
 
     print("[2] Collecting...")
-    items = collect_from_bluesky(bsky) + collect_from_rss(rss)
+    items = collect_from_bluesky(bsky) + collect_from_twitter(twitter) + collect_from_rss(rss)
     print(f"    {len(items)} item(s) with images")
 
     print("[3] Deduplicating...")

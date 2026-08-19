@@ -38,5 +38,7 @@ jobs:
           NOMINATIM_UA: ${{ secrets.NOMINATIM_UA }}
           BLUESKY_IDENTIFIER: ${{ secrets.BLUESKY_IDENTIFIER }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          TWITTER_MAX_RESULTS: ${{ vars.TWITTER_MAX_RESULTS }}  # optional, defaults to 25 in the script
           EVENT_RADIUS_KM: ${{ vars.EVENT_RADIUS_KM }}  # optional, defaults to 500 in the script
         run: python scripts/lfe/ingest_triage_data.py --event-slug "${{ inputs.event_slug }}"
