@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { DAMAGE_LABEL, DAMAGE_COLOR, observationTypesLabel, provenanceLabel } from '../../lib/constantsLfe.js';
+import { DAMAGE_LABEL, DAMAGE_COLOR, observationTypesLabel, provenanceLabel, PUBLIC_IMAGES_HIDDEN } from '../../lib/constantsLfe.js';
 
 /**
  * Table view of the (filtered) records for a tab, with key metadata and a
@@ -30,7 +30,7 @@ export default function RecordTableLfe({ records, mode, othersByRecord, onOpen }
             return (
               <tr key={r.id} className={others.length ? 'in-use' : ''} onClick={() => onOpen(r)}>
                 <td className="thumb-td">
-                  {r.media_url && (
+                  {r.media_url && !(isPublic && PUBLIC_IMAGES_HIDDEN) && (
                     <img className="thumb-small" src={r.media_url} alt=""
                       onMouseEnter={(e) => setPreview({ src: r.media_url, x: e.clientX, y: e.clientY })}
                       onMouseMove={(e) => setPreview((p) => (p ? { ...p, x: e.clientX, y: e.clientY } : p))}

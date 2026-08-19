@@ -11,6 +11,7 @@ import { epicentreMetaOf } from '../../lib/useEvent.js';
 import EpicentreMarker, { LegendStar } from './EpicentreMarker.jsx';
 import {
   DAMAGE_COLOR, DAMAGE_LABEL, observationTypesLabel, HEIGHT_CLASSES, cap, fmtDate, BASEMAP_PRESETS,
+  PUBLIC_IMAGES_HIDDEN,
 } from '../../lib/constantsLfe.js';
 
 // Fully anonymous, zero-auth, zero-DB-query - same pattern as Kumamoto's
@@ -78,7 +79,7 @@ function PublicDetail({ site, onClose }) {
               held in other locations. Please speak to NZSEE ERP if you are seeking more information on this location.
             </div>
           )}
-          {site.media_url && <Zoomable className="pub-media" src={site.media_url} alt="Site photo" />}
+          {site.media_url && !PUBLIC_IMAGES_HIDDEN && <Zoomable className="pub-media" src={site.media_url} alt="Site photo" />}
 
           <div className="pub-grid">
             <KV label="Classification">{DAMAGE_LABEL[site.damage_score] ?? '-'}</KV>
@@ -109,7 +110,7 @@ function PublicDetail({ site, onClose }) {
                 {site.attachments.map((a, i) => (
                   <div key={i} className="attach">
                     <div className="attach-main">
-                      {a.media_url && <Zoomable src={a.media_url} alt="Attachment" />}
+                      {a.media_url && !PUBLIC_IMAGES_HIDDEN && <Zoomable src={a.media_url} alt="Attachment" />}
                       {a.file_url && <button type="button" className="file-chip" onClick={() => downloadFile(a.file_url, a.file_name)}><span className="file-ic">FILE</span> {a.file_name || 'download'}</button>}
                       {a.source_url && <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>}
                       {a.note && <p className="note">{a.note}</p>}
@@ -408,7 +409,7 @@ export default function PublicViewLfe() {
         pathOptions={{ color: '#ffffff', weight: 2, fillColor: DAMAGE_COLOR[s.damage_score] ?? '#9e9e9e', fillOpacity: 0.9 }}
         eventHandlers={{ click: () => setSelected(s) }}>
         <Tooltip direction="top">
-          {solo && s.media_url && <img className="tip-thumb" src={s.media_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
+          {solo && s.media_url && !PUBLIC_IMAGES_HIDDEN && <img className="tip-thumb" src={s.media_url} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />}
           {s.eventName && `${s.eventName} · `}
           {s.site_id != null && `#${s.site_id} · `}
           {DAMAGE_LABEL[s.damage_score]?.split(' - ')[0] ?? '?'} · {observationTypesLabel(s.observation_types)}
