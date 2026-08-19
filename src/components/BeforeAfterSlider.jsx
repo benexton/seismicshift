@@ -3,9 +3,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 const BRAND = '#17638f'
 const NUDGE_STEP = 2
 const NUDGE_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']
-// How many percentage-points of handle travel near each edge the opposite
-// pill takes to fade out, so it's gone by the time its image is fully hidden.
-const LABEL_EDGE_FADE = 8
+// Percentage-points of handle travel over which each pill fades, so it
+// tracks the swipe the whole way rather than snapping near the edge.
+const LABEL_EDGE_FADE = 100
 
 /**
  * Draggable before/after image comparison slider.
