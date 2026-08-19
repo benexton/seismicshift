@@ -31,12 +31,6 @@ export default function BeforeAfterSlider({
   const [hinting, setHinting] = useState(false)
   const containerRef = useRef(null)
   const handleRef = useRef(null)
-  const beforeLabelRef = useRef(null)
-  const afterLabelRef = useRef(null)
-  // Near edge of each pill as a % of the container width - measured from the
-  // actual DOM so the cutoff always matches the pill's own footprint.
-  const [beforeLabelEdge, setBeforeLabelEdge] = useState(null)
-  const [afterLabelEdge, setAfterLabelEdge] = useState(null)
 
   const clamp = (value) => Math.min(100, Math.max(0, value))
 
@@ -89,34 +83,7 @@ export default function BeforeAfterSlider({
     return () => clearTimeout(timer)
   }, [])
 
-  // Measure each pill's near edge (as a % of container width) so it can be
-  // hidden the instant the divider reaches it, not on some arbitrary range.
-  useEffect(() => {
-    const container = containerRef.current
-    const beforeEl = beforeLabelRef.current
-    const afterEl = afterLabelRef.current
-    if (!container || !beforeEl || !afterEl) return
-
-    const measure = () => {
-      const containerRect = container.getBoundingClientRect()
-      if (containerRect.width === 0) return
-      const beforeRect = beforeEl.getBoundingClientRect()
-      const afterRect = afterEl.getBoundingClientRect()
-      setBeforeLabelEdge(((beforeRect.right - containerRect.left) / containerRect.width) * 100)
-      setAfterLabelEdge(((afterRect.left - containerRect.left) / containerRect.width) * 100)
-    }
-
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(container)
-    return () => ro.disconnect()
-  }, [])
-
   const roundedPosition = Math.round(position)
-  // Each pill sits over its own image, so it should vanish the instant the
-  // divider reaches it - not fade gradually and not linger past that point.
-  const beforeLabelOpacity = beforeLabelEdge === null || position >= beforeLabelEdge ? 1 : 0
-  const afterLabelOpacity = afterLabelEdge === null || position <= afterLabelEdge ? 1 : 0
 
   return (
     <div className="w-full">
@@ -134,7 +101,9 @@ export default function BeforeAfterSlider({
         onPointerLeave={endDrag}
         onPointerCancel={endDrag}
       >
-        {/* Before image: base layer, full width */}
+        {/* Before image: base layer, full width. Its corner pill is a plain
+            sibling so the after layer painting on top of it clips it away
+            exactly like the image underneath, instead of a separate fade. */}
         <img
           src={beforeSrc}
           alt={beforeAlt}
@@ -144,36 +113,26 @@ export default function BeforeAfterSlider({
           // TODO: add srcset/sizes here once resized image variants exist
           className="absolute inset-0 h-full w-full object-cover pointer-events-none"
         />
-
-        {/* After image: clipped to reveal only right of the handle */}
-        <img
-          src={afterSrc}
-          alt={afterAlt}
-          draggable={false}
-          loading="lazy"
-          decoding="async"
-          // TODO: add srcset/sizes here once resized image variants exist
-          className="absolute inset-0 h-full w-full object-cover pointer-events-none"
-          style={{ clipPath: `inset(0 0 0 ${position}%)` }}
-        />
-
-        {/* Corner label pills - DOM overlays, never baked into the images.
-            Each disappears the instant the divider reaches its own footprint,
-            rather than staying pinned in place once the divider has crossed it. */}
-        <span
-          ref={beforeLabelRef}
-          className="absolute bottom-3 left-3 z-10 rounded-full bg-black/60 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-white backdrop-blur-sm"
-          style={{ opacity: beforeLabelOpacity }}
-        >
+        <span className="absolute bottom-3 left-3 z-10 rounded-full bg-black/60 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
           {beforeLabel}
         </span>
-        <span
-          ref={afterLabelRef}
-          className="absolute bottom-3 right-3 z-10 rounded-full bg-black/60 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-white backdrop-blur-sm"
-          style={{ opacity: afterLabelOpacity }}
-        >
-          {afterLabel}
-        </span>
+
+        {/* After image + its pill: clipped together so the pill is swept
+            away by the divider exactly like the image it belongs to. */}
+        <div className="absolute inset-0 z-10" style={{ clipPath: `inset(0 0 0 ${position}%)` }}>
+          <img
+            src={afterSrc}
+            alt={afterAlt}
+            draggable={false}
+            loading="lazy"
+            decoding="async"
+            // TODO: add srcset/sizes here once resized image variants exist
+            className="absolute inset-0 h-full w-full object-cover pointer-events-none"
+          />
+          <span className="absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+            {afterLabel}
+          </span>
+        </div>
 
         {/* Divider + handle */}
         <div
