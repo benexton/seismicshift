@@ -18,11 +18,19 @@ Pipeline order (keeps LLM spend low - dedup BEFORE the model):
                             translation at ingest - the same call already
                             being made, not a second one, so a triager who
                             doesn't read the event's language can still work
-                            the queue), and - when a specific place can be
-                            recognised from a landmark, street sign,
-                            storefront signage, or address text - a direct
-                            coordinate guess.
-    6. Geocode            - place name -> lat/lng via Nominatim. If that
+                            the queue), whether the image is an actual
+                            photograph (rather than a shakemap, seismograph
+                            readout, or other agency-generated infographic -
+                            official accounts like USGS post these
+                            automatically for every event, and they're not
+                            useful triage material), and - when a specific
+                            place can be recognised from a landmark, street
+                            sign, storefront signage, or address text - a
+                            direct coordinate guess.
+    6. Photo filter       - drop items the model flagged as maps/infographics
+                            rather than photographs, before spending a
+                            geocode call on them.
+    7. Geocode            - place name -> lat/lng via Nominatim. If that
                             fails, falls back to the AI's own coordinate
                             guess from step 5, flagged 'ai_estimated' (not
                             'approximate') so a human triager knows to
@@ -36,7 +44,7 @@ Pipeline order (keeps LLM spend low - dedup BEFORE the model):
                             of trusting keyword anchoring alone to keep
                             results on-topic. Only genuinely unlocatable or
                             out-of-range posts are dropped.
-    7. Push               - upsert into Supabase via ingest_triage() (service role).
+    8. Push               - upsert into Supabase via ingest_triage() (service role).
 
 Env vars:
     LFE_SUPABASE_URL, LFE_SUPABASE_SERVICE_ROLE_KEY
@@ -270,7 +278,16 @@ def triage_prompt(event_name: str, country: str | None) -> str:
     return (
         "You are a senior structural/geotechnical engineer assessing post-earthquake "
         f"damage from a photo and its caption, following {event_name}{where}. Respond "
-        'with STRICT JSON only, keys: {"damage_score": int 0-4 (0 none..4 collapse), '
+        'with STRICT JSON only, keys: {"is_photo": bool - true only if the image is '
+        'an actual photograph of a real scene (damage, a building, a landscape, '
+        'people, etc). false for a map, shakemap, seismograph/waveform readout, '
+        'chart, infographic, screenshot of text, or any other generated graphic - '
+        'agencies like USGS post these automatically for every event and they carry '
+        'no triage-useful damage information. A photo with a small inset map or '
+        'diagram overlaid is still true; a graphic that is mostly map/chart/text is '
+        'false. If false, still fill the other fields as best you can from the '
+        'caption alone, '
+        '"damage_score": int 0-4 (0 none..4 collapse), '
         '"observation_types": array of one or more of "building"|"geotechnical"|'
         '"landslide"|"lifeline"|"emergency_management"|"tsunami"|"other" (use '
         '"emergency_management" for evacuation centres, rescue, or emergency-response '
@@ -448,6 +465,7 @@ _MOCK_OBS = [["building"], ["building"], ["geotechnical"], ["landslide"], ["life
 def _triage_mock(item: MediaItem, event_name: str) -> dict[str, Any]:
     seed = int(hashlib.sha1(item.media_url.encode()).hexdigest(), 16)
     return {
+        "is_photo": True,
         "damage_score": seed % 5,
         "observation_types": _MOCK_OBS[seed % len(_MOCK_OBS)],
         "code_era": ["pre-1981", "1981-2000", "post-2000", "unknown"][seed % 4],
@@ -629,7 +647,14 @@ def process_event(event: dict) -> None:
     for it in items:
         it.triage = triage(it, name, country)
 
-    print(f"[5] Geocoding (event radius {EVENT_RADIUS_KM:.0f}km)...")
+    print("[5] Filtering out maps/infographics...")
+    dropped = [it for it in items if it.triage.get("is_photo") is False]
+    items = [it for it in items if it.triage.get("is_photo") is not False]
+    for it in dropped:
+        print(f"    - not a photo, dropped: {it.source_url}")
+    print(f"    {len(items)} photo(s) remain ({len(dropped)} map/infographic/chart dropped)")
+
+    print(f"[6] Geocoding (event radius {EVENT_RADIUS_KM:.0f}km)...")
     located: list[MediaItem] = []
     ai_estimated = 0
     out_of_range = 0
@@ -660,7 +685,7 @@ def process_event(event: dict) -> None:
     print(f"    {len(located)} geolocated ({ai_estimated} AI-estimated - flagged for human confirmation"
           + (f"; {out_of_range} rejected as too far from the event" if out_of_range else "") + ")")
 
-    print("[6] Pushing...")
+    print("[7] Pushing...")
     for it in located:
         try:
             push(it, event_id)
