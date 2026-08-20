@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { downloadFile } from '../lib/media.js';
+import { downloadFile } from '../lib/mediaLfe.js';
 
 /**
  * An image that opens full-size in a lightbox when clicked. The trigger click

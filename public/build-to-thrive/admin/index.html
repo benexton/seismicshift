@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#081c29">
+<title>Build to Thrive - Admin</title>
+<style>
+  :root{
+    --bg-deep:#081c29;
+    --bg-panel:#0f3049;
+    --bg-panel-2:#123a52;
+    --line-dim:rgba(191,224,236,.38);
+    --line-faint:rgba(191,224,236,.14);
+    --paper:#eef4f6;
+    --line:#bfe0ec;
+    --amber:#e8a33d;
+    --danger:#e0574f;
+    --safe:#38b07d;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,"Roboto Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:var(--font);
+    background:var(--bg-deep);
+    color:var(--paper);
+    min-height:100dvh;
+    display:flex;
+    justify-content:center;
+    padding:32px 16px;
+  }
+  #app{width:100%;max-width:720px;}
+  h1{font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:.01em;margin:0 0 4px;}
+  p.sub{color:var(--line-dim);font-size:13px;margin:0 0 20px;}
+
+  .gate{
+    background:var(--bg-panel);border:1px solid var(--line-faint);border-radius:4px;
+    padding:20px;max-width:340px;
+  }
+  .gate label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--line-dim);margin-bottom:6px;}
+  .gate input{
+    width:100%;background:var(--bg-panel-2);border:1px solid var(--line-dim);border-radius:3px;
+    color:var(--paper);font-size:14px;padding:10px 12px;font-family:inherit;margin-bottom:12px;
+  }
+  .gate input:focus-visible{outline:2px solid var(--amber);outline-offset:1px;}
+  .gate button{
+    display:block;width:100%;background:var(--amber);color:#231403;border:none;border-radius:3px;
+    font-weight:800;font-size:14px;letter-spacing:.03em;text-transform:uppercase;padding:12px 16px;
+    cursor:pointer;
+  }
+  .gate button:disabled{filter:grayscale(.5) brightness(.75);cursor:not-allowed;}
+  .gate .err{color:var(--danger);font-size:12px;margin-top:10px;}
+
+  .summary{color:var(--line-dim);font-size:13px;margin-bottom:14px;}
+  .table-wrap{overflow-x:auto;border:1px solid var(--line-faint);border-radius:4px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap;}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line-faint);}
+  th{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--line-dim);background:var(--bg-panel);}
+  td{color:var(--paper);}
+  td.score{color:var(--amber);font-weight:700;}
+  tr:last-child td{border-bottom:none;}
+  .reload{
+    margin-top:14px;background:transparent;color:var(--line);border:1px solid var(--line-dim);border-radius:3px;
+    font-size:12px;padding:8px 14px;cursor:pointer;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>Build to Thrive - Admin</h1>
+  <p class="sub">Leaderboard entries, including email, for the prize draw.</p>
+
+  <div class="gate" id="gate">
+    <label for="pw">Admin password</label>
+    <input type="password" id="pw" autocomplete="off">
+    <button type="button" id="btn-login">Log in</button>
+    <p class="err" id="err" style="display:none;"></p>
+  </div>
+
+  <div id="results" style="display:none;">
+    <p class="summary" id="summary"></p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Score</th><th>Name</th><th>Email</th><th>Building</th><th>Submitted</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <button type="button" class="reload" id="btn-reload">Reload</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  "use strict";
+
+  var SUPABASE_URL = 'https://qrblhtyoslxvoyyafgkl.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyYmxodHlvc2x4dm95eWFmZ2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNDYwNDMsImV4cCI6MjEwMDkyMjA0M30.Jk4kGwhE_R5JElqgMxZk-U43nHElaGFaI0L7Ha9a8Sk';
+  var ADMIN_LIST_FN_URL = SUPABASE_URL + '/functions/v1/build-to-thrive-admin-list';
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'bts-admin-auth' }
+  });
+
+  // No real login screen for the game itself, so this reuses Supabase's
+  // anonymous auth just to satisfy the Edge Function's JWT requirement -
+  // the actual gate is admin_password, checked server-side.
+  function ensureAnonSession(){
+    return sb.auth.getSession().then(function(res){
+      if(res.data.session) return res.data.session;
+      return sb.auth.signInAnonymously().then(function(res2){
+        if(res2.error) throw res2.error;
+        return res2.data.session;
+      });
+    });
+  }
+
+  function fmt(iso){
+    try{ return new Date(iso).toLocaleString(); }catch(e){ return iso; }
+  }
+  function esc(s){
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  function renderRows(scores){
+    document.getElementById('summary').textContent = scores.length + ' submission' + (scores.length===1?'':'s') + '.';
+    document.getElementById('rows').innerHTML = scores.map(function(r){
+      return '<tr>'+
+        '<td class="score">'+esc(r.score)+'</td>'+
+        '<td>'+esc(r.name)+'</td>'+
+        '<td>'+esc(r.email)+'</td>'+
+        '<td>'+esc(r.building_type||'-')+'</td>'+
+        '<td>'+esc(fmt(r.created_at))+'</td>'+
+      '</tr>';
+    }).join('');
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('results').style.display = 'block';
+  }
+
+  var lastPassword = '';
+
+  function login(pw){
+    pw = pw || document.getElementById('pw').value;
+    var btn = document.getElementById('btn-login');
+    var err = document.getElementById('err');
+    err.style.display = 'none';
+    if(!pw) return;
+    lastPassword = pw;
+    btn.disabled = true; btn.textContent = 'Checking...';
+    ensureAnonSession().then(function(session){
+      return fetch(ADMIN_LIST_FN_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: 'Bearer ' + session.access_token
+        },
+        body: JSON.stringify({ admin_password: pw })
+      });
+    }).then(function(res){
+      return res.json().then(function(body){
+        if(!res.ok) throw new Error(body.error || 'Could not load the list.');
+        renderRows(body.scores);
+      });
+    }).catch(function(e){
+      err.textContent = e.message || 'Could not load the list.';
+      err.style.display = 'block';
+    }).finally(function(){
+      btn.disabled = false; btn.textContent = 'Log in';
+    });
+  }
+
+  document.getElementById('btn-login').addEventListener('click', function(){ login(); });
+  document.getElementById('pw').addEventListener('keydown', function(e){ if(e.key==='Enter') login(); });
+  document.getElementById('btn-reload').addEventListener('click', function(){ login(lastPassword); });
+})();
+</script>
+</body>
+</html>
