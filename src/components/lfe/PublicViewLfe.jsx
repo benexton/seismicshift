@@ -13,6 +13,7 @@ import {
   DAMAGE_COLOR, DAMAGE_LABEL, observationTypesLabel, HEIGHT_CLASSES, cap, fmtDate, BASEMAP_PRESETS,
   PUBLIC_IMAGES_HIDDEN,
 } from '../../lib/constantsLfe.js';
+import { safeHref } from '../../lib/url.js';
 
 // Fully anonymous, zero-auth, zero-DB-query - same pattern as Kumamoto's
 // PublicView.jsx. First fetches the events-index manifest (every is_public
@@ -99,7 +100,7 @@ function PublicDetail({ site, onClose }) {
           {site.engineer_notes && <div className="pub-notes"><span className="pub-k">Notes</span><p>{site.engineer_notes}</p></div>}
 
           <div className="pub-links">
-            {site.source_url && <a href={site.source_url} target="_blank" rel="noreferrer">Source link</a>}
+            {site.source_url && safeHref(site.source_url) && <a href={site.source_url} target="_blank" rel="noreferrer">Source link</a>}
             {site.streetview_url && <a href={site.streetview_url} target="_blank" rel="noreferrer">Street View</a>}
           </div>
 
@@ -112,7 +113,7 @@ function PublicDetail({ site, onClose }) {
                     <div className="attach-main">
                       {a.media_url && !PUBLIC_IMAGES_HIDDEN && <Zoomable src={a.media_url} alt="Attachment" />}
                       {a.file_url && <button type="button" className="file-chip" onClick={() => downloadFile(a.file_url, a.file_name)}><span className="file-ic">FILE</span> {a.file_name || 'download'}</button>}
-                      {a.source_url && <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>}
+                      {a.source_url && safeHref(a.source_url) && <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>}
                       {a.note && <p className="note">{a.note}</p>}
                     </div>
                   </div>

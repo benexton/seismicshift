@@ -7,6 +7,7 @@ import { DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate, phOr } fro
 import { buildReportDocxBlob } from '../../lib/reportDocxLfe.js';
 import { parseReportSections } from '../../lib/reportSections.js';
 import { fetchUsgsHazardFigures } from '../../lib/usgsHazardLfe.js';
+import { safeHref } from '../../lib/url.js';
 
 // Fields that live in event_meta (editable here). Name, epicentre, and
 // event_datetime live on the events row itself (set at creation / on the
@@ -399,7 +400,7 @@ export default function ReportGeneratorLfe() {
             {references.map((ref, i) => (
               <li key={ref.url} id={`ref-${i + 1}`}>
                 {ref.label ? `${ref.label}: ` : ''}
-                <a href={ref.url} target="_blank" rel="noreferrer">{ref.url}</a>
+                {safeHref(ref.url) ? <a href={ref.url} target="_blank" rel="noreferrer">{ref.url}</a> : ref.url}
                 {ref.date ? ` (retrieved ${fmtDate(ref.date)})` : ''}
               </li>
             ))}

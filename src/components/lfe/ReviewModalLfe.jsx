@@ -10,6 +10,7 @@ import MergeModalLfe from './MergeModalLfe.jsx';
 import StreetviewFieldLfe from './StreetviewFieldLfe.jsx';
 import { uploadImage } from '../../lib/mediaLfe.js';
 import { coordError } from '../../lib/coordsLfe.js';
+import { safeHref } from '../../lib/url.js';
 
 /**
  * Review a queue record: imagery, provenance, all editable attributes, and
@@ -198,7 +199,7 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
                 <input type="text" value={v.source_url ?? ''} onChange={set('source_url')} placeholder="https://..." />
               </div>
             ) : (
-              v.source_url && <p className="kv"><b>Source:</b> <a href={v.source_url} target="_blank" rel="noreferrer">link</a></p>
+              v.source_url && safeHref(v.source_url) && <p className="kv"><b>Source:</b> <a href={v.source_url} target="_blank" rel="noreferrer">link</a></p>
             )}
 
             <AttachmentAdderLfe

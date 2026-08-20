@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase.js';
 import { uploadImage, uploadFile, downloadFile } from '../lib/media.js';
+import { safeHref } from '../lib/url.js';
 import Zoomable from './Zoomable.jsx';
 
 /**
@@ -111,7 +112,7 @@ export default function AttachmentAdder({ recordId, reviewer, onPendingChange })
                     <span className="file-ic">FILE</span> {a.file_name || 'download'}
                   </button>
                 )}
-                {a.source_url && <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>}
+                {a.source_url && safeHref(a.source_url) && <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>}
                 {a.note && <p className="note">{a.note}</p>}
               </div>
               <div className="attach-meta">

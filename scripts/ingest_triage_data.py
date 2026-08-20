@@ -29,13 +29,16 @@ from __future__ import annotations
 
 import hashlib
 import io
+import ipaddress
 import json
 import os
 import re
+import socket
 import sys
 import time
 from dataclasses import dataclass, field
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
 
@@ -66,6 +69,33 @@ GEMINI_MIN_INTERVAL = float(os.environ.get("GEMINI_MIN_INTERVAL", "6"))  # secon
 # Fallback sources if the Supabase config table can't be read.
 DEFAULT_BLUESKY = ["熊本地震", "Kumamoto earthquake"]
 DEFAULT_RSS: list[str] = []
+
+
+def is_safe_fetch_url(url: str) -> bool:
+    """Guards outbound fetches of scraped/user-supplied URLs (source_url,
+    og:image links, media URLs pulled from a remote page) against SSRF: a
+    hostile or compromised source page could set an og:image (or similar) to
+    an internal address - e.g. http://169.254.169.254/... (cloud metadata) or
+    http://localhost:.../ - to make this pipeline's server-side fetch probe
+    the runner's own network on the attacker's behalf. Rejects non-http(s)
+    schemes and any hostname that resolves to a loopback/private/link-local/
+    reserved/multicast address."""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        return False
+    try:
+        infos = socket.getaddrinfo(parsed.hostname, None)
+    except socket.gaierror:
+        return False
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_multicast or ip.is_reserved or ip.is_unspecified):
+            return False
+    return True
 
 
 @dataclass
@@ -192,11 +222,14 @@ def collect_from_bluesky(terms: list[str], per_term: int = 100) -> list[MediaIte
 
 
 def _article_image(url: str) -> str | None:
+    if not is_safe_fetch_url(url):
+        return None
     try:
         html = requests.get(url, timeout=REQUEST_TIMEOUT, headers={"User-Agent": NOMINATIM_UA}).text
         import re
         m = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)', html)
-        return m.group(1) if m else None
+        image_url = m.group(1) if m else None
+        return image_url if image_url and is_safe_fetch_url(image_url) else None
     except Exception:  # noqa: BLE001
         return None
 
@@ -230,6 +263,9 @@ def collect_from_rss(feeds: list[str], per_feed: int = 15) -> list[MediaItem]:
 
 # --- 3. pHash dedup ----------------------------------------------------------
 def _download_image(url: str) -> Image.Image | None:
+    if not is_safe_fetch_url(url):
+        print(f"  ! image fetch blocked (unsafe URL): {url}", file=sys.stderr)
+        return None
     try:
         r = requests.get(url, timeout=REQUEST_TIMEOUT, headers={"User-Agent": NOMINATIM_UA})
         r.raise_for_status()
@@ -383,6 +419,8 @@ def _retry_after(resp, attempt: int) -> float:
 def _triage_gemini(item: MediaItem) -> dict[str, Any]:
     import base64
     global _GEMINI_IDX
+    if not is_safe_fetch_url(item.media_url):
+        raise ValueError(f"unsafe media_url, refusing to fetch: {item.media_url}")
     img = requests.get(item.media_url, timeout=REQUEST_TIMEOUT)
     img.raise_for_status()
     b64 = base64.b64encode(img.content).decode()
@@ -475,6 +513,17 @@ def geocode(place: str | None) -> tuple[float | None, float | None]:
 
 
 # --- 6. Push -----------------------------------------------------------------
+def _safe_damage_score(raw) -> int:
+    """t.get("damage_score", 0) only substitutes the default when the key is
+    missing, not when the model explicitly returns null or a non-numeric
+    value - and a bare int(None) or int("unsure") would raise, aborting the
+    whole run rather than just this one record."""
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return 0
+
+
 def _external_id(item: MediaItem) -> str:
     basis = f"{item.source_url}|{item.phash or item.media_url}"
     return hashlib.sha1(basis.encode()).hexdigest()[:24]
@@ -491,7 +540,7 @@ def push(item: MediaItem) -> None:
         "p_lng": item.lng, "p_lat": item.lat,
         "p_source_url": item.source_url, "p_media_url": item.media_url,
         "p_phash": item.phash, "p_region": t.get("location_text"),
-        "p_damage_score": int(t.get("damage_score", 0)),
+        "p_damage_score": _safe_damage_score(t.get("damage_score")),
         "p_code_era": t.get("code_era"),
         "p_failure_mechanism": t.get("failure_mechanism"),
         "p_observed_retrofits": t.get("observed_retrofits"),
@@ -542,7 +591,10 @@ def main() -> int:
 
     print("[6] Pushing...")
     for it in located:
-        push(it)
+        try:
+            push(it)
+        except Exception as exc:  # noqa: BLE001
+            print(f"  ! push failed, skipping ({it.source_url}): {exc}", file=sys.stderr)
 
     print("Done.")
     return 0

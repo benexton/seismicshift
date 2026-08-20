@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import { uploadImage, uploadFile, downloadFile } from '../../lib/mediaLfe.js';
+import { safeHref } from '../../lib/url.js';
 import Zoomable from '../Zoomable.jsx';
 
 /**
@@ -189,7 +190,7 @@ export default function AttachmentAdderLfe({
                     <span className="file-ic">FILE</span> {a.file_name || 'download'}
                   </button>
                 )}
-                {a.source_url && <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>}
+                {a.source_url && safeHref(a.source_url) && <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>}
                 {!a.source_url && a.source_na && <span className="muted small">No source (N/A)</span>}
                 {a.note && <p className="note">{a.note}</p>}
               </div>
