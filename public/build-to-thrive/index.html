@@ -331,6 +331,10 @@
     border:1px solid var(--line-faint);border-radius:3px;padding:14px;margin-top:14px;
     background:var(--bg-panel);
   }
+  .lb-prize{
+    background:var(--bg-panel-2);border-left:3px solid var(--amber);border-radius:0 3px 3px 0;
+    padding:10px 12px;font-size:12.5px;line-height:1.45;color:var(--paper);margin:0 0 14px;
+  }
   .leaderboard-card .lb-title{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);margin:0 0 4px;}
   .leaderboard-card .lb-score{font-size:30px;font-weight:900;color:var(--paper);margin:2px 0 4px;}
   .leaderboard-card .lb-sub{font-size:12px;color:var(--line-dim);line-height:1.4;margin:0 0 12px;}
@@ -2053,20 +2057,20 @@
       return;
     }
     card.innerHTML =
+      '<p class="lb-prize">Prize: a $100 Prezzy card. Winner must be present on the final afternoon of PCEE to collect their prize from Ben Exton of Seismic Shift.</p>'+
       '<div class="lb-title">Your Score</div>'+
       '<div class="lb-score">'+score+'</div>'+
-      '<div class="lb-board" id="lb-board"><p class="lb-sub">Loading leaderboard...</p></div>'+
+      '<div class="lb-board" id="lb-board" style="display:none;"></div>'+
       '<p class="lb-sub">Add your name to the leaderboard - we\'ll be drawing a prize from the entries.</p>'+
       '<div class="lb-field"><label for="lb-name">Name</label><input type="text" id="lb-name" autocomplete="name" placeholder="Your name" maxlength="60"></div>'+
       '<div class="lb-field"><label for="lb-email">Email</label><input type="email" id="lb-email" autocomplete="email" placeholder="you@email.com" maxlength="120"></div>'+
       '<button class="cta-secondary" id="btn-submit-score" style="margin-top:2px;">Add to Leaderboard</button>'+
       '<div class="lb-status" id="lb-status"></div>'+
-      '<p class="lb-privacy">Your name and email are only used to contact you if you win a prize, and to show your name on the leaderboard.</p>';
+      '<p class="lb-privacy">Only your name is shown on the leaderboard. Your name and email are used to contact you if you win the prize, and for Seismic Shift promotional purposes - you may opt out of promotional contact at any time. One entry per person - if you play again with a better score, your leaderboard entry updates automatically. The winner is drawn at random from valid entries; Seismic Shift\'s decision is final and there is no cash alternative.</p>';
 
     document.getElementById('btn-submit-score').addEventListener('click', function(){
       submitScore(score);
     });
-    loadLeaderboard();
   }
 
   function loadLeaderboard(){
@@ -2139,6 +2143,11 @@
       statusEl.className = 'lb-status ok';
       submitBtn.textContent = 'Submitted';
       track('leaderboard_submitted', { score: score });
+      var boardEl = document.getElementById('lb-board');
+      if(boardEl){
+        boardEl.style.display = '';
+        boardEl.innerHTML = '<p class="lb-sub">Loading leaderboard...</p>';
+      }
       loadLeaderboard();
     }).catch(function(){
       statusEl.textContent = "Couldn't submit right now - check your connection and try again.";
