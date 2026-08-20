@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import {
   supabase, RECORD_COLUMNS, EVENT_META_ID, EVENT_META_MAP,
   metaRowToCamel, camelToMetaRow,
@@ -78,7 +79,7 @@ export default function ReportGenerator({ reviewer }) {
   const regions = useMemo(() => [...new Set(approved.map((r) => r.region).filter(Boolean))], [approved]);
   const parsed = useMemo(() => parseReportSections(conclusions), [conclusions]);
   const sec = parsed?.structured ? parsed.sections : null;
-  const mdHtml = (t) => marked.parse(String(t || ''));
+  const mdHtml = (t) => DOMPurify.sanitize(marked.parse(String(t || '')));
   const plainConcl = sec ? sec.conclusions : (parsed && !parsed.structured ? parsed.markdown : '');
 
   let figNo = 0;

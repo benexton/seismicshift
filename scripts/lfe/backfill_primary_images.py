@@ -46,7 +46,7 @@ from urllib.parse import parse_qs, urlparse
 import requests
 from PIL import Image
 
-from _common import SUPABASE_KEY, SUPABASE_URL, require_env, sb_get, sb_post
+from _common import SUPABASE_KEY, SUPABASE_URL, is_safe_fetch_url, require_env, sb_get, sb_post
 
 REQUEST_TIMEOUT = 30
 UA = os.environ.get("NOMINATIM_UA", "vert-lfe-recon/1.0 (contact: set NOMINATIM_UA)")
@@ -93,10 +93,13 @@ def youtube_thumbnail(url: str) -> str | None:
 
 
 def og_image(url: str) -> str | None:
+    if not is_safe_fetch_url(url):
+        return None
     try:
         html = requests.get(url, timeout=REQUEST_TIMEOUT, headers={"User-Agent": UA}).text
         m = OG_IMAGE_RE.search(html)
-        return m.group(1) if m else None
+        image_url = m.group(1) if m else None
+        return image_url if image_url and is_safe_fetch_url(image_url) else None
     except Exception:  # noqa: BLE001
         return None
 
@@ -104,6 +107,8 @@ def og_image(url: str) -> str | None:
 def validate_image(url: str) -> bool:
     """Downloads and confirms this really is a loadable image, not a 404
     page, a consent-wall placeholder, or a 1x1 tracking pixel."""
+    if not is_safe_fetch_url(url):
+        return False
     try:
         r = requests.get(url, timeout=REQUEST_TIMEOUT, headers={"User-Agent": UA})
         r.raise_for_status()

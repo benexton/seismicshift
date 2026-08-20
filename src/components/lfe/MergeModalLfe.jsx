@@ -3,6 +3,7 @@ import { supabaseLfe, LFE_RECORD_COLUMNS } from '../../lib/supabaseLfe.js';
 import {
   DAMAGE_LABEL, observationTypesLabel, HEIGHT_CLASSES, provenanceLabel, cap,
 } from '../../lib/constantsLfe.js';
+import { safeHref } from '../../lib/url.js';
 import Zoomable from '../Zoomable.jsx';
 
 // Metadata fields reconciled one-or-the-other.
@@ -59,7 +60,7 @@ function ItemRow({ item, checked, onToggle }) {
       )}
       <span className="ex-label">
         <b>{item.label}</b>
-        {item.kind === 'link' && <> · <a href={item.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{item.url}</a></>}
+        {item.kind === 'link' && safeHref(item.url) && <> · <a href={item.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{item.url}</a></>}
         {item.kind === 'file' && <> · {item.fileName || 'file'}</>}
         {item.kind === 'note' && <> · {item.note}</>}
         {item.note && item.kind !== 'note' ? <span className="muted"> · {item.note}</span> : null}

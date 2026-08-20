@@ -9,6 +9,7 @@ import AttachmentAdderLfe from './AttachmentAdderLfe.jsx';
 import StreetviewFieldLfe from './StreetviewFieldLfe.jsx';
 import { uploadImage } from '../../lib/mediaLfe.js';
 import { coordError } from '../../lib/coordsLfe.js';
+import { safeHref } from '../../lib/url.js';
 
 /**
  * Detail view for a triaged (Approved) site. Same editing as the review panel:
@@ -121,7 +122,7 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
                 <input type="text" value={v.source_url ?? ''} onChange={set('source_url')} placeholder="https://..." />
               </div>
             ) : (
-              v.source_url && <p className="kv"><b>Source:</b> <a href={v.source_url} target="_blank" rel="noreferrer">link</a></p>
+              v.source_url && safeHref(v.source_url) && <p className="kv"><b>Source:</b> <a href={v.source_url} target="_blank" rel="noreferrer">link</a></p>
             )}
 
             <AttachmentAdderLfe

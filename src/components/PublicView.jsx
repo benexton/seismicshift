@@ -10,6 +10,7 @@ import { emptyFilter, matchesFilter } from '../lib/filter.js';
 import {
   DAMAGE_COLOR, DAMAGE_LABEL, OBSERVATION_LABEL, HEIGHT_CLASSES, cap, fmtDate,
 } from '../lib/constants.js';
+import { safeHref } from '../lib/url.js';
 
 const SUPA = import.meta.env.PUBLIC_SUPABASE_URL || '';
 const DATA_URL = `${SUPA}/storage/v1/object/public/observation-media/public/kumamoto-2026-public.json`;
@@ -84,7 +85,7 @@ function PublicDetail({ site, onClose }) {
           {site.engineer_notes && <div className="pub-notes"><span className="pub-k">Notes</span><p>{site.engineer_notes}</p></div>}
 
           <div className="pub-links">
-            {site.source_url && <a href={site.source_url} target="_blank" rel="noreferrer">Source link</a>}
+            {site.source_url && safeHref(site.source_url) && <a href={site.source_url} target="_blank" rel="noreferrer">Source link</a>}
             {site.streetview_url && <a href={site.streetview_url} target="_blank" rel="noreferrer">Street View</a>}
           </div>
 
@@ -97,7 +98,7 @@ function PublicDetail({ site, onClose }) {
                     <div className="attach-main">
                       {a.media_url && <Zoomable src={a.media_url} alt="Attachment" />}
                       {a.file_url && <button type="button" className="file-chip" onClick={() => downloadFile(a.file_url, a.file_name)}><span className="file-ic">FILE</span> {a.file_name || 'download'}</button>}
-                      {a.source_url && <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>}
+                      {a.source_url && safeHref(a.source_url) && <a className="src-link" href={a.source_url} target="_blank" rel="noreferrer">source link</a>}
                       {a.note && <p className="note">{a.note}</p>}
                     </div>
                   </div>

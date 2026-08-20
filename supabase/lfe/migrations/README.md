@@ -1,7 +1,7 @@
 # LFE platform migrations
 
 Run these against the new, separate LFE Supabase project only - never against
-the Kumamoto project. Run in numeric order (`0001` through `0037`), e.g. via
+the Kumamoto project. Run in numeric order (`0001` through `0039`), e.g. via
 the Supabase SQL editor or `supabase db push`. `0021` and `0022` are security
 fixes from a post-launch review (a client-writable report-conclusions column
 and an overly broad storage policy) - run them even if `0001`-`0020` are
@@ -52,7 +52,17 @@ than just leaving it blank), so a missing source_url is unambiguously
 existing rows. `0037` adds `'twitter'` as a third `scraper_sources.kind`
 (alongside `'bluesky'` and `'rss'`) and `triage_records.source_type`, for
 the scraper pipeline's new X/Twitter collector (see
-`scripts/lfe/ingest_triage_data.py`).
+`scripts/lfe/ingest_triage_data.py`). `0038` is a critical security fix from
+a post-launch review - `ingest_triage()` was missing the service_role check
+every sibling RPC has, so any authenticated user of any event could call it
+directly and write/overwrite `triage_records` in every other event; run it
+even if `0001`-`0037` are already live. `0039` is a defense-in-depth security
+fix from the same review - pins `search_path` on the remaining `SECURITY
+DEFINER` functions that were missing it (`is_event_writer`, `is_event_member`,
+`is_event_admin`, `move_observation`, `submit_observation`,
+`is_platform_admin`, `is_any_event_writer`), matching the pattern already
+used from `0013` onward. Purely additive, no behaviour change; run it even if
+`0001`-`0038` are already live.
 
 After running them:
 1. Create a real user in that project's Auth dashboard.

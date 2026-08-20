@@ -97,6 +97,7 @@ import os
 from _common import (
     SUPABASE_URL, SUPABASE_KEY,
     valid_observation_types, sb_get, resolve_events, require_env,
+    is_safe_fetch_url,
 )
 
 PHASH_DUPLICATE_MAX = 5
@@ -268,10 +269,13 @@ def collect_from_twitter(terms: list[str], per_term: int = 25) -> list[MediaItem
 
 
 def _article_image(url: str) -> str | None:
+    if not is_safe_fetch_url(url):
+        return None
     try:
         html = requests.get(url, timeout=REQUEST_TIMEOUT, headers={"User-Agent": NOMINATIM_UA}).text
         m = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)', html)
-        return m.group(1) if m else None
+        image_url = m.group(1) if m else None
+        return image_url if image_url and is_safe_fetch_url(image_url) else None
     except Exception:  # noqa: BLE001
         return None
 
@@ -305,6 +309,9 @@ def collect_from_rss(feeds: list[str], per_feed: int = 15) -> list[MediaItem]:
 
 # --- pHash dedup (unchanged) -------------------------------------------------
 def _download_image(url: str) -> Image.Image | None:
+    if not is_safe_fetch_url(url):
+        print(f"  ! image fetch blocked (unsafe URL): {url}", file=sys.stderr)
+        return None
     try:
         r = requests.get(url, timeout=REQUEST_TIMEOUT, headers={"User-Agent": NOMINATIM_UA})
         r.raise_for_status()
@@ -477,6 +484,8 @@ def _retry_after(resp, attempt: int) -> float:
 def _triage_gemini(item: MediaItem, prompt: str) -> dict[str, Any]:
     import base64
     global _GEMINI_IDX
+    if not is_safe_fetch_url(item.media_url):
+        raise ValueError(f"unsafe media_url, refusing to fetch: {item.media_url}")
     img = requests.get(item.media_url, timeout=REQUEST_TIMEOUT)
     img.raise_for_status()
     b64 = base64.b64encode(img.content).decode()

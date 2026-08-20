@@ -7,9 +7,12 @@ new, separate LFE Supabase project (LFE_SUPABASE_URL / LFE_SUPABASE_SERVICE_ROLE
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
+import socket
 import sys
+from urllib.parse import urlparse
 
 import requests
 
@@ -36,6 +39,33 @@ def valid_observation_types(tags) -> list[str]:
         return ["other"]
     out = [t for t in tags if t in OBSERVATION_TYPES]
     return out or ["other"]
+
+
+def is_safe_fetch_url(url: str) -> bool:
+    """Guards outbound fetches of scraped/user-supplied URLs (source_url,
+    og:image links, media URLs pulled from a remote page) against SSRF: a
+    hostile or compromised source page could set an og:image (or similar) to
+    an internal address - e.g. http://169.254.169.254/... (cloud metadata) or
+    http://localhost:.../ - to make this pipeline's server-side fetch probe
+    the runner's own network on the attacker's behalf. Rejects non-http(s)
+    schemes and any hostname that resolves to a loopback/private/link-local/
+    reserved/multicast address."""
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return False
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        return False
+    try:
+        infos = socket.getaddrinfo(parsed.hostname, None)
+    except socket.gaierror:
+        return False
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_multicast or ip.is_reserved or ip.is_unspecified):
+            return False
+    return True
 
 
 def require_env(**kv) -> None:

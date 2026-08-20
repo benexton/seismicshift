@@ -7,6 +7,7 @@ import RecordFields, { fieldsPatch } from './RecordFields.jsx';
 import AttachmentAdder from './AttachmentAdder.jsx';
 import Zoomable from './Zoomable.jsx';
 import { coordError } from '../lib/coords.js';
+import { safeHref } from '../lib/url.js';
 
 /**
  * Detail view for a triaged (Approved) site. Same editing as the review panel:
@@ -82,7 +83,7 @@ export default function SiteDetailModal({ record, reviewer, others = [], onClose
             )}
             <p className="kv"><b>Provenance:</b> {provenanceLabel(record)}</p>
             <p className="kv"><b>Verified by:</b> {record.reviewed_by ?? '-'}</p>
-            {record.source_url && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
+            {record.source_url && safeHref(record.source_url) && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
 
             <AttachmentAdder recordId={record.id} reviewer={reviewer} onPendingChange={setAttachPending} />
           </div>

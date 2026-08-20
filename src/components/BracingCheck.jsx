@@ -282,7 +282,10 @@ function BuField({ label, value, onChange, ariaLabel }) {
         step="1"
         value={value}
         placeholder="0"
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          const raw = e.target.value
+          onChange(raw !== '' && Number(raw) < 0 ? '0' : raw)
+        }}
         aria-label={ariaLabel}
         className={FIELD_CLASS}
       />
@@ -499,6 +502,7 @@ function DesignerMode({ locationKey, setLocationKey, siteClass, setSiteClass }) 
   const along = { eq: Number(alongEq) || 0, wind: Number(alongWind) || 0 }
   const across = { eq: Number(acrossEq) || 0, wind: Number(acrossWind) || 0 }
   const ready = alongEq !== '' && alongWind !== '' && acrossEq !== '' && acrossWind !== ''
+    && (along.eq > 0 || along.wind > 0) && (across.eq > 0 || across.wind > 0)
 
   const alongResult = useMemo(
     () => computeDesignerResult({ eqBu: along.eq, windBu: along.wind, H }),

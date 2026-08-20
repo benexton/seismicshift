@@ -8,6 +8,7 @@ import AttachmentAdder from './AttachmentAdder.jsx';
 import MergeModal from './MergeModal.jsx';
 import Zoomable from './Zoomable.jsx';
 import { coordError } from '../lib/coords.js';
+import { safeHref } from '../lib/url.js';
 
 /**
  * Review a queue record: imagery, provenance, all editable attributes, and
@@ -163,7 +164,7 @@ export default function ReviewModal({ record, reviewer, others = [], onClose, on
               {record.ai_confidence != null && `(${Math.round(record.ai_confidence * 100)}%)`} · {record.ai_model ?? '-'}
             </p>
             <p className="kv"><b>Provenance:</b> {provenanceLabel(record)}</p>
-            {record.source_url && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
+            {record.source_url && safeHref(record.source_url) && <p className="kv"><b>Source:</b> <a href={record.source_url} target="_blank" rel="noreferrer">link</a></p>}
 
             <AttachmentAdder recordId={record.id} reviewer={reviewer} onPendingChange={setAttachPending} />
           </div>
