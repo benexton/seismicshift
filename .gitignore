@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+__pycache__/
 
 # Supabase CLI local state (project links, etc.) - machine-specific, not secrets
 supabase/.temp/
