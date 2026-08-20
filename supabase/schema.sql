@@ -1,6 +1,14 @@
 -- =============================================================================
 -- VERT Kumamoto 2026 — Supabase / PostGIS schema
 -- Run in the Supabase SQL editor (or `supabase db push`) on a fresh project.
+--
+-- STATUS (as of 2026-08-21): the app that read/wrote this schema
+-- (/kumamoto-triage-2026/, /kumamoto-2026-public/, their GitHub Actions) has
+-- been decommissioned - that event now lives inside the LFE platform
+-- (supabase/lfe/) instead. This project's tables below are left in place,
+-- dormant, as a historical record - nothing reads or writes them any more.
+-- The project itself has been repurposed to also host Build to Thrive's
+-- leaderboard; see supabase/build-to-thrive/schema.sql for that schema.
 -- =============================================================================
 
 -- 1. Extensions ---------------------------------------------------------------
@@ -122,22 +130,42 @@ end $$;
 alter table public.triage_records enable row level security;
 
 -- Only signed-in volunteers may read the triage queue / approved records.
+-- Excludes anonymous sessions: Supabase's anonymous sign-in (enabled for
+-- Build to Thrive's admin page, see supabase/build-to-thrive/) authenticates
+-- as role `authenticated` too, so without the is_anonymous check below,
+-- anyone could call signInAnonymously() with the public anon key and get
+-- full read/write on this dormant table with zero credentials.
 drop policy if exists "authenticated read" on public.triage_records;
 create policy "authenticated read"
   on public.triage_records for select
   to authenticated
-  using (true);
+  using ((select (auth.jwt() ->> 'is_anonymous')::boolean) is not true);
 
 -- Signed-in volunteers may update review fields (status, notes, reviewer).
 drop policy if exists "authenticated update" on public.triage_records;
 create policy "authenticated update"
   on public.triage_records for update
   to authenticated
-  using (true)
-  with check (true);
+  using ((select (auth.jwt() ->> 'is_anonymous')::boolean) is not true)
+  with check ((select (auth.jwt() ->> 'is_anonymous')::boolean) is not true);
 
 -- INSERT/DELETE are not granted to anon/authenticated: ingestion happens only
 -- through ingest_triage() called with the service role (which bypasses RLS).
+
+-- event_meta (single-row event details: magnitude, epicentre, dates, etc.)
+-- was provisioned by hand in the dashboard, not by this file - recorded
+-- here for completeness. Same anonymous-session gap as above, same fix:
+-- "authenticated read event_meta" (select) and "authenticated write
+-- event_meta" (all) both need their `true` (with_check) replaced with
+-- (select (auth.jwt() ->> 'is_anonymous')::boolean) is not true.
+
+-- Storage: the observation-media bucket's "auth upload media" policy
+-- (INSERT, to authenticated, no qual) was dropped entirely rather than
+-- patched - nothing in the live app uploads to this bucket any more
+-- (AttachmentAdder.jsx / ManualInput.jsx are gone), so zero write access is
+-- the correct state, not merely non-anonymous write access. Its "public
+-- read media" policy (SELECT, anon+authenticated) is unchanged - read-only,
+-- low stakes, and still matches how PublicView-style snapshots were served.
 
 -- 8. Optional demo data -------------------------------------------------------
 -- Points around Kumamoto City / Mashiki, Kumamoto Prefecture.

@@ -346,6 +346,17 @@
   .lb-status.err{color:var(--danger);}
   .lb-privacy{font-size:10.5px;color:var(--line-dim);line-height:1.4;margin-top:8px;}
 
+  .lb-board{margin:10px 0 16px;}
+  .lb-list{display:flex;flex-direction:column;gap:2px;}
+  .lb-row{
+    display:flex;align-items:center;gap:10px;
+    background:var(--bg-panel-2);border-radius:3px;padding:7px 10px;
+    font-family:var(--mono);font-size:12.5px;
+  }
+  .lb-row .lb-rank{flex:0 0 auto;width:18px;color:var(--line-dim);}
+  .lb-row .lb-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--paper);}
+  .lb-row .lb-pts{flex:0 0 auto;color:var(--amber);font-weight:700;}
+
   .qr-note{
     margin-top:auto;padding-top:20px;text-align:center;font-family:var(--mono);
     font-size:10px;color:var(--line-dim);letter-spacing:.06em;
@@ -548,6 +559,7 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
   "use strict";
@@ -655,11 +667,15 @@
     standard: 'https://www.seismicshift.nz/quake-defender/'
   };
 
-  // TODO: point this at your own endpoint before this goes live.
-  // Leave blank and the leaderboard form will explain it isn't connected yet rather than fail silently.
-  // A JSON POST works out of the box against most serverless functions / Airtable / a small backend.
-  // Using a Google Form instead needs a small tweak - see the notes in the response this code shipped with.
-  var LEADERBOARD_ENDPOINT_URL = '';
+  // Leaderboard backend: the former Kumamoto Supabase project, repurposed
+  // (see the STATUS note at the top of supabase/schema.sql). The anon key
+  // is safe to ship - it can only call the two RPCs below, which are the
+  // only access this project grants to it (see supabase/build-to-thrive/schema.sql).
+  var SUPABASE_URL = 'https://qrblhtyoslxvoyyafgkl.supabase.co';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyYmxodHlvc2x4dm95eWFmZ2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNDYwNDMsImV4cCI6MjEwMDkyMjA0M30.Jk4kGwhE_R5JElqgMxZk-U43nHElaGFaI0L7Ha9a8Sk';
+  var sb = (window.supabase && window.supabase.createClient)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
 
   /* =========================================================
      STATE
@@ -2039,6 +2055,7 @@
     card.innerHTML =
       '<div class="lb-title">Your Score</div>'+
       '<div class="lb-score">'+score+'</div>'+
+      '<div class="lb-board" id="lb-board"><p class="lb-sub">Loading leaderboard...</p></div>'+
       '<p class="lb-sub">Add your name to the leaderboard - we\'ll be drawing a prize from the entries.</p>'+
       '<div class="lb-field"><label for="lb-name">Name</label><input type="text" id="lb-name" autocomplete="name" placeholder="Your name" maxlength="60"></div>'+
       '<div class="lb-field"><label for="lb-email">Email</label><input type="email" id="lb-email" autocomplete="email" placeholder="you@email.com" maxlength="120"></div>'+
@@ -2049,6 +2066,37 @@
     document.getElementById('btn-submit-score').addEventListener('click', function(){
       submitScore(score);
     });
+    loadLeaderboard();
+  }
+
+  function loadLeaderboard(){
+    var boardEl = document.getElementById('lb-board');
+    if(!boardEl) return;
+    if(!sb){
+      boardEl.innerHTML = '<p class="lb-sub">Leaderboard unavailable right now.</p>';
+      return;
+    }
+    sb.rpc('get_build_to_thrive_leaderboard', { p_limit: 10 }).then(function(res){
+      if(res.error) throw res.error;
+      var rows = res.data || [];
+      if(!rows.length){
+        boardEl.innerHTML = '<p class="lb-sub">No scores yet - be the first on the board.</p>';
+        return;
+      }
+      boardEl.innerHTML = '<div class="lb-list">'+rows.map(function(r, i){
+        return '<div class="lb-row"><span class="lb-rank">'+(i+1)+'</span>'+
+          '<span class="lb-name">'+escapeHtml(r.name)+'</span>'+
+          '<span class="lb-pts">'+r.score+'</span></div>';
+      }).join('')+'</div>';
+    }).catch(function(){
+      boardEl.innerHTML = '<p class="lb-sub">Couldn\'t load the leaderboard right now.</p>';
+    });
+  }
+
+  function escapeHtml(s){
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
   }
 
   function submitScore(score){
@@ -2069,8 +2117,8 @@
       statusEl.className = 'lb-status err';
       return;
     }
-    if(!LEADERBOARD_ENDPOINT_URL){
-      statusEl.textContent = "Leaderboard isn't connected yet - ask your organiser to set it up.";
+    if(!sb){
+      statusEl.textContent = "Leaderboard isn't connected right now - try again shortly.";
       statusEl.className = 'lb-status err';
       return;
     }
@@ -2078,25 +2126,20 @@
     submitBtn.disabled = true;
     submitBtn.textContent = 'Submitting...';
 
-    var payload = {
-      name: name,
-      email: email,
-      score: score,
-      buildingType: state.typeKey,
-      system: state.systemKey,
-      level: state.levelKey,
-      t: Date.now()
-    };
-
-    fetch(LEADERBOARD_ENDPOINT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }).then(function(){
+    sb.rpc('submit_build_to_thrive_score', {
+      p_name: name,
+      p_email: email,
+      p_score: score,
+      p_building_type: state.typeKey,
+      p_system_key: state.systemKey,
+      p_level_key: state.levelKey
+    }).then(function(res){
+      if(res.error) throw res.error;
       statusEl.textContent = 'Score submitted - good luck!';
       statusEl.className = 'lb-status ok';
       submitBtn.textContent = 'Submitted';
       track('leaderboard_submitted', { score: score });
+      loadLeaderboard();
     }).catch(function(){
       statusEl.textContent = "Couldn't submit right now - check your connection and try again.";
       statusEl.className = 'lb-status err';
