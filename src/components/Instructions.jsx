@@ -1,13 +1,13 @@
+function Go({ tab, onGoTo, children }) {
+  return <button className="link-btn" onClick={() => onGoTo?.(tab)}>{children}</button>;
+}
+
 /**
  * Landing page shown first on login. Walks a new volunteer through the workflow,
  * leading with the triage queue (the core task), then the other tabs in the
  * order they are typically needed.
  */
 export default function Instructions({ onGoTo }) {
-  const Go = ({ tab, children }) => (
-    <button className="link-btn" onClick={() => onGoTo?.(tab)}>{children}</button>
-  );
-
   return (
     <div className="panel-scroll">
       <div className="panel-inner instructions">
@@ -21,7 +21,7 @@ export default function Instructions({ onGoTo }) {
 
         <h2>1. Triage queue - the main task</h2>
         <p>
-          The <Go tab="triage">Triage queue</Go> is where most of the work
+          The <Go tab="triage" onGoTo={onGoTo}>Triage queue</Go> is where most of the work
           happens. Each dot is an unverified observation waiting for a human to
           check. Open one by clicking it.
         </p>
@@ -55,7 +55,7 @@ export default function Instructions({ onGoTo }) {
 
         <h2>2. Manual input - add your own observation</h2>
         <p>
-          The <Go tab="manual">Manual input</Go> tab is for entering an
+          The <Go tab="manual" onGoTo={onGoTo}>Manual input</Go> tab is for entering an
           observation directly. Set an exact location by clicking the map or
           typing coordinates, then record what you saw: observation type, damage
           or Great performance, and for buildings the name, type, primary
@@ -67,7 +67,7 @@ export default function Instructions({ onGoTo }) {
 
         <h2>3. Scraper keywords - the automated feed</h2>
         <p>
-          The <Go tab="scraper">Scraper keywords</Go> tab controls what the
+          The <Go tab="scraper" onGoTo={onGoTo}>Scraper keywords</Go> tab controls what the
           automated pipeline watches: Bluesky search terms and news/RSS feeds.
           Add Japan-relevant terms or a campaign hashtag, and the scheduled job
           picks them up on its next run, fetches matching posts with images,
@@ -77,7 +77,7 @@ export default function Instructions({ onGoTo }) {
 
         <h2>4. Triaged sites - the verified record</h2>
         <p>
-          Approved observations live in <Go tab="triaged">Triaged sites</Go>.
+          Approved observations live in <Go tab="triaged" onGoTo={onGoTo}>Triaged sites</Go>.
           Click any site to review it and keep adding to it over time: more
           photos, extra source links, or notes as new information surfaces. This
           is the living record of each location.
@@ -85,7 +85,7 @@ export default function Instructions({ onGoTo }) {
 
         <h2>5. Report generator</h2>
         <p>
-          The <Go tab="report">Report generator</Go> holds the event details
+          The <Go tab="report" onGoTo={onGoTo}>Report generator</Go> holds the event details
           (magnitude, epicentre, and so on, entered once) and turns all approved
           observations into a Learning from Earthquakes draft you can download and
           finish offline.
