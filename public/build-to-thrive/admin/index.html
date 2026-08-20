@@ -94,7 +94,6 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
   "use strict";
@@ -102,22 +101,9 @@
   var SUPABASE_URL = 'https://qrblhtyoslxvoyyafgkl.supabase.co';
   var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFyYmxodHlvc2x4dm95eWFmZ2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUzNDYwNDMsImV4cCI6MjEwMDkyMjA0M30.Jk4kGwhE_R5JElqgMxZk-U43nHElaGFaI0L7Ha9a8Sk';
   var ADMIN_LIST_FN_URL = SUPABASE_URL + '/functions/v1/build-to-thrive-admin-list';
-  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'bts-admin-auth' }
-  });
-
-  // No real login screen for the game itself, so this reuses Supabase's
-  // anonymous auth just to satisfy the Edge Function's JWT requirement -
-  // the actual gate is admin_password, checked server-side.
-  function ensureAnonSession(){
-    return sb.auth.getSession().then(function(res){
-      if(res.data.session) return res.data.session;
-      return sb.auth.signInAnonymously().then(function(res2){
-        if(res2.error) throw res2.error;
-        return res2.data.session;
-      });
-    });
-  }
+  // No Supabase session needed - the function is deployed with verify_jwt
+  // off (see supabase/build-to-thrive/README.md), so admin_password (sent
+  // in the body below, checked server-side) is the only real gate.
 
   function fmt(iso){
     try{ return new Date(iso).toLocaleString(); }catch(e){ return iso; }
@@ -153,16 +139,13 @@
     if(!pw) return;
     lastPassword = pw;
     btn.disabled = true; btn.textContent = 'Checking...';
-    ensureAnonSession().then(function(session){
-      return fetch(ADMIN_LIST_FN_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: 'Bearer ' + session.access_token
-        },
-        body: JSON.stringify({ admin_password: pw })
-      });
+    fetch(ADMIN_LIST_FN_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: SUPABASE_ANON_KEY
+      },
+      body: JSON.stringify({ admin_password: pw })
     }).then(function(res){
       return res.json().then(function(body){
         if(!res.ok) throw new Error(body.error || 'Could not load the list.');

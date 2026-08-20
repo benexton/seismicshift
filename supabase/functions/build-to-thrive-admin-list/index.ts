@@ -1,11 +1,11 @@
 // Returns every leaderboard entry, including email, gated by a shared
 // password - a single-owner prize draw, not a system with real accounts to
 // manage, so a shared password checked server-side (never shipped in the
-// client bundle) is the right amount of protection here. The caller still
-// needs a valid anonymous-auth JWT to get past the API gateway, but that
-// identity is never itself the check - admin_password is.
+// client bundle) is the right amount of protection here. Deployed with
+// verify_jwt off (see README) so no Supabase session is required at all -
+// admin_password is the only real gate, checked below.
 //
-// Deploy: supabase functions deploy build-to-thrive-admin-list --project-ref qrblhtyoslxvoyyafgkl
+// Deploy: supabase functions deploy build-to-thrive-admin-list --project-ref qrblhtyoslxvoyyafgkl --no-verify-jwt
 // Secret: supabase secrets set ADMIN_PASSWORD=... --project-ref qrblhtyoslxvoyyafgkl
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.112.0';
 
@@ -38,17 +38,6 @@ Deno.serve(async (req) => {
   if (!ADMIN_PASSWORD || payload.admin_password !== ADMIN_PASSWORD) {
     return json(401, { error: 'Wrong password' });
   }
-
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) return json(401, { error: 'Missing Authorization header' });
-
-  const userClient = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
-    { global: { headers: { Authorization: authHeader } } },
-  );
-  const { data: { user }, error: userError } = await userClient.auth.getUser();
-  if (userError || !user) return json(401, { error: 'Not signed in' });
 
   const admin = createClient(
     Deno.env.get('SUPABASE_URL')!,
