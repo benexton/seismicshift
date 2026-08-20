@@ -263,8 +263,20 @@
     border-radius:4px;
     padding:10px 10px 0;
     margin:14px 0;
+    position:relative;
+    overflow:hidden;
   }
   #scene{width:100%;height:auto;max-height:360px;display:block;margin:0 auto;}
+  /* Damage vignette + impact flash, screen-space (not scene-space, so it
+     never moves with the camera-shake transform on #cameraGroup). Opacity
+     and colour are driven per-frame from collapseFrac and one-off impact
+     pulses in runShakeAnimation - see quakeFlash(). */
+  .quake-flash{
+    position:absolute; top:10px; left:10px; right:10px; bottom:0;
+    pointer-events:none; opacity:0; border-radius:3px;
+    background:radial-gradient(ellipse at 50% 45%, transparent 35%, var(--flash-color, rgba(224,87,79,.4)) 100%);
+    mix-blend-mode:screen;
+  }
   .seis-strip{
     border-top:1px solid var(--line-faint);
     padding:6px 4px 8px;
@@ -502,6 +514,7 @@
 
     <div class="scene-wrap">
       <svg id="scene" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="quake-flash" id="quake-flash"></div>
       <div class="seis-strip">
         <div class="cap"><span>SEISMOGRAPH</span><span id="seis-status">STANDBY</span></div>
         <canvas id="seismograph" width="600" height="112"></canvas>
@@ -1575,6 +1588,8 @@
     SCENE.storeyEls.forEach(function(el){ el.setAttribute('transform','translate(0,0)'); });
     SCENE.crackEls.forEach(function(el){ el.setAttribute('opacity','0'); });
     resetForceViz();
+    var flashEl = document.getElementById('quake-flash');
+    if(flashEl) flashEl.style.opacity = '0';
   }
 
   function updateSpecLine(){
@@ -1621,27 +1636,56 @@
     seisHistory = [];
     drawSeismograph();
   }
+  /* Amplitude-coded trace colour - green through amber to red by how hard
+     the ground is currently moving, echoing a real strong-motion
+     seismograph's intensity banding (and the arcade reference art). 28 is
+     comfortably above the largest groundAmp a Major quake produces, so
+     red is reserved for genuinely severe motion rather than triggering
+     on every Moderate shake. */
+  function seisColor(mag){
+    var t = clamp(mag/28, 0, 1);
+    return t < 0.5 ? hexLerp('#38b07d', '#e8a33d', t/0.5) : hexLerp('#e8a33d', '#e0574f', (t-0.5)/0.5);
+  }
+
   function drawSeismograph(){
     if(!seisCtx) return;
     var c = seisCtx.canvas;
     var w = c.width, h = c.height;
     seisCtx.clearRect(0,0,w,h);
+    seisCtx.shadowBlur = 0;
     seisCtx.strokeStyle = 'rgba(191,224,236,0.15)';
     seisCtx.lineWidth = 1;
     seisCtx.beginPath();
     seisCtx.moveTo(0,h/2); seisCtx.lineTo(w,h/2);
     seisCtx.stroke();
     if(seisHistory.length < 2) return;
-    seisCtx.strokeStyle = '#e8a33d';
-    seisCtx.lineWidth = 1.6;
-    seisCtx.beginPath();
     var n = seisHistory.length;
-    for(var i=0;i<n;i++){
-      var x = (i/(n-1)) * w;
-      var y = h/2 - seisHistory[i]*3.2;
-      if(i===0) seisCtx.moveTo(x,y); else seisCtx.lineTo(x,y);
+    seisCtx.lineWidth = 1.8;
+    seisCtx.lineCap = 'round';
+    // drawn as short coloured segments (not one path) so the glow/colour
+    // can change smoothly along the trace as amplitude rises and falls
+    for(var i=1;i<n;i++){
+      var x0 = ((i-1)/(n-1)) * w, y0 = h/2 - seisHistory[i-1]*3.2;
+      var x1 = (i/(n-1)) * w, y1 = h/2 - seisHistory[i]*3.2;
+      var col = seisColor(Math.abs(seisHistory[i]));
+      seisCtx.strokeStyle = col;
+      seisCtx.shadowColor = col;
+      seisCtx.shadowBlur = 5;
+      seisCtx.beginPath();
+      seisCtx.moveTo(x0,y0);
+      seisCtx.lineTo(x1,y1);
+      seisCtx.stroke();
     }
-    seisCtx.stroke();
+    // pulsing recording head at the latest sample, CRT-phosphor style
+    var hy = h/2 - seisHistory[n-1]*3.2;
+    var headCol = seisColor(Math.abs(seisHistory[n-1]));
+    seisCtx.shadowBlur = 8;
+    seisCtx.shadowColor = headCol;
+    seisCtx.fillStyle = headCol;
+    seisCtx.beginPath();
+    seisCtx.arc(w-2, hy, 2.6, 0, Math.PI*2);
+    seisCtx.fill();
+    seisCtx.shadowBlur = 0;
   }
 
   /* =========================================================
@@ -1655,42 +1699,67 @@
   /* ---------- Parallax camera ----------
      A wrapper transform on #cameraGroup gives the 2.5D scene a sense of
      a real 3D vantage: a slow idle orbit (subtle rotate + drift + scale
-     breathing) when at rest, plus a decaying camera-shake during the
-     quake. cameraShake is written by the shake loop each frame and
-     decays here, so it tracks the shaking and settles afterwards. The
-     loop self-terminates when the shake screen is no longer active. */
-  var cameraRAF = null, cameraShake = 0, cameraStartT = null;
+     breathing) when at rest, plus a trauma-driven camera shake during the
+     quake (Squirrel Eiserloh's "shake trauma" pattern: a single decaying
+     0..1 value, squared before it drives amplitude, so shake ramps in hard
+     on a hit and tails off quickly rather than the linear/mushy decay a
+     raw amplitude gives). bumpCameraShake() is called by the shake loop
+     each frame and by one-off impact events; decay happens here so it
+     keeps running (and settling) even across frames where nothing bumps
+     it. Offsets come from noise1() - several summed sines at incommensurate
+     frequencies - instead of Math.random(), so consecutive frames stay
+     correlated: it reads as a camera being knocked around, not TV static.
+     The loop self-terminates when the shake screen is no longer active. */
+  var cameraRAF = null, cameraTrauma = 0, cameraStartT = null, cameraLastTs = null;
+  var CAMERA_MAX_PX = 10, CAMERA_MAX_ROT = 3.4, CAMERA_MAX_ZOOM = 0.055;
+
+  function noise1(t){
+    return Math.sin(t*13.1)*0.35 + Math.sin(t*27.3+1.7)*0.25 +
+           Math.sin(t*53.7+4.1)*0.25 + Math.sin(t*97.9+0.6)*0.15;
+  }
 
   function startCamera(){
     if(reduceMotion) { var cg=document.getElementById('cameraGroup'); if(cg) cg.removeAttribute('transform'); return; }
-    cameraShake = 0;
+    cameraTrauma = 0;
     if(cameraRAF) return;
     cameraStartT = null;
+    cameraLastTs = null;
     cameraRAF = requestAnimationFrame(cameraFrame);
   }
-  function bumpCameraShake(v){ if(v > cameraShake) cameraShake = v; }
+  /* v arrives in the shake loop's rough 0-8 "how hard was this frame"
+     units; normalised to trauma's 0..1 range and only ever raised, never
+     lowered directly - decay is the only way trauma falls, so a string of
+     hits compounds instead of the newest one overwriting a bigger one
+     already in flight. */
+  function bumpCameraShake(v){
+    var t = clamp(v/8, 0, 1);
+    if(t > cameraTrauma) cameraTrauma = t;
+  }
 
   function cameraFrame(ts){
     var shakeScreen = document.getElementById('screen-shake');
     if(!shakeScreen || !shakeScreen.classList.contains('active')){ cameraRAF = null; return; }
     var cam = document.getElementById('cameraGroup');
     if(cam){
-      if(cameraStartT===null) cameraStartT = ts;
+      if(cameraStartT===null){ cameraStartT = ts; cameraLastTs = ts; }
       var t = (ts - cameraStartT)/1000;
+      var dt = clamp((ts-cameraLastTs)/1000, 0, 0.05);
+      cameraLastTs = ts;
       // idle orbit - slow and subtle
       var rot = Math.sin(t*0.5)*0.5;
       var tx = Math.sin(t*0.37)*2.4;
       var ty = Math.cos(t*0.42)*1.1;
       var zoom = 1 + Math.sin(t*0.30)*0.004;
-      // camera shake - jitter + zoom-in, scaled by the current quake
-      var mag = Math.min(cameraShake, 7);
-      if(mag > 0.05){
-        tx += (Math.random()-0.5)*mag*1.3;
-        ty += (Math.random()-0.5)*mag*0.8;
-        rot += (Math.random()-0.5)*mag*0.15;
-        zoom += mag*0.003;
+      // trauma-driven shake: squared falloff for a hard-in/fast-out punch,
+      // correlated noise per axis (offset phases so x/y/rot don't lock step)
+      var shakeMag = cameraTrauma*cameraTrauma;
+      if(shakeMag > 0.0008){
+        tx += noise1(t*3.6)*CAMERA_MAX_PX*shakeMag;
+        ty += noise1(t*3.6+41.0)*CAMERA_MAX_PX*0.62*shakeMag;
+        rot += noise1(t*2.4+83.0)*CAMERA_MAX_ROT*shakeMag;
+        zoom += shakeMag*CAMERA_MAX_ZOOM;
       }
-      cameraShake *= 0.90;
+      cameraTrauma = Math.max(0, cameraTrauma - dt*1.35);
       cam.setAttribute('transform',
         'translate('+tx.toFixed(2)+','+ty.toFixed(2)+') '+
         'translate(150 300) scale('+zoom.toFixed(4)+') rotate('+rot.toFixed(3)+') translate(-150 -300)');
@@ -1740,6 +1809,40 @@
 
     var svg = document.getElementById('scene');
     var fxGroup = null, particles = [], dust = [];
+    var flashEl = document.getElementById('quake-flash');
+    var flashPulse = 0;
+    var storeyImpactFired = {};
+    var crackStage2Fired = false;
+    var STOREY_STAGGER = 0.045;
+
+    /* Small one-off debris burst + camera/flash kick at a specific storey
+       boundary - fired once per storey as its own local collapse crosses
+       halfway (see storeyCollapseFrac below), so a multi-storey collapse
+       reads as a cascade of individual impacts landing in sequence rather
+       than one uniform crumple. */
+    function impactAt(i, cx){
+      if(!fxGroup) return;
+      var y = SCENE.buildingBaseY - i*SCENE.storeyH;
+      var n = reduceMotion ? 3 : 6;
+      for(var q=0;q<n;q++){
+        var el = document.createElementNS('http://www.w3.org/2000/svg','rect');
+        var sz = 1.5+Math.random()*2.5;
+        el.setAttribute('width', sz);
+        el.setAttribute('height', sz);
+        el.setAttribute('fill', Math.random()<0.5 ? '#1b4a6b' : '#bfe0ec');
+        el.setAttribute('opacity', '0.7');
+        fxGroup.appendChild(el);
+        particles.push({
+          el: el,
+          x: SCENE.bx + Math.random()*SCENE.bw + cx,
+          y: y,
+          vx: (Math.random()-0.5)*55,
+          vy: -30 - Math.random()*40
+        });
+      }
+      flashPulse = Math.max(flashPulse, 0.3);
+      bumpCameraShake(3.5);
+    }
 
     function spawnCollapseFx(groundX){
       var old = svg.querySelector('#fxGroup');
@@ -1847,6 +1950,22 @@
       var swayDamp = 1 - collapseFrac*0.7;
       var residualAngle = residual ? tiltDir*1.1*clamp((frac-0.8)/0.2,0,1) : 0;
 
+      // Each storey starts its own local collapse slightly after the one
+      // below it (see STOREY_STAGGER) - a soft-storey failure at ground
+      // level (i=0) drags the storeys above down in a short cascade
+      // instead of every floor crumpling in lockstep.
+      function storeyCollapseFrac(i){
+        if(collapseFrac<=0) return 0;
+        var localStart = sched.collapse + i*STOREY_STAGGER;
+        return frac > localStart ? clamp((frac-localStart)/Math.max(1-localStart,0.001)*1.2, 0, 1) : 0;
+      }
+
+      if(!crackStage2Fired && frac >= sched.c2){
+        crackStage2Fired = true;
+        flashPulse = Math.max(flashPulse, 0.4);
+        bumpCameraShake(3.0);
+      }
+
       function uAt(hf){ return baseX + (topSmoothed-baseX)*modeShape(hf); }
 
       SCENE.storeyEls.forEach(function(el){
@@ -1871,11 +1990,15 @@
             var dropS = collapseFrac * SCENE.storeyH * 0.5;
             tf = 'matrix(1,0,'+cS.toFixed(4)+',1,'+eS.toFixed(2)+','+(dropS+bdy).toFixed(2)+')';
           } else if(i===0){
-            var sy = 1 - 0.7*collapseFrac;
+            var localCF0 = storeyCollapseFrac(0);
+            if(localCF0 > 0.5 && !storeyImpactFired[0]){ storeyImpactFired[0]=true; impactAt(0, groundX); }
+            var sy = 1 - 0.7*localCF0;
             var ky = SCENE.buildingBaseY*(1-sy);
             tf = 'translate('+(sway+bdx).toFixed(2)+','+(ky+bdy).toFixed(2)+') scale(1,'+sy.toFixed(3)+')';
           } else {
-            var ang = tiltDir * collapseFrac * (4 + hfC*22);
+            var localCF = storeyCollapseFrac(i);
+            if(localCF > 0.5 && !storeyImpactFired[i]){ storeyImpactFired[i]=true; impactAt(i, groundX); }
+            var ang = tiltDir * localCF * (4 + hfC*22);
             tf = 'translate('+(sway+bdx).toFixed(2)+','+(crushPx+bdy).toFixed(2)+') rotate('+ang.toFixed(2)+' 150 '+SCENE.buildingBaseY+')';
           }
         } else if(SCENE.rigidBody){
@@ -1944,6 +2067,20 @@
         seisHistory.push(groundX);
         if(seisHistory.length > 140) seisHistory.shift();
         drawSeismograph();
+      }
+
+      // Damage vignette: a baseline red wash that scales with overall
+      // collapse progress, plus flashPulse - a fast-decaying spike laid on
+      // top for actual "hit" moments (first major crack, each storey's
+      // impact) so it visibly kicks rather than just fading in.
+      flashPulse = Math.max(0, flashPulse - dtReal*2.4);
+      if(flashEl){
+        var vign = collapseFrac*0.55;
+        flashEl.style.opacity = clamp(vign + flashPulse, 0, 1).toFixed(3);
+        var flashColor = collapseFrac > 0.1
+          ? 'rgba(224,87,79,'+(0.30+0.24*collapseFrac).toFixed(2)+')'
+          : 'rgba(232,163,61,'+(0.32*flashPulse).toFixed(2)+')';
+        flashEl.style.setProperty('--flash-color', flashColor);
       }
 
       if(frac < 1){
