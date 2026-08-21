@@ -282,14 +282,6 @@
     padding:6px 4px 8px;
   }
   .seis-strip .cap{font-family:var(--mono);font-size:9px;color:var(--line-dim);letter-spacing:.1em;display:flex;justify-content:space-between;padding:0 2px 2px;}
-  .force-legend{
-    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-    border-top:1px solid var(--line-faint);padding:7px 4px 8px;
-    font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--line-dim);
-  }
-  .force-legend .fl-item{display:flex;align-items:center;gap:5px;color:var(--line);}
-  .force-legend .fl-swatch{width:14px;height:3px;border-radius:2px;display:inline-block;}
-  .force-legend .fl-hint{opacity:.7;font-style:italic;}
   #seismograph{width:100%;height:56px;display:block;}
 
   .level-select{display:flex;gap:8px;margin:4px 0 14px;}
@@ -519,11 +511,6 @@
         <div class="cap"><span>SEISMOGRAPH</span><span id="seis-status">STANDBY</span></div>
         <canvas id="seismograph" width="600" height="112"></canvas>
       </div>
-      <div class="force-legend" id="force-legend" style="display:none;">
-        <span class="fl-item"><span class="fl-swatch" style="background:#ff6b5a;"></span>Tension</span>
-        <span class="fl-item"><span class="fl-swatch" style="background:#5aa9ff;"></span>Compression</span>
-        <span class="fl-hint">watch the load path flip as it sways</span>
-      </div>
     </div>
 
     <div class="group-title">Earthquake Level</div>
@@ -558,6 +545,7 @@
     </div>
 
     <div id="learn-more-slot"></div>
+    <div id="whatif-slot"></div>
 
     <button class="cta-secondary" id="btn-how" style="margin-top:10px;">See How It Works</button>
     <div class="how-panel" id="how-panel"></div>
@@ -968,7 +956,19 @@
       if(k==='shearwallsAdd' && state.systemKey==='shearwalls') return; // already maxed
       var p = pool[k];
       var selected = state.protections[k];
-      var remAfterToggleOff = budgetRemaining() + (selected ? p.cost : 0);
+      var featuredKeyForCard = Object.keys(pool).find(function(fk){ return pool[fk].featured; });
+      // Selecting this card may auto-clear others (the exclusivity rule
+      // below) - that frees their budget too, so affordability has to
+      // account for it, not just this card's own current cost.
+      var freedByThis = 0;
+      if(!selected && k===featuredKeyForCard){
+        Object.keys(pool).forEach(function(ok){
+          if(ok!==k && state.protections[ok]) freedByThis += pool[ok].cost;
+        });
+      } else if(!selected && state.protections[featuredKeyForCard]){
+        freedByThis = pool[featuredKeyForCard].cost;
+      }
+      var remAfterToggleOff = budgetRemaining() + (selected ? p.cost : 0) + freedByThis;
       var affordable = remAfterToggleOff >= p.cost;
       var el = document.createElement('button');
       el.type = 'button';
@@ -984,8 +984,23 @@
           flashNote('protect-note', 'Not enough budget remaining - deselect something first.');
           return;
         }
-        state.protections[k] = !state.protections[k];
-        track(state.protections[k] ? 'protection_selected' : 'protection_deselected', {protection:k});
+        var turningOn = !selected;
+        // The featured protection (FrontFoot Dampers / Quake Defender) is
+        // an all-in-one system, not stackable with the piecemeal options -
+        // selecting either one clears the other, with a note explaining why.
+        var featuredKey = Object.keys(pool).find(function(fk){ return pool[fk].featured; });
+        if(turningOn && k===featuredKey){
+          var cleared = [];
+          Object.keys(pool).forEach(function(ok){
+            if(ok!==k && state.protections[ok]){ cleared.push(pool[ok].label); state.protections[ok]=false; }
+          });
+          if(cleared.length) flashNote('protect-note', p.label+' replaces other protection choices - removed '+cleared.join(' and ')+'.');
+        } else if(turningOn && k!==featuredKey && state.protections[featuredKey]){
+          state.protections[featuredKey] = false;
+          flashNote('protect-note', 'Removed '+pool[featuredKey].label+' - it can\'t be combined with other protections.');
+        }
+        state.protections[k] = turningOn;
+        track(turningOn ? 'protection_selected' : 'protection_deselected', {protection:k});
         renderProtectionCards(); syncBudget3();
       });
       wrap.appendChild(el);
@@ -1044,54 +1059,6 @@
     return clamp(num/den, 0.4, 2.5);
   }
 
-  function runSimulation(){
-    var derived = buildDerivedStats();
-    var lvl = LEVELS[state.levelKey];
-    var eq = {
-      intensity: rand(lvl.intensity[0], lvl.intensity[1]),
-      freq: rand(lvl.freq[0], lvl.freq[1]),
-      duration: rand(lvl.duration[0], lvl.duration[1])
-    };
-    var r = eq.freq / derived.fn;
-    var tr = transmissibility(r, derived.zeta);
-    var massFactor = Math.sqrt(derived.mass/20);
-    var heightFactor = 1 + derived.totalHeightM/40;
-    var jitter = rand(0.85, 1.15);
-    var demand = tr * eq.intensity * massFactor * heightFactor * 2.5 * jitter;
-    if(derived.isolated) demand *= 0.5;
-    var capacity = derived.strength;
-    var survives = capacity >= demand;
-    var resonant = Math.abs(r-1) < 0.3;
-
-    var cause = null;
-    if(!survives){
-      if(resonant) cause = 'resonance';
-      else if(demand/capacity > 1.6) cause = 'capacity';
-      else cause = 'movement';
-    }
-    var margin = capacity/demand;
-
-    return { derived:derived, eq:eq, r:r, tr:tr, demand:demand, capacity:capacity, survives:survives, cause:cause, margin:margin };
-  }
-
-  /* =========================================================
-     SCORE (for the leaderboard)
-     Deliberately independent of which earthquake level was
-     tested and of that run's random draw - it scores the
-     DESIGN itself, using a fixed reference scenario and an
-     average response across the full plausible frequency
-     range, not the one random earthquake that was actually
-     thrown at it. Weak structural systems are squeezed hard
-     (multiplicative, not additive). Designs that don't use
-     FrontFoot Dampers (house) or Quake Defender (industrial/
-     commercial) are capped below the designs that do, so the
-     top of the leaderboard always belongs to those.
-  ========================================================= */
-  var SCORE_NON_PROMOTED_CAP = 60;
-  var SCORE_PROMOTED_MULTIPLIER = 1.5;
-  var SCORE_FAIL_THRESHOLD = 10;
-  var SCORE_THRIVE_THRESHOLD = 61;
-
   function averageTransmissibility(fn, zeta){
     var sum = 0, n = 0;
     for(var f=0.35; f<=2.2; f+=0.05){
@@ -1101,32 +1068,156 @@
     return sum/n;
   }
 
-  function computeScore(result){
-    if(!result.survives) return 0;
-    var derived = result.derived;
+  /* =========================================================
+     DETERMINISTIC VERDICT + SCORE
+     The pass/fail verdict and the score both come from this one
+     fixed reference scenario (intensity 0.35, transmissibility
+     averaged across the full plausible frequency range) - never
+     from the random earthquake actually drawn for the shake test,
+     and never from which level was chosen to test it at. Two
+     designs with identical choices always get identical results;
+     the level picker only changes how dramatic the animation looks
+     (see runSimulation's eq/tr), not the outcome.
+
+     TYPE_DEMAND_CALIBRATION exists because the three building types
+     are not naturally comparable: at calib=1, the weakest possible
+     choice (cheapest system, no protection) has a safety margin of
+     1.27 for a house, 1.43 for a commercial block, and 3.57 for an
+     industrial building - industrial is structurally overtuned, so
+     a bad industrial choice almost never fails while a bad house or
+     commercial choice often does. These factors equalise that
+     worst-case margin to ~1.27 for all three, so a poor choice is
+     comparably risky whichever type you pick. (Numbers from a
+     one-off enumeration of every system x protection combination
+     per type - see the design discussion, not re-derived at runtime.)
+  ========================================================= */
+  var TYPE_DEMAND_CALIBRATION = { house: 1.00, industrial: 2.81, commercial: 1.12 };
+
+  function referenceMargin(derived, typeKey){
     var meanTr = averageTransmissibility(derived.fn, derived.zeta);
     var massFactor = Math.sqrt(derived.mass/20);
     var heightFactor = 1 + derived.totalHeightM/40;
-    var demandRef = meanTr * 0.35 * massFactor * heightFactor * 2.5;
-    if(derived.isolated) demandRef *= 0.5;
-    var marginRef = derived.strength / demandRef;
+    var demand = TYPE_DEMAND_CALIBRATION[typeKey] * meanTr * 0.35 * massFactor * heightFactor * 2.5;
+    if(derived.isolated) demand *= 0.5;
+    return { meanTr:meanTr, demand:demand, capacity:derived.strength, margin: derived.strength/demand };
+  }
 
-    var movementScore = clamp(1 - (meanTr-0.6)/1.3, 0, 1);
-    var marginScore, rawQuality;
-    if(derived.isHouse){
-      // More generous, near-linear curve so surviving houses spread
-      // across the band (plasterboard low, plywood mid, concrete high)
-      // instead of all bunching near zero.
-      marginScore = clamp((marginRef-1)/4, 0, 1);
-      rawQuality = 100 * marginScore * Math.pow(movementScore, 0.8);
-    } else {
-      marginScore = clamp((marginRef-0.7)/3.5, 0, 1);
-      rawQuality = 100 * Math.pow(marginScore, 1.3) * Math.pow(movementScore, 0.8);
+  function boolCombos(keys){
+    var out = [], n = keys.length;
+    for(var mask=0; mask<(1<<n); mask++){
+      var o = {};
+      keys.forEach(function(k,i){ o[k] = !!(mask & (1<<i)); });
+      out.push(o);
+    }
+    return out;
+  }
+
+  /* The 0-100 performance ceiling for each type: the best margin
+     actually reachable by ANY system + protection combination that
+     fits inside the base 100pt budget (no revenue additions). Tried
+     "strongest system + isolation only" first, but that combo costs
+     more than 100 for industrial/commercial (only house's strongest
+     system + isolation happens to fit) - using it as the ceiling made
+     "thrive" unreachable for two of the three types. Enumerating every
+     combo and taking the best affordable one fixes that, and stays
+     correct automatically if systems/protections/costs are ever
+     rebalanced, since nothing here is hardcoded to a specific combo. */
+  function bestAffordableMargin(typeKey){
+    var bt = BUILDING_TYPES[typeKey];
+    var isHouse = bt.category==='house';
+    var systems = isHouse ? HOUSE_SYSTEMS : STANDARD_SYSTEMS;
+    var systemOrder = isHouse ? HOUSE_SYSTEM_ORDER : STANDARD_SYSTEM_ORDER;
+    var protections = isHouse ? HOUSE_PROTECTIONS : STANDARD_PROTECTIONS;
+    var isolatedKey = isHouse ? 'frontfootDampers' : 'isolation';
+    var best = 1;
+    systemOrder.forEach(function(sysKey){
+      var sys = systems[sysKey];
+      boolCombos(Object.keys(protections)).forEach(function(prot){
+        var stiffness = sys.stiffness, strength = sys.strength, zeta = sys.zeta, mass = bt.massBase, cost = sys.cost;
+        if(isHouse){
+          if(prot.upspecBracing){ stiffness*=1.5; strength*=1.5; cost += protections.upspecBracing.cost; }
+          if(prot.lightweight){ mass*=0.8; cost += protections.lightweight.cost; }
+        } else {
+          if(prot.quakeDefender){ stiffness+=3; strength+=2; zeta+=0.07; cost += protections.quakeDefender.cost; }
+          if(prot.shearwallsAdd){ stiffness+=3; strength+=3; cost += protections.shearwallsAdd.cost; }
+        }
+        var isolated = !!prot[isolatedKey];
+        if(isolated) cost += protections[isolatedKey].cost;
+        if(cost > BASE_BUDGET) return;
+        var totalHeightM = bt.storeys*bt.storeyHeightM;
+        var fn, zetaFinal = zeta;
+        if(isolated){ fn = 0.4; zetaFinal = isHouse ? 0.12 : (0.12 + (prot.quakeDefender?0.03:0)); }
+        else { fn = 1/(bt.periodK*totalHeightM/Math.sqrt(stiffness/6)); }
+        var derived = { mass:mass, strength:strength, zeta:zetaFinal, fn:fn, isolated:isolated, totalHeightM:totalHeightM };
+        best = Math.max(best, referenceMargin(derived, typeKey).margin);
+      });
+    });
+    return best;
+  }
+  var SCORE_CEILING = {};
+  TYPE_ORDER.forEach(function(k){ SCORE_CEILING[k] = bestAffordableMargin(k); });
+
+  var SCORE_THRIVE_THRESHOLD = 70;
+
+  function runSimulation(){
+    var derived = buildDerivedStats();
+    var lvl = LEVELS[state.levelKey];
+    // Randomised per the chosen level - drives how dramatic the shake
+    // ANIMATION looks (amplitude, duration, which resonance/capacity/
+    // movement story gets told), never the verdict below.
+    var eq = {
+      intensity: rand(lvl.intensity[0], lvl.intensity[1]),
+      freq: rand(lvl.freq[0], lvl.freq[1]),
+      duration: rand(lvl.duration[0], lvl.duration[1])
+    };
+    var r = eq.freq / derived.fn;
+    var tr = transmissibility(r, derived.zeta);
+    var resonant = Math.abs(r-1) < 0.3;
+
+    var ref = referenceMargin(derived, state.typeKey);
+    var survives = ref.margin >= 1;
+
+    var cause = null;
+    if(!survives){
+      if(resonant) cause = 'resonance';
+      else if(ref.margin < 0.6) cause = 'capacity';
+      else cause = 'movement';
     }
 
-    var promoted = derived.isHouse ? !!state.protections.frontfootDampers : !!state.protections.quakeDefender;
-    if(!promoted) return Math.round(Math.min(rawQuality, SCORE_NON_PROMOTED_CAP));
-    return Math.round(rawQuality * SCORE_PROMOTED_MULTIPLIER);
+    return {
+      derived:derived, eq:eq, r:r, tr:tr, resonant:resonant,
+      meanTr:ref.meanTr, demand:ref.demand, capacity:ref.capacity,
+      survives:survives, cause:cause, margin:ref.margin
+    };
+  }
+
+  /* Efficiency: a bounded bonus for spending less of the base 100pt
+     budget, and a bounded penalty for spending more - linear, centred
+     so a mid-range spend is neutral, capped at +-30% so a cheap but
+     mediocre design can't outscore a genuinely better one, only nudge
+     the ranking toward good value between similar designs.
+
+     House systems/protections are priced noticeably cheaper than
+     standard ones (a full "great design" costs ~70 for house vs ~90
+     for industrial/commercial), so the same formula applied to raw
+     spend gave house an efficiency bonus standard could never reach -
+     categoryOffset shifts standard's spend back onto house's scale
+     before applying it, so an equally good/cheap design in either
+     category lands on the same efficiency multiplier. */
+  function computeEfficiency(spend, isHouse){
+    var categoryOffset = isHouse ? 0 : 20;
+    return clamp(1.4 - 0.008*(spend-categoryOffset), 0.7, 1.3);
+  }
+
+  function computeScore(result){
+    if(!result.survives) return { score:0, performance:0, efficiency:1 };
+    var ceiling = SCORE_CEILING[state.typeKey];
+    var marginScore = clamp((result.margin-1) / (ceiling-1), 0, 1);
+    var movementScore = clamp(1 - (result.meanTr-0.6)/1.3, 0, 1);
+    var performance = 100 * marginScore * Math.pow(movementScore, 0.8);
+
+    var efficiency = computeEfficiency(spentDesign()+spentProtections(), result.derived.isHouse);
+    return { score: Math.round(performance*efficiency), performance: Math.round(performance), efficiency: efficiency };
   }
 
   function resultTier(result, score){
@@ -1255,8 +1346,6 @@
     SCENE.hasForceViz = (SCENE.braceEls.length>0 || SCENE.haunchEls.length>0);
     SCENE.groundGroupEl = svg.querySelector('#groundGroup');
     SCENE.isolatorGroupEl = svg.querySelector('#isolatorGroup');
-    var legend = document.getElementById('force-legend');
-    if(legend) legend.style.display = SCENE.hasForceViz ? 'flex' : 'none';
   }
 
   /* Blend two #rrggbb colours; t in [0,1]. Used for force colouring. */
@@ -2002,10 +2091,24 @@
             tf = 'translate('+(sway+bdx).toFixed(2)+','+(crushPx+bdy).toFixed(2)+') rotate('+ang.toFixed(2)+' 150 '+SCENE.buildingBaseY+')';
           }
         } else if(SCENE.rigidBody){
-          /* Wall-braced buildings translate as one stiff block -
-             negligible racking between storeys. */
           var uR = uAt(1);
-          tf = 'translate('+(uR+bdx).toFixed(2)+','+bdy.toFixed(2)+')';
+          if(derived.isolated){
+            /* Isolated: the whole rigid block genuinely slides on the
+               isolator bearings, base included - translating the
+               whole block is correct here. */
+            tf = 'translate('+(uR+bdx).toFixed(2)+','+bdy.toFixed(2)+')';
+          } else {
+            /* Not isolated: the base is rigidly founded, so it stays
+               locked to the ground with zero slip - only the top
+               should visibly sway. Shown as a small rotation about
+               the base (rocking), not a translation of the whole
+               block, so a shear-wall building never looks like it's
+               sliding on its foundation the way an isolated one does. */
+            var driftAboveBase = uR - baseX;
+            var heightPx = Math.max(SCENE.segments*SCENE.storeyH, 1);
+            var angR = clamp(driftAboveBase/heightPx * (180/Math.PI), -14, 14);
+            tf = 'translate('+(baseX+bdx).toFixed(2)+','+bdy.toFixed(2)+') rotate('+angR.toFixed(2)+' 150 '+SCENE.buildingBaseY+')';
+          }
           if(residualAngle) tf += ' rotate('+residualAngle.toFixed(2)+' 150 '+SCENE.buildingBaseY+')';
         } else {
           /* Flexural racking: each storey deforms as a parallelogram.
@@ -2134,7 +2237,8 @@
   }
 
   function showResults(result){
-    var score = computeScore(result);
+    var scoreResult = computeScore(result);
+    var score = scoreResult.score;
     var tier = resultTier(result, score);
     var copy = TIER_COPY[tier];
 
@@ -2152,6 +2256,11 @@
     stats.push(['Max. Movement', maxMove + ' mm~']);
     stats.push(['Budget Spent', COIN + (spentDesign()+spentProtections()) + ' / ' + budgetTotal()]);
     stats.push(['Earthquake Level', LEVELS[state.levelKey].label]);
+    if(result.survives){
+      var effPct = Math.round((scoreResult.efficiency-1)*100);
+      stats.push(['Efficiency', (effPct>=0?'+':'')+effPct+'% budget bonus']);
+      stats.push(['Design Score', scoreResult.performance + ' pts before efficiency']);
+    }
     statGrid.innerHTML = stats.map(function(s){
       return '<div class="stat"><div class="k">'+s[0]+'</div><div class="v">'+s[1]+'</div></div>';
     }).join('');
@@ -2165,13 +2274,23 @@
     document.getElementById('learn-more-slot').innerHTML =
       '<a class="learn-more-link" href="'+learnUrl+'" target="_blank" rel="noopener">'+learnLabel+' &rarr;</a>';
 
+    var featuredPool = currentProtections();
+    var featuredKey = Object.keys(featuredPool).find(function(fk){ return featuredPool[fk].featured; });
+    var featuredLabel = featuredPool[featuredKey].label;
+    var hasFeatured = !!state.protections[featuredKey];
+    var whatifSlot = document.getElementById('whatif-slot');
+    whatifSlot.innerHTML =
+      '<button class="cta-secondary" id="btn-whatif">What would this look like '+
+      (hasFeatured ? 'without' : 'with') + ' ' + featuredLabel + '?</button>';
+    document.getElementById('btn-whatif').addEventListener('click', retestWithFeaturedToggle);
+
     var how = document.getElementById('how-panel');
     how.classList.remove('open');
     how.innerHTML =
-      '<div class="spec-line"><span>Earthquake frequency</span><span>'+result.eq.freq.toFixed(2)+' Hz</span></div>'+
+      '<div class="spec-line"><span>Earthquake frequency (this test)</span><span>'+result.eq.freq.toFixed(2)+' Hz</span></div>'+
       '<div class="spec-line"><span>Building natural frequency</span><span>'+result.derived.fn.toFixed(2)+' Hz</span></div>'+
-      '<div class="spec-line"><span>Response amplification</span><span>'+result.tr.toFixed(2)+'x</span></div>'+
-      '<div class="spec-line"><span>Demand vs. capacity</span><span>'+result.demand.toFixed(1)+' / '+result.capacity.toFixed(1)+'</span></div>';
+      '<div class="spec-line"><span>Average response amplification</span><span>'+result.meanTr.toFixed(2)+'x</span></div>'+
+      '<div class="spec-line"><span>Demand vs. capacity (reference)</span><span>'+result.demand.toFixed(1)+' / '+result.capacity.toFixed(1)+'</span></div>';
 
     renderLeaderboardCard(result, score);
 
@@ -2179,6 +2298,36 @@
     showScreen('results');
     track(result.survives ? 'earthquake_survived' : 'earthquake_failure', {
       type: state.typeKey, system: state.systemKey, protections: state.protections, level: state.levelKey, score: score
+    });
+  }
+
+  /* Toggles the featured protection (FrontFoot Dampers / Quake Defender)
+     on the CURRENT design and immediately re-runs the shake test, so a
+     player can directly compare "with" vs "without" on the same design.
+     Turning it on clears the other protections first, matching the
+     exclusivity rule on the protection-selection screen. */
+  function retestWithFeaturedToggle(){
+    if(animRunning) return;
+    var pool = currentProtections();
+    var featuredKey = Object.keys(pool).find(function(fk){ return pool[fk].featured; });
+    var turningOn = !state.protections[featuredKey];
+    if(turningOn){
+      Object.keys(pool).forEach(function(ok){ if(ok!==featuredKey) state.protections[ok] = false; });
+    }
+    state.protections[featuredKey] = turningOn;
+    track('what_if_retest', {protection:featuredKey, on:turningOn});
+
+    buildScene(); setStaticScenePose(); updateSpecLine(); renderLevelSelect();
+    initSeismograph();
+    showScreen('shake'); startCamera();
+
+    animRunning = true;
+    document.getElementById('btn-shake').disabled = true;
+    document.getElementById('seis-status').textContent = 'RECORDING';
+    var result = runSimulation();
+    state.lastRun = result;
+    runShakeAnimation(result, function(){
+      setTimeout(function(){ showResults(result); }, reduceMotion?150:500);
     });
   }
 
