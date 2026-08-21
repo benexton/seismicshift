@@ -1209,6 +1209,15 @@
     return clamp(1.4 - 0.008*(spend-categoryOffset), 0.7, 1.3);
   }
 
+  // FrontFoot Dampers and Quake Defender are Seismic Shift's own products -
+  // any surviving design that uses one always lands in "You Thrived"
+  // territory (comfortably above SCORE_THRIVE_THRESHOLD), whatever else was
+  // picked. Deliberately a floor on the FINAL score, not a shortcut earlier
+  // in the calculation, so a genuinely strong featured-protection design
+  // still scores above a weak one - it just guarantees neither can fall
+  // out of the thrive band.
+  var FEATURED_SCORE_FLOOR = 80;
+
   function computeScore(result){
     if(!result.survives) return { score:0, performance:0, efficiency:1 };
     var ceiling = SCORE_CEILING[state.typeKey];
@@ -1217,7 +1226,12 @@
     var performance = 100 * marginScore * Math.pow(movementScore, 0.8);
 
     var efficiency = computeEfficiency(spentDesign()+spentProtections(), result.derived.isHouse);
-    return { score: Math.round(performance*efficiency), performance: Math.round(performance), efficiency: efficiency };
+    var score = Math.round(performance*efficiency);
+
+    var hasFeatured = result.derived.isHouse ? !!state.protections.frontfootDampers : !!state.protections.quakeDefender;
+    if(hasFeatured) score = Math.max(score, FEATURED_SCORE_FLOOR);
+
+    return { score: score, performance: Math.round(performance), efficiency: efficiency };
   }
 
   function resultTier(result, score){
