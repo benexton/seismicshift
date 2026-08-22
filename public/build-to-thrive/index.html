@@ -1159,6 +1159,19 @@
 
   var SCORE_THRIVE_THRESHOLD = 70;
 
+  // Below this, a "technical" pass (margin just barely over 1.0) reads and
+  // scores as a failure instead of a hollow "You Survived" at 0 points - a
+  // margin of 1.001 is not meaningfully different from failing outright,
+  // and showing a survive banner next to a 0 score read as broken.
+  var MIN_SURVIVE_PERFORMANCE = 5;
+
+  function computePerformance(margin, meanTr, typeKey){
+    var ceiling = SCORE_CEILING[typeKey];
+    var marginScore = clamp((margin-1) / (ceiling-1), 0, 1);
+    var movementScore = clamp(1 - (meanTr-0.6)/1.3, 0, 1);
+    return 100 * marginScore * Math.pow(movementScore, 0.8);
+  }
+
   function runSimulation(){
     var derived = buildDerivedStats();
     var lvl = LEVELS[state.levelKey];
@@ -1175,7 +1188,8 @@
     var resonant = Math.abs(r-1) < 0.3;
 
     var ref = referenceMargin(derived, state.typeKey);
-    var survives = ref.margin >= 1;
+    var performance = computePerformance(ref.margin, ref.meanTr, state.typeKey);
+    var survives = ref.margin >= 1 && performance >= MIN_SURVIVE_PERFORMANCE;
 
     var cause = null;
     if(!survives){
@@ -1187,7 +1201,7 @@
     return {
       derived:derived, eq:eq, r:r, tr:tr, resonant:resonant,
       meanTr:ref.meanTr, demand:ref.demand, capacity:ref.capacity,
-      survives:survives, cause:cause, margin:ref.margin
+      survives:survives, cause:cause, margin:ref.margin, performance:performance
     };
   }
 
@@ -1220,10 +1234,7 @@
 
   function computeScore(result){
     if(!result.survives) return { score:0, performance:0, efficiency:1 };
-    var ceiling = SCORE_CEILING[state.typeKey];
-    var marginScore = clamp((result.margin-1) / (ceiling-1), 0, 1);
-    var movementScore = clamp(1 - (result.meanTr-0.6)/1.3, 0, 1);
-    var performance = 100 * marginScore * Math.pow(movementScore, 0.8);
+    var performance = result.performance;
 
     var efficiency = computeEfficiency(spentDesign()+spentProtections(), result.derived.isHouse);
     var score = Math.round(performance*efficiency);
