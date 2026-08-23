@@ -2,7 +2,8 @@ import { Fragment, useEffect, useState } from 'react';
 import { supabaseLfe, edgeFunctionErrorMessage } from '../../lib/supabaseLfe.js';
 import LoginGateLfe from './LoginGateLfe.jsx';
 import LfeNavGroup from './LfeNavGroup.jsx';
-import { BASEMAP_PRESETS } from '../../lib/constantsLfe.js';
+import { BASEMAP_PRESETS, TSUNAMI_OPTIONS, VERT_DEPLOYMENT_OPTIONS, PHYSICAL_DEPLOYMENT_OPTIONS, withCurrentOption } from '../../lib/constantsLfe.js';
+import { geonetIdFromInput, fetchGeonetEvent } from '../../lib/geonetLfe.js';
 
 // Accepts either a bare USGS event id (e.g. "us7000abcd") or a full event
 // page URL and returns just the id. Event page URLs almost always carry a
@@ -221,8 +222,14 @@ function CreateEventPanel({ onCreated }) {
   const [depth, setDepth] = useState('');
   const [locationName, setLocationName] = useState('');
   const [faulting, setFaulting] = useState('');
+  const [tensor, setTensor] = useState('');
   const [maxMmi, setMaxMmi] = useState('');
   const [tsunami, setTsunami] = useState('');
+  // 'Active' matches the documented real-world default (0034_event_meta_deployment_status.sql) -
+  // a virtual deployment is in practice always active for an event with a report being generated
+  // at all. Physical deployment has no such default - most events never need one.
+  const [vertDeployment, setVertDeployment] = useState('Active');
+  const [physicalDeployment, setPhysicalDeployment] = useState('');
   const [languages, setLanguages] = useState('en');
   const [basemapKey, setBasemapKey] = useState('osm');
   const [zoom, setZoom] = useState(10);
@@ -233,6 +240,14 @@ function CreateEventPanel({ onCreated }) {
   // loop.
   const [englishKeywords, setEnglishKeywords] = useState('');
   const [keywordText, setKeywordText] = useState({});
+  // Primary source: USGS everywhere, or GeoNet for NZ events (fresher/more
+  // precise for NZ, but its public API is much thinner - see geonetLfe.js).
+  // When GeoNet is primary, usgsInput/usgsBusy below double as an optional
+  // backfill for whatever GeoNet doesn't provide (moment tensor, ShakeMap
+  // hazard figures) rather than the primary fetch.
+  const [dataSource, setDataSource] = useState('usgs');
+  const [geonetInput, setGeonetInput] = useState('');
+  const [geonetBusy, setGeonetBusy] = useState(false);
   const [usgsInput, setUsgsInput] = useState('');
   const [usgsBusy, setUsgsBusy] = useState(false);
   const [translateBusy, setTranslateBusy] = useState(false);
@@ -307,6 +322,61 @@ function CreateEventPanel({ onCreated }) {
     }
   }
 
+  async function fetchGeonet() {
+    const id = geonetIdFromInput(geonetInput);
+    if (!id) return setStatus({ kind: 'err', msg: 'Paste a GeoNet event id or event page URL first.' });
+    setGeonetBusy(true); setStatus(null);
+    try {
+      const r = await fetchGeonetEvent(id);
+      if (r.name) setName(r.name);
+      if (r.magnitude) setMagnitude(r.magnitude);
+      if (r.depth) setDepth(r.depth);
+      if (r.lng) setLng(r.lng);
+      if (r.lat) setLat(r.lat);
+      if (r.eventDatetime) setEventDatetime(r.eventDatetime);
+      if (r.locationName) setLocationName(r.locationName);
+      if (r.maxMmi) setMaxMmi(r.maxMmi);
+      if (r.country) { setCountry(r.country); setCountryCode(r.countryCode); onLanguagesChange(r.languages); }
+
+      setStatus({ kind: 'ok', msg: 'Fetched from GeoNet. Review the fields below - GeoNet has no moment tensor or ShakeMap-style hazard maps, so those stay blank unless backfilled from USGS below.' });
+    } catch (ex) {
+      setStatus({ kind: 'err', msg: `GeoNet lookup failed: ${ex.message ?? ex}` });
+    } finally {
+      setGeonetBusy(false);
+    }
+  }
+
+  // Only fills a field that is still empty - never overwrites a value GeoNet
+  // (or the admin) already put there. Uses a functional update so it never
+  // needs the current value passed in stale.
+  function fillIfEmpty(setter, value) {
+    if (!value) return;
+    setter((cur) => (cur === '' ? value : cur));
+  }
+
+  async function backfillFromUsgs() {
+    const id = usgsIdFromInput(usgsInput);
+    if (!id) return setStatus({ kind: 'err', msg: 'Paste a USGS event id or event page URL first.' });
+    setUsgsBusy(true); setStatus(null);
+    try {
+      const r = await fetchUsgsEvent(id);
+      fillIfEmpty(setMagnitude, r.magnitude);
+      fillIfEmpty(setDepth, r.depth);
+      fillIfEmpty(setLng, r.lng);
+      fillIfEmpty(setLat, r.lat);
+      fillIfEmpty(setEventDatetime, r.eventDatetime);
+      fillIfEmpty(setLocationName, r.locationName);
+      fillIfEmpty(setMaxMmi, r.maxMmi);
+      fillIfEmpty(setTsunami, r.tsunami);
+
+      setStatus({ kind: 'ok', msg: 'Backfilled any fields GeoNet left blank from USGS. Review before creating the event.' });
+    } catch (ex) {
+      setStatus({ kind: 'err', msg: `USGS backfill failed: ${ex.message ?? ex}` });
+    } finally {
+      setUsgsBusy(false);
+    }
+  }
+
   async function createEvent(e) {
     e.preventDefault();
     if (!name.trim()) return setStatus({ kind: 'err', msg: 'Event name is required.' });
@@ -344,9 +414,12 @@ function CreateEventPanel({ onCreated }) {
         status: 'draft',
         is_public: false,
         created_by: userData?.user?.id ?? null,
+        data_source: dataSource,
+        geonet_event_id: geonetIdFromInput(geonetInput.trim()) || null,
         // Kept so the report generator can re-query USGS later for
         // ShakeMap/ground-failure hazard figures, without asking the admin
-        // to paste the id a second time.
+        // to paste the id a second time. Doubles as the optional backfill id
+        // when data_source is 'geonet'.
         usgs_event_id: usgsIdFromInput(usgsInput.trim()) || null,
       }).select().single();
       if (error) throw error;
@@ -356,8 +429,11 @@ function CreateEventPanel({ onCreated }) {
       if (depth !== '') metaPatch.depth = Number(depth);
       if (locationName.trim()) metaPatch.location_name = locationName.trim();
       if (faulting.trim()) metaPatch.faulting = faulting.trim();
+      if (tensor.trim()) metaPatch.tensor = tensor.trim();
       if (maxMmi.trim()) metaPatch.max_mmi = maxMmi.trim();
       if (tsunami.trim()) metaPatch.tsunami = tsunami.trim();
+      if (vertDeployment.trim()) metaPatch.vert_deployment = vertDeployment.trim();
+      if (physicalDeployment.trim()) metaPatch.physical_mission_deployment = physicalDeployment.trim();
       if (Object.keys(metaPatch).length) {
         await supabaseLfe.from('event_meta').update(metaPatch).eq('event_id', created.id);
       }
@@ -371,8 +447,9 @@ function CreateEventPanel({ onCreated }) {
 
       setStatus({ kind: 'ok', msg: `Event "${created.name}" created (slug: ${created.slug}). It starts in draft - flip it to active on the Manage events tab once it's ready.${keywordSyncWarning}` });
       setName(''); setSlug(''); setSlugEdited(false); setCountry(''); setCountryCode(''); setEventDatetime('');
-      setLat(''); setLng(''); setMagnitude(''); setDepth(''); setUsgsInput('');
-      setLocationName(''); setFaulting(''); setMaxMmi(''); setTsunami('');
+      setLat(''); setLng(''); setMagnitude(''); setDepth(''); setUsgsInput(''); setGeonetInput(''); setDataSource('usgs');
+      setLocationName(''); setFaulting(''); setTensor(''); setMaxMmi(''); setTsunami('');
+      setVertDeployment('Active'); setPhysicalDeployment('');
       setEnglishKeywords(''); setKeywordText({});
       setConfirmSkipTranslation(false);
       onCreated?.();
@@ -388,16 +465,52 @@ function CreateEventPanel({ onCreated }) {
       <h2 style={{ marginTop: 0 }}>Create event</h2>
 
       <div className="field">
-        <label>USGS event id or event page URL</label>
+        <label>Primary data source</label>
         <div className="link-add">
-          <input type="text" value={usgsInput} onChange={(e) => setUsgsInput(e.target.value)}
-            placeholder="e.g. us7000abcd, or a USGS event page URL" />
-          <button type="button" className="mini" onClick={fetchUsgs} disabled={usgsBusy}>
-            {usgsBusy ? 'Fetching...' : 'Fetch from USGS'}
-          </button>
+          <label><input type="radio" name="create-data-source" value="usgs" checked={dataSource === 'usgs'} onChange={() => setDataSource('usgs')} /> USGS</label>
+          <label><input type="radio" name="create-data-source" value="geonet" checked={dataSource === 'geonet'} onChange={() => setDataSource('geonet')} /> GeoNet (New Zealand)</label>
         </div>
-        <span className="muted small">Optional. Auto-fills name, epicentre, time, magnitude, depth, location, and maximum MMI/tsunami-threshold below - review before saving.</span>
+        <span className="muted small">GeoNet is New Zealand's authoritative source - use it for NZ events. Its public feed is thinner than USGS's, so a USGS id can optionally backfill what it's missing.</span>
       </div>
+
+      {dataSource === 'usgs' ? (
+        <div className="field">
+          <label>USGS event id or event page URL</label>
+          <div className="link-add">
+            <input type="text" value={usgsInput} onChange={(e) => setUsgsInput(e.target.value)}
+              placeholder="e.g. us7000abcd, or a USGS event page URL" />
+            <button type="button" className="mini" onClick={fetchUsgs} disabled={usgsBusy}>
+              {usgsBusy ? 'Fetching...' : 'Fetch from USGS'}
+            </button>
+          </div>
+          <span className="muted small">Optional. Auto-fills name, epicentre, time, magnitude, depth, location, and maximum MMI below - review before saving.</span>
+        </div>
+      ) : (
+        <>
+          <div className="field">
+            <label>GeoNet event id or event page URL</label>
+            <div className="link-add">
+              <input type="text" value={geonetInput} onChange={(e) => setGeonetInput(e.target.value)}
+                placeholder="e.g. 2026p576643, or a GeoNet event page URL" />
+              <button type="button" className="mini" onClick={fetchGeonet} disabled={geonetBusy}>
+                {geonetBusy ? 'Fetching...' : 'Fetch from GeoNet'}
+              </button>
+            </div>
+            <span className="muted small">Auto-fills name, epicentre, time, magnitude, depth, location, and maximum MMI below - review before saving.</span>
+          </div>
+          <div className="field">
+            <label>USGS event id (optional, for backfill)</label>
+            <div className="link-add">
+              <input type="text" value={usgsInput} onChange={(e) => setUsgsInput(e.target.value)}
+                placeholder="e.g. us7000abcd, or a USGS event page URL" />
+              <button type="button" className="mini" onClick={backfillFromUsgs} disabled={usgsBusy}>
+                {usgsBusy ? 'Backfilling...' : 'Backfill missing fields from USGS'}
+              </button>
+            </div>
+            <span className="muted small">GeoNet has no moment tensor or ShakeMap-style hazard maps - only fills fields still blank above, never overwrites what GeoNet already set.</span>
+          </div>
+        </>
+      )}
 
       <form onSubmit={createEvent}>
         <div className="report-meta-form">
@@ -416,9 +529,30 @@ function CreateEventPanel({ onCreated }) {
           <div><label>Magnitude (Mw)</label><input type="number" step="0.1" value={magnitude} onChange={(e) => setMagnitude(e.target.value)} /></div>
           <div><label>Depth (km)</label><input type="number" step="0.1" value={depth} onChange={(e) => setDepth(e.target.value)} /></div>
           <div><label>Location (geographical)</label><input type="text" value={locationName} onChange={(e) => setLocationName(e.target.value)} placeholder="e.g. 5km ESE of Catia La Mar, Venezuela" /></div>
-          <div><label>Faulting mechanism</label><input type="text" value={faulting} onChange={(e) => setFaulting(e.target.value)} placeholder="not auto-filled - not reliably available from USGS's basic feed" /></div>
+          <div><label>Faulting mechanism</label><input type="text" value={faulting} onChange={(e) => setFaulting(e.target.value)} placeholder="not auto-filled - not reliably available from either provider's basic feed" /></div>
+          <div><label>Tensor</label><input type="text" value={tensor} onChange={(e) => setTensor(e.target.value)} placeholder="not auto-filled - not reliably available from either provider's basic feed" /></div>
           <div><label>Maximum MMI</label><input type="text" value={maxMmi} onChange={(e) => setMaxMmi(e.target.value)} /></div>
-          <div><label>Tsunami alert</label><input type="text" value={tsunami} onChange={(e) => setTsunami(e.target.value)} /></div>
+          <div>
+            <label>Tsunami alert</label>
+            <select value={tsunami} onChange={(e) => setTsunami(e.target.value)}>
+              <option value="">-</option>
+              {withCurrentOption(TSUNAMI_OPTIONS, tsunami).map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>NZERP Virtual Reconnaissance Deployment</label>
+            <select value={vertDeployment} onChange={(e) => setVertDeployment(e.target.value)}>
+              <option value="">-</option>
+              {withCurrentOption(VERT_DEPLOYMENT_OPTIONS, vertDeployment).map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
+          <div>
+            <label>NZERP Physical Reconnaissance Deployment</label>
+            <select value={physicalDeployment} onChange={(e) => setPhysicalDeployment(e.target.value)}>
+              <option value="">-</option>
+              {withCurrentOption(PHYSICAL_DEPLOYMENT_OPTIONS, physicalDeployment).map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+          </div>
           <div><label>Languages (comma-separated codes)</label><input type="text" value={languages} onChange={(e) => onLanguagesChange(e.target.value)} placeholder="en, ja" /></div>
           <div>
             <label>Basemap preset</label>
@@ -529,7 +663,7 @@ function EventKeywordsEditor({ event, onClose, onSaved }) {
 
   return (
     <tr>
-      <td colSpan={6}>
+      <td colSpan={7}>
         <div className="card" style={{ margin: 0 }}>
           <div className="report-actions">
             <button type="button" className="mini" onClick={translate} disabled={busy}>
@@ -571,13 +705,20 @@ function EditEventPanel({ event, onClose, onSaved }) {
   const [depth, setDepth] = useState('');
   const [locationName, setLocationName] = useState('');
   const [faulting, setFaulting] = useState('');
+  const [tensor, setTensor] = useState('');
   const [maxMmi, setMaxMmi] = useState('');
   const [tsunami, setTsunami] = useState('');
+  const [vertDeployment, setVertDeployment] = useState('');
+  const [physicalDeployment, setPhysicalDeployment] = useState('');
   const [metaLoaded, setMetaLoaded] = useState(false);
   const [languages, setLanguages] = useState((event.languages?.length ? event.languages : ['en']).join(', '));
   const [basemapKey, setBasemapKey] = useState(Object.keys(event.basemap || {})[0] || 'osm');
   const [zoom, setZoom] = useState(event.map_center?.zoom ?? 10);
   const [gsheetId, setGsheetId] = useState(event.gsheet_id || '');
+  const [dataSource, setDataSource] = useState(event.data_source || 'usgs');
+  const [geonetInput, setGeonetInput] = useState('');
+  const [geonetEventId, setGeonetEventId] = useState(event.geonet_event_id || '');
+  const [geonetBusy, setGeonetBusy] = useState(false);
   const [usgsInput, setUsgsInput] = useState('');
   const [usgsEventId, setUsgsEventId] = useState(event.usgs_event_id || '');
   const [usgsBusy, setUsgsBusy] = useState(false);
@@ -609,17 +750,76 @@ function EditEventPanel({ event, onClose, onSaved }) {
     }
   }
 
+  async function fetchGeonet() {
+    const id = geonetIdFromInput(geonetInput);
+    if (!id) return setStatus({ kind: 'err', msg: 'Paste a GeoNet event id or event page URL first.' });
+    setGeonetBusy(true); setStatus(null);
+    try {
+      const r = await fetchGeonetEvent(id);
+      if (r.magnitude) setMagnitude(r.magnitude);
+      if (r.depth) setDepth(r.depth);
+      if (r.lng) setLng(r.lng);
+      if (r.lat) setLat(r.lat);
+      if (r.eventDatetime) setEventDatetime(r.eventDatetime);
+      if (r.locationName) setLocationName(r.locationName);
+      if (r.maxMmi) setMaxMmi(r.maxMmi);
+      if (r.country) { setCountry(r.country); setCountryCode(r.countryCode); }
+      setGeonetEventId(id);
+
+      setStatus({ kind: 'ok', msg: 'Fetched from GeoNet. Review the fields below, then Save - GeoNet has no moment tensor or ShakeMap-style hazard maps, so those stay as-is unless backfilled from USGS below.' });
+    } catch (ex) {
+      setStatus({ kind: 'err', msg: `GeoNet lookup failed: ${ex.message ?? ex}` });
+    } finally {
+      setGeonetBusy(false);
+    }
+  }
+
+  // Only fills a field that is still empty - never overwrites a value GeoNet
+  // (or the admin) already put there.
+  function fillIfEmpty(setter, value) {
+    if (!value) return;
+    setter((cur) => (cur === '' ? value : cur));
+  }
+
+  async function backfillFromUsgs() {
+    const id = usgsIdFromInput(usgsInput);
+    if (!id) return setStatus({ kind: 'err', msg: 'Paste a USGS event id or event page URL first.' });
+    setUsgsBusy(true); setStatus(null);
+    try {
+      const r = await fetchUsgsEvent(id);
+      fillIfEmpty(setMagnitude, r.magnitude);
+      fillIfEmpty(setDepth, r.depth);
+      fillIfEmpty(setLng, r.lng);
+      fillIfEmpty(setLat, r.lat);
+      fillIfEmpty(setEventDatetime, r.eventDatetime);
+      fillIfEmpty(setLocationName, r.locationName);
+      fillIfEmpty(setMaxMmi, r.maxMmi);
+      fillIfEmpty(setTsunami, r.tsunami);
+      setUsgsEventId(id);
+
+      setStatus({ kind: 'ok', msg: 'Backfilled any fields still blank from USGS. Review before saving.' });
+    } catch (ex) {
+      setStatus({ kind: 'err', msg: `USGS backfill failed: ${ex.message ?? ex}` });
+    } finally {
+      setUsgsBusy(false);
+    }
+  }
+
   useEffect(() => {
     (async () => {
       const { data } = await supabaseLfe.from('event_meta')
-        .select('magnitude, depth, location_name, faulting, max_mmi, tsunami').eq('event_id', event.id).maybeSingle();
+        .select('magnitude, depth, location_name, faulting, tensor, max_mmi, tsunami, vert_deployment, physical_mission_deployment')
+        .eq('event_id', event.id).maybeSingle();
       if (data) {
         setMagnitude(data.magnitude != null ? String(data.magnitude) : '');
         setDepth(data.depth != null ? String(data.depth) : '');
         setLocationName(data.location_name ?? '');
         setFaulting(data.faulting ?? '');
+        setTensor(data.tensor ?? '');
         setMaxMmi(data.max_mmi ?? '');
         setTsunami(data.tsunami ?? '');
+        setVertDeployment(data.vert_deployment ?? '');
+        setPhysicalDeployment(data.physical_mission_deployment ?? '');
       }
       setMetaLoaded(true);
     })();
@@ -648,6 +848,8 @@ function EditEventPanel({ event, onClose, onSaved }) {
         basemap,
         map_center: { lat: latNum ?? 0, lng: lngNum ?? 0, zoom: Number(zoom) },
         gsheet_id: gsheetId.trim() || null,
+        data_source: dataSource,
+        geonet_event_id: geonetEventId.trim() || null,
         usgs_event_id: usgsEventId.trim() || null,
       }).eq('id', event.id);
       if (error) throw error;
@@ -657,8 +859,11 @@ function EditEventPanel({ event, onClose, onSaved }) {
         depth: depth !== '' ? Number(depth) : null,
         location_name: locationName.trim() || null,
         faulting: faulting.trim() || null,
+        tensor: tensor.trim() || null,
         max_mmi: maxMmi.trim() || null,
         tsunami: tsunami.trim() || null,
+        vert_deployment: vertDeployment.trim() || null,
+        physical_mission_deployment: physicalDeployment.trim() || null,
       }).eq('event_id', event.id);
       if (metaError) throw metaError;
 
@@ -673,19 +878,56 @@ function EditEventPanel({ event, onClose, onSaved }) {
 
   return (
     <tr>
-      <td colSpan={6}>
+      <td colSpan={7}>
         <div className="card" style={{ margin: 0 }}>
           <div className="field">
-            <label>USGS event id or event page URL</label>
+            <label>Primary data source</label>
             <div className="link-add">
-              <input type="text" value={usgsInput} onChange={(e) => setUsgsInput(e.target.value)}
-                placeholder="e.g. us7000abcd, or a USGS event page URL" />
-              <button type="button" className="mini" onClick={fetchUsgs} disabled={usgsBusy}>
-                {usgsBusy ? 'Fetching...' : 'Fetch from USGS'}
-              </button>
+              <label><input type="radio" name={`edit-data-source-${event.id}`} value="usgs" checked={dataSource === 'usgs'} onChange={() => setDataSource('usgs')} /> USGS</label>
+              <label><input type="radio" name={`edit-data-source-${event.id}`} value="geonet" checked={dataSource === 'geonet'} onChange={() => setDataSource('geonet')} /> GeoNet (New Zealand)</label>
             </div>
-            <span className="muted small">Optional - backfills epicentre, time, magnitude, depth, location, and maximum MMI/tsunami-threshold below. Review before saving; the event name is not overwritten.</span>
+            <span className="muted small">GeoNet is New Zealand's authoritative source - use it for NZ events. Its public feed is thinner than USGS's, so a USGS id can optionally backfill what it's missing.</span>
           </div>
+
+          {dataSource === 'usgs' ? (
+            <div className="field">
+              <label>USGS event id or event page URL</label>
+              <div className="link-add">
+                <input type="text" value={usgsInput} onChange={(e) => setUsgsInput(e.target.value)}
+                  placeholder="e.g. us7000abcd, or a USGS event page URL" />
+                <button type="button" className="mini" onClick={fetchUsgs} disabled={usgsBusy}>
+                  {usgsBusy ? 'Fetching...' : 'Fetch from USGS'}
+                </button>
+              </div>
+              <span className="muted small">Optional - backfills epicentre, time, magnitude, depth, location, and maximum MMI below. Review before saving; the event name is not overwritten.</span>
+            </div>
+          ) : (
+            <>
+              <div className="field">
+                <label>GeoNet event id or event page URL</label>
+                <div className="link-add">
+                  <input type="text" value={geonetInput} onChange={(e) => setGeonetInput(e.target.value)}
+                    placeholder="e.g. 2026p576643, or a GeoNet event page URL" />
+                  <button type="button" className="mini" onClick={fetchGeonet} disabled={geonetBusy}>
+                    {geonetBusy ? 'Fetching...' : 'Fetch from GeoNet'}
+                  </button>
+                </div>
+                <span className="muted small">Backfills epicentre, time, magnitude, depth, location, and maximum MMI below. Review before saving; the event name is not overwritten.</span>
+              </div>
+              <div className="field">
+                <label>USGS event id (optional, for backfill)</label>
+                <div className="link-add">
+                  <input type="text" value={usgsInput} onChange={(e) => setUsgsInput(e.target.value)}
+                    placeholder="e.g. us7000abcd, or a USGS event page URL" />
+                  <button type="button" className="mini" onClick={backfillFromUsgs} disabled={usgsBusy}>
+                    {usgsBusy ? 'Backfilling...' : 'Backfill missing fields from USGS'}
+                  </button>
+                </div>
+                <span className="muted small">GeoNet has no moment tensor or ShakeMap-style hazard maps - only fills fields still blank above, never overwrites what GeoNet already set.</span>
+              </div>
+            </>
+          )}
+
           <form onSubmit={save}>
             <div className="report-meta-form">
               <div><label>Name</label><input type="text" value={name} onChange={(e) => setName(e.target.value)} required /></div>
@@ -703,8 +945,29 @@ function EditEventPanel({ event, onClose, onSaved }) {
               <div><label>Depth (km)</label><input type="number" step="0.1" value={depth} onChange={(e) => setDepth(e.target.value)} disabled={!metaLoaded} /></div>
               <div><label>Location (geographical)</label><input type="text" value={locationName} onChange={(e) => setLocationName(e.target.value)} disabled={!metaLoaded} /></div>
               <div><label>Faulting mechanism</label><input type="text" value={faulting} onChange={(e) => setFaulting(e.target.value)} disabled={!metaLoaded} /></div>
+              <div><label>Tensor</label><input type="text" value={tensor} onChange={(e) => setTensor(e.target.value)} disabled={!metaLoaded} /></div>
               <div><label>Maximum MMI</label><input type="text" value={maxMmi} onChange={(e) => setMaxMmi(e.target.value)} disabled={!metaLoaded} /></div>
-              <div><label>Tsunami alert</label><input type="text" value={tsunami} onChange={(e) => setTsunami(e.target.value)} disabled={!metaLoaded} /></div>
+              <div>
+                <label>Tsunami alert</label>
+                <select value={tsunami} onChange={(e) => setTsunami(e.target.value)} disabled={!metaLoaded}>
+                  <option value="">-</option>
+                  {withCurrentOption(TSUNAMI_OPTIONS, tsunami).map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label>NZERP Virtual Reconnaissance Deployment</label>
+                <select value={vertDeployment} onChange={(e) => setVertDeployment(e.target.value)} disabled={!metaLoaded}>
+                  <option value="">-</option>
+                  {withCurrentOption(VERT_DEPLOYMENT_OPTIONS, vertDeployment).map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label>NZERP Physical Reconnaissance Deployment</label>
+                <select value={physicalDeployment} onChange={(e) => setPhysicalDeployment(e.target.value)} disabled={!metaLoaded}>
+                  <option value="">-</option>
+                  {withCurrentOption(PHYSICAL_DEPLOYMENT_OPTIONS, physicalDeployment).map((o) => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
               <div><label>Languages (comma-separated codes)</label><input type="text" value={languages} onChange={(e) => setLanguages(e.target.value)} placeholder="en, ja" /></div>
               <div>
                 <label>Basemap preset</label>
@@ -715,12 +978,18 @@ function EditEventPanel({ event, onClose, onSaved }) {
               <div><label>Default zoom</label><input type="number" value={zoom} onChange={(e) => setZoom(e.target.value)} /></div>
             </div>
             <div className="field">
+              <label>GeoNet event id</label>
+              <input type="text" value={geonetEventId} onChange={(e) => setGeonetEventId(e.target.value)}
+                placeholder="e.g. 2026p576643" />
+              <span className="muted small">Set by "Fetch from GeoNet" above, or paste one directly.</span>
+            </div>
+            <div className="field">
               <label>USGS event id</label>
               <input type="text" value={usgsEventId} onChange={(e) => setUsgsEventId(e.target.value)}
                 placeholder="e.g. us7000abcd" />
               <span className="muted small">
                 Set by "Fetch from USGS" above, or paste one directly. Lets the report generator re-query USGS for
-                ShakeMap and ground-failure hazard figures without asking for the id again.
+                ShakeMap and ground-failure hazard figures without asking for the id again{dataSource === 'geonet' ? ' - and, for a GeoNet-primary event, backfill fields GeoNet does not provide' : ''}.
               </span>
             </div>
             <div className="field">
@@ -772,13 +1041,14 @@ function ManageEventsPanel({ events, loading, onChanged }) {
       {!loading && events.length === 0 && <p className="muted">No events yet - create one on the other tab.</p>}
       {events.length > 0 && (
         <table className="record-table">
-          <thead><tr><th>Name</th><th>Slug</th><th>Status</th><th>Public</th><th>Sheets backup</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Slug</th><th>Source</th><th>Status</th><th>Public</th><th>Sheets backup</th><th></th></tr></thead>
           <tbody>
             {events.map((ev) => (
               <Fragment key={ev.id}>
                 <tr>
                   <td>{ev.name}</td>
                   <td>{ev.slug}</td>
+                  <td>{ev.data_source === 'geonet' ? 'GeoNet' : 'USGS'}</td>
                   <td>
                     <select value={ev.status} disabled={busyId === ev.id}
                       onChange={(e) => updateEvent(ev, { status: e.target.value })}>

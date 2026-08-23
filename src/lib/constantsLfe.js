@@ -116,6 +116,20 @@ export const BASEMAP_PRESETS = {
   },
 };
 
+// ---- Fixed option sets for report characteristics-table fields that used to
+// be free text (per the team's VERT template scoping) --------------------
+export const TSUNAMI_OPTIONS = ['Warning issued', 'Warning issued but cancelled', 'Minor', 'Significant', 'Major'];
+export const VERT_DEPLOYMENT_OPTIONS = ['Calling for volunteers', 'Active', 'Being evaluated', 'Unlikely required'];
+export const PHYSICAL_DEPLOYMENT_OPTIONS = ['Active', 'Being evaluated', 'Unlikely required'];
+
+// Prepends the current stored value if it isn't already one of the fixed
+// options, so converting a free-text column to a <select> can never silently
+// discard a pre-existing value that predates the fixed list.
+export function withCurrentOption(options, current) {
+  if (!current || options.includes(current)) return options;
+  return [current, ...options];
+}
+
 // Small, type-specific structured fields shown when that type is ticked,
 // stored in triage_records.type_details (jsonb, keyed by type). 'building'
 // has its own dedicated fields already (building_name/type/material/etc);

@@ -145,6 +145,7 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
   const countryEntries = extra.entries ?? [];
   const attachments = extra.attachments ?? [];
   const usgsEventId = extra.usgsEventId ?? null;
+  const geonetEventId = extra.geonetEventId ?? null;
   const hazard = extra.hazard ?? null;
   const approved = records.filter((r) => r.status === 'Approved');
   const buildings = approved.filter((r) => (r.observation_types || []).includes('building'));
@@ -167,6 +168,8 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
     .map(([url, date]) => ({ url, date }));
   const usgsEventPageUrl = usgsEventId ? `https://earthquake.usgs.gov/earthquakes/eventpage/${usgsEventId}` : null;
   if (usgsEventPageUrl) refList.unshift({ url: usgsEventPageUrl, date: null, label: 'USGS event page' });
+  const geonetEventPageUrl = geonetEventId ? `https://www.geonet.org.nz/earthquake/${geonetEventId}` : null;
+  if (geonetEventPageUrl) refList.unshift({ url: geonetEventPageUrl, date: null, label: 'GeoNet event page' });
   const refIndex = new Map(refList.map((r, i) => [r.url, i + 1]));
   function cite(url) {
     const n = url ? refIndex.get(url) : undefined;
@@ -194,6 +197,7 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
     ['Magnitude (Mw)', phOr(meta.magnitude)], ['Depth (km)', phOr(meta.depth)],
     ['Location (geographical)', phOr(meta.locationName)], ['Location (lat/long)', phOr(meta.locationLatLong)],
     ['Time and date', phOr(meta.eventDatetime)], ['Faulting mechanism', phOr(meta.faulting)],
+    ['Tensor', phOr(meta.tensor)],
     ['Maximum Modified Mercalli Intensity', phOr(meta.maxMMI)], ['Tsunami alert issued', phOr(meta.tsunami)],
     ['ERP deployment', phOr(meta.vertDeployment)], ['Physical mission deployment', phOr(meta.physicalMissionDeployment)],
   ]));
@@ -214,7 +218,7 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
 
   children.push(heading(2, 'Introduction'));
   if (sec?.introduction) { children.push(aiNote()); children.push(...mdParas(sec.introduction)); }
-  children.push(placeholder(`event background and seismotectonic setting.${usgsEventId ? '' : " Set the event's USGS event id to auto-pull ShakeMap and ground-failure figures here."}`));
+  children.push(placeholder(`event background and seismotectonic setting.${usgsEventId ? '' : " Set the event's USGS event id - even just as a backfill id on a GeoNet-primary event - to auto-pull ShakeMap and ground-failure figures here."}`));
 
   const hazardFigs = (hazard ? [
     [hazard.intensityUrl, 'USGS ShakeMap - macroseismic intensity (MMI).'],

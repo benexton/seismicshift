@@ -3,7 +3,10 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { supabaseLfe, LFE_RECORD_COLUMNS } from '../../lib/supabaseLfe.js';
 import { useEvent } from '../../lib/useEvent.js';
-import { DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate, phOr } from '../../lib/constantsLfe.js';
+import {
+  DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate, phOr,
+  TSUNAMI_OPTIONS, VERT_DEPLOYMENT_OPTIONS, PHYSICAL_DEPLOYMENT_OPTIONS, withCurrentOption,
+} from '../../lib/constantsLfe.js';
 import { buildReportDocxBlob } from '../../lib/reportDocxLfe.js';
 import { parseReportSections } from '../../lib/reportSections.js';
 import { fetchUsgsHazardFigures } from '../../lib/usgsHazardLfe.js';
@@ -11,17 +14,20 @@ import { safeHref } from '../../lib/url.js';
 
 // Fields that live in event_meta (editable here). Name, epicentre, and
 // event_datetime live on the events row itself (set at creation / on the
-// admin Manage events tab) and are shown read-only below.
+// admin Manage events tab) and are shown read-only below. Third element is
+// a fixed option set for a <select> (mirrors TYPE_DETAIL_FIELDS's
+// [key, label, options] shape), or null/omitted for free text.
 const META_FIELDS = [
   ['version', 'Version'],
   ['location_name', 'Location (geographical)'],
   ['magnitude', 'Magnitude (Mw)'],
   ['depth', 'Depth (km)'],
   ['faulting', 'Faulting mechanism'],
+  ['tensor', 'Tensor'],
   ['max_mmi', 'Maximum MMI'],
-  ['tsunami', 'Tsunami alert'],
-  ['vert_deployment', 'ERP deployment'],
-  ['physical_mission_deployment', 'Physical mission deployment'],
+  ['tsunami', 'Tsunami alert', TSUNAMI_OPTIONS],
+  ['vert_deployment', 'ERP deployment', VERT_DEPLOYMENT_OPTIONS],
+  ['physical_mission_deployment', 'Physical mission deployment', PHYSICAL_DEPLOYMENT_OPTIONS],
 ];
 
 const EMPTY_META = Object.fromEntries([...META_FIELDS.map(([k]) => k), 'contributors'].map((k) => [k, '']));
@@ -119,6 +125,7 @@ export default function ReportGeneratorLfe() {
         locationLatLong: event?.epicentre_lat != null && event?.epicentre_lng != null ? `${event.epicentre_lat}, ${event.epicentre_lng}` : '',
         eventDatetime: event?.event_datetime ? fmtDate(event.event_datetime) : '',
         faulting: meta.faulting,
+        tensor: meta.tensor,
         maxMMI: meta.max_mmi,
         tsunami: meta.tsunami,
         vertDeployment: meta.vert_deployment,
@@ -127,7 +134,7 @@ export default function ReportGeneratorLfe() {
       };
       const blob = await buildReportDocxBlob(records, fullMeta, conclusions, {
         sections: countrySections, entries: countryEntries,
-        attachments, usgsEventId: event?.usgs_event_id, hazard,
+        attachments, usgsEventId: event?.usgs_event_id, geonetEventId: event?.geonet_event_id, hazard,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -173,8 +180,11 @@ export default function ReportGeneratorLfe() {
     if (event?.usgs_event_id) {
       list.unshift({ url: `https://earthquake.usgs.gov/earthquakes/eventpage/${event.usgs_event_id}`, date: null, label: 'USGS event page' });
     }
+    if (event?.geonet_event_id) {
+      list.unshift({ url: `https://www.geonet.org.nz/earthquake/${event.geonet_event_id}`, date: null, label: 'GeoNet event page' });
+    }
     return list;
-  }, [approved, attachments, event?.usgs_event_id]);
+  }, [approved, attachments, event?.usgs_event_id, event?.geonet_event_id]);
   // url -> its fixed position (1-based) in the references list above, so an
   // inline superscript always points at the right entry - since it's a
   // lookup rather than a typed-in number, adding more references anywhere
@@ -221,10 +231,17 @@ export default function ReportGeneratorLfe() {
         <h2 style={{ marginTop: 0, fontSize: 17 }}>Event details</h2>
         <form onSubmit={saveMeta}>
           <div className="report-meta-form">
-            {META_FIELDS.map(([key, label]) => (
+            {META_FIELDS.map(([key, label, options]) => (
               <div key={key}>
                 <label htmlFor={key}>{label}</label>
-                <input id={key} type="text" value={meta[key] ?? ''} onChange={set(key)} />
+                {options ? (
+                  <select id={key} value={meta[key] ?? ''} onChange={set(key)}>
+                    <option value="">-</option>
+                    {withCurrentOption(options, meta[key]).map((o) => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input id={key} type="text" value={meta[key] ?? ''} onChange={set(key)} />
+                )}
               </div>
             ))}
             <div style={{ gridColumn: '1 / -1' }}>
@@ -257,6 +274,7 @@ export default function ReportGeneratorLfe() {
               ['Location (geographical)', meta.location_name],
               ['Location (lat/long)', event?.epicentre_lat != null ? `${event.epicentre_lat}, ${event.epicentre_lng}` : ''],
               ['Time and date', event?.event_datetime ? fmtDate(event.event_datetime) : ''], ['Faulting mechanism', meta.faulting],
+              ['Tensor', meta.tensor],
               ['Maximum Modified Mercalli Intensity', meta.max_mmi], ['Tsunami alert issued', meta.tsunami],
               ['ERP deployment', meta.vert_deployment], ['Physical mission deployment', meta.physical_mission_deployment],
             ].map(([k, v]) => (<tr key={k}><th>{k}</th><td>{phOr(v)}</td></tr>))}
@@ -281,7 +299,7 @@ export default function ReportGeneratorLfe() {
         {sec?.introduction && <div className="report-body" dangerouslySetInnerHTML={{ __html: mdHtml(sec.introduction) }} />}
         <div className="report-ph">
           AUTHOR TO ADD: event background and seismotectonic setting.
-          {!event?.usgs_event_id && " Set the event's USGS event id (Manage events -> Edit) to auto-pull ShakeMap and ground-failure figures here."}
+          {!event?.usgs_event_id && " Set the event's USGS event id (Manage events -> Edit) - even just as a backfill id on a GeoNet-primary event - to auto-pull ShakeMap and ground-failure figures here."}
         </div>
 
         {hazardFigList.length > 0 && (
