@@ -122,6 +122,21 @@ export const TSUNAMI_OPTIONS = ['Warning issued', 'Warning issued but cancelled'
 export const VERT_DEPLOYMENT_OPTIONS = ['Calling for volunteers', 'Active', 'Being evaluated', 'Unlikely required'];
 export const PHYSICAL_DEPLOYMENT_OPTIONS = ['Active', 'Being evaluated', 'Unlikely required'];
 
+// metric key (as written by scripts/lfe/capture_geonet_shaking_maps.py) ->
+// figure caption, shared by the on-screen report preview and the .docx
+// export so their captions can never drift apart. PGV and the Sa periods
+// have no filled "Map" layer on GeoNet's own UI, only contour lines, unlike
+// Intensity/PGA which have both - captioned as such rather than implying a
+// full heatmap that isn't there.
+export const GEONET_SHAKING_LABELS = {
+  intensity: 'macroseismic intensity (MMI)',
+  pga: 'peak ground acceleration (PGA)',
+  pgv: 'peak ground velocity (PGV, contours only)',
+  sa03: 'spectral acceleration Sa(0.3s) (contours only)',
+  sa1: 'spectral acceleration Sa(1.0s) (contours only)',
+  sa3: 'spectral acceleration Sa(3.0s) (contours only)',
+};
+
 // Prepends the current stored value if it isn't already one of the fixed
 // options, so converting a free-text column to a <select> can never silently
 // discard a pre-existing value that predates the fixed list.

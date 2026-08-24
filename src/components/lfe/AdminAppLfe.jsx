@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { supabaseLfe, edgeFunctionErrorMessage } from '../../lib/supabaseLfe.js';
 import LoginGateLfe from './LoginGateLfe.jsx';
 import LfeNavGroup from './LfeNavGroup.jsx';
-import { BASEMAP_PRESETS, TSUNAMI_OPTIONS, VERT_DEPLOYMENT_OPTIONS, PHYSICAL_DEPLOYMENT_OPTIONS, withCurrentOption } from '../../lib/constantsLfe.js';
+import { BASEMAP_PRESETS, TSUNAMI_OPTIONS, VERT_DEPLOYMENT_OPTIONS, PHYSICAL_DEPLOYMENT_OPTIONS, withCurrentOption, fmtDate } from '../../lib/constantsLfe.js';
 import { geonetIdFromInput, fetchGeonetEvent } from '../../lib/geonetLfe.js';
 
 // Accepts either a bare USGS event id (e.g. "us7000abcd") or a full event
@@ -710,6 +710,8 @@ function EditEventPanel({ event, onClose, onSaved }) {
   const [tsunami, setTsunami] = useState('');
   const [vertDeployment, setVertDeployment] = useState('');
   const [physicalDeployment, setPhysicalDeployment] = useState('');
+  const [shakingMapsCapturedAt, setShakingMapsCapturedAt] = useState(null);
+  const [shakingMapsBusy, setShakingMapsBusy] = useState(false);
   const [metaLoaded, setMetaLoaded] = useState(false);
   const [languages, setLanguages] = useState((event.languages?.length ? event.languages : ['en']).join(', '));
   const [basemapKey, setBasemapKey] = useState(Object.keys(event.basemap || {})[0] || 'osm');
@@ -805,10 +807,33 @@ function EditEventPanel({ event, onClose, onSaved }) {
     }
   }
 
+  // GeoNet's public API has no PGA/PGV/SA grid-image product the way USGS's
+  // ShakeMap does - that data only exists rendered into GeoNet's own
+  // interactive map, so getting it as report figures means driving a real
+  // browser server-side (see scripts/lfe/capture_geonet_shaking_maps.py).
+  // This just dispatches that GitHub Actions job and returns immediately -
+  // it takes a few minutes to actually finish.
+  async function captureShakingMaps() {
+    setShakingMapsBusy(true); setStatus(null);
+    try {
+      const { data, error } = await supabaseLfe.functions.invoke('dispatch-geonet-shaking-maps', {
+        body: { event_id: event.id },
+      });
+      if (error) throw new Error(await edgeFunctionErrorMessage(error));
+      setStatus({ kind: 'ok', msg: data?.dispatched
+        ? 'Dispatched - running in GitHub Actions, takes a few minutes. The Report generator will pick up the images once it\'s done.'
+        : 'Dispatch request sent, but the response was unexpected - check the GitHub Actions tab.' });
+    } catch (ex) {
+      setStatus({ kind: 'err', msg: `Capture dispatch failed: ${ex.message ?? ex}` });
+    } finally {
+      setShakingMapsBusy(false);
+    }
+  }
+
   useEffect(() => {
     (async () => {
       const { data } = await supabaseLfe.from('event_meta')
-        .select('magnitude, depth, location_name, faulting, tensor, max_mmi, tsunami, vert_deployment, physical_mission_deployment')
+        .select('magnitude, depth, location_name, faulting, tensor, max_mmi, tsunami, vert_deployment, physical_mission_deployment, geonet_shaking_maps')
         .eq('event_id', event.id).maybeSingle();
       if (data) {
         setMagnitude(data.magnitude != null ? String(data.magnitude) : '');
@@ -820,6 +845,7 @@ function EditEventPanel({ event, onClose, onSaved }) {
         setTsunami(data.tsunami ?? '');
         setVertDeployment(data.vert_deployment ?? '');
         setPhysicalDeployment(data.physical_mission_deployment ?? '');
+        setShakingMapsCapturedAt(data.geonet_shaking_maps?.captured_at ?? null);
       }
       setMetaLoaded(true);
     })();
@@ -983,6 +1009,23 @@ function EditEventPanel({ event, onClose, onSaved }) {
                 placeholder="e.g. 2026p576643" />
               <span className="muted small">Set by "Fetch from GeoNet" above, or paste one directly.</span>
             </div>
+            {geonetEventId.trim() && (
+              <div className="field">
+                <label>GeoNet shaking maps</label>
+                <div className="link-add">
+                  <button type="button" className="mini" onClick={captureShakingMaps} disabled={shakingMapsBusy}>
+                    {shakingMapsBusy ? 'Dispatching...' : 'Capture GeoNet shaking maps'}
+                  </button>
+                  {shakingMapsCapturedAt && <span className="muted small">Last captured {fmtDate(shakingMapsCapturedAt)}</span>}
+                </div>
+                <span className="muted small">
+                  Screenshots GeoNet's own Shaking Layers Map (intensity/PGA/PGV/Sa, legend included) via a GitHub
+                  Actions job - GeoNet's API has no static hazard-map images the way USGS's ShakeMap does. Takes a
+                  few minutes; results show up on the Report generator tab once done. Save this event first if the
+                  GeoNet event id above is new.
+                </span>
+              </div>
+            )}
             <div className="field">
               <label>USGS event id</label>
               <input type="text" value={usgsEventId} onChange={(e) => setUsgsEventId(e.target.value)}

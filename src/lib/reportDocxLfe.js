@@ -3,7 +3,7 @@ import {
   BorderStyle, ShadingType, AlignmentType, HeadingLevel, ImageRun, Header, Footer,
   PageNumber, PageBreak, ExternalHyperlink, InternalHyperlink, Bookmark, TableOfContents,
 } from 'docx';
-import { DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate, phOr } from './constantsLfe.js';
+import { DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate, phOr, GEONET_SHAKING_LABELS } from './constantsLfe.js';
 import { parseReportSections } from './reportSections.js';
 
 const MAROON = '8A1538';
@@ -147,6 +147,7 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
   const usgsEventId = extra.usgsEventId ?? null;
   const geonetEventId = extra.geonetEventId ?? null;
   const hazard = extra.hazard ?? null;
+  const geonetShakingMaps = extra.geonetShakingMaps ?? null;
   const approved = records.filter((r) => r.status === 'Approved');
   const buildings = approved.filter((r) => (r.observation_types || []).includes('building'));
   const now = fmtDate(new Date());
@@ -220,21 +221,26 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
   if (sec?.introduction) { children.push(aiNote()); children.push(...mdParas(sec.introduction)); }
   children.push(placeholder(`event background and seismotectonic setting.${usgsEventId ? '' : " Set the event's USGS event id - even just as a backfill id on a GeoNet-primary event - to auto-pull ShakeMap and ground-failure figures here."}`));
 
-  const hazardFigs = (hazard ? [
-    [hazard.intensityUrl, 'USGS ShakeMap - macroseismic intensity (MMI).'],
-    [hazard.pgaUrl, 'USGS ShakeMap - peak ground acceleration (PGA).'],
-    [hazard.pgvUrl, 'USGS ShakeMap - peak ground velocity (PGV).'],
-    [hazard.liquefactionUrl, 'USGS Ground Failure - liquefaction probability.'],
-    [hazard.landslideUrl, 'USGS Ground Failure - landslide probability.'],
-  ] : []).filter(([url]) => url);
+  const usgsFigs = (hazard ? [
+    [hazard.intensityUrl, 'USGS ShakeMap - macroseismic intensity (MMI).', usgsEventPageUrl],
+    [hazard.pgaUrl, 'USGS ShakeMap - peak ground acceleration (PGA).', usgsEventPageUrl],
+    [hazard.pgvUrl, 'USGS ShakeMap - peak ground velocity (PGV).', usgsEventPageUrl],
+    [hazard.liquefactionUrl, 'USGS Ground Failure - liquefaction probability.', usgsEventPageUrl],
+    [hazard.landslideUrl, 'USGS Ground Failure - landslide probability.', usgsEventPageUrl],
+  ] : []);
+  // Additive, not exclusive - a USGS-primary event with a GeoNet id set (or
+  // vice versa) gets both sets of figures.
+  const geonetFigs = Object.entries(GEONET_SHAKING_LABELS)
+    .map(([key, label]) => [geonetShakingMaps?.[key], `GeoNet Shaking Layers - ${label}.`, geonetEventPageUrl]);
+  const hazardFigs = [...usgsFigs, ...geonetFigs].filter(([url]) => url);
   if (hazardFigs.length) {
     children.push(heading(3, 'Key Event Graphics'));
-    for (const [url, label] of hazardFigs) {
+    for (const [url, label, sourceUrl] of hazardFigs) {
       const img = await fetchImage(url);
       if (!img) continue;
       children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 },
         children: [new ImageRun({ data: img.data, type: img.type, transformation: { width: 360, height: 270 } })] }));
-      children.push(caption(`Figure ${figNo}. ${label} `, cite(usgsEventPageUrl)));
+      children.push(caption(`Figure ${figNo}. ${label} `, cite(sourceUrl)));
       figNo += 1;
     }
   }

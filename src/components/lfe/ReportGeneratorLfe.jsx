@@ -6,6 +6,7 @@ import { useEvent } from '../../lib/useEvent.js';
 import {
   DAMAGE_SCORES, DAMAGE_LABEL, observationTypesLabel, fmtDate, phOr,
   TSUNAMI_OPTIONS, VERT_DEPLOYMENT_OPTIONS, PHYSICAL_DEPLOYMENT_OPTIONS, withCurrentOption,
+  GEONET_SHAKING_LABELS,
 } from '../../lib/constantsLfe.js';
 import { buildReportDocxBlob } from '../../lib/reportDocxLfe.js';
 import { parseReportSections } from '../../lib/reportSections.js';
@@ -42,6 +43,7 @@ export default function ReportGeneratorLfe() {
   const [countryEntries, setCountryEntries] = useState([]);
   const [conclusions, setConclusions] = useState('');
   const [hazard, setHazard] = useState(null);
+  const [geonetShakingMaps, setGeonetShakingMaps] = useState(null);
   const [genAt, setGenAt] = useState(null);
   const [genBy, setGenBy] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -86,6 +88,7 @@ export default function ReportGeneratorLfe() {
       setConclusions(ev.data.conclusions_md ?? '');
       setGenAt(ev.data.report_generated_at ?? null);
       setGenBy(ev.data.report_generated_by ?? null);
+      setGeonetShakingMaps(ev.data.geonet_shaking_maps ?? null);
     }
   }
   useEffect(() => { load(); }, [eventId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -134,7 +137,8 @@ export default function ReportGeneratorLfe() {
       };
       const blob = await buildReportDocxBlob(records, fullMeta, conclusions, {
         sections: countrySections, entries: countryEntries,
-        attachments, usgsEventId: event?.usgs_event_id, geonetEventId: event?.geonet_event_id, hazard,
+        attachments, usgsEventId: event?.usgs_event_id, geonetEventId: event?.geonet_event_id,
+        hazard, geonetShakingMaps,
       });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -191,6 +195,7 @@ export default function ReportGeneratorLfe() {
   // else in the report can never throw the existing citations out of sync.
   const refIndex = useMemo(() => new Map(references.map((r, i) => [r.url, i + 1])), [references]);
   const usgsEventPageUrl = event?.usgs_event_id ? `https://earthquake.usgs.gov/earthquakes/eventpage/${event.usgs_event_id}` : null;
+  const geonetEventPageUrl = event?.geonet_event_id ? `https://www.geonet.org.nz/earthquake/${event.geonet_event_id}` : null;
   const Cite = ({ url }) => {
     const n = url ? refIndex.get(url) : undefined;
     if (!n) return null;
@@ -207,15 +212,20 @@ export default function ReportGeneratorLfe() {
   const mdHtml = (t) => DOMPurify.sanitize(marked.parse(String(t || '')));
   const plainConcl = sec ? sec.conclusions : (parsed && !parsed.structured ? parsed.markdown : '');
   const hazardFigList = useMemo(() => {
-    if (!hazard) return [];
-    return [
-      [hazard.intensityUrl, 'USGS ShakeMap - macroseismic intensity (MMI).'],
-      [hazard.pgaUrl, 'USGS ShakeMap - peak ground acceleration (PGA).'],
-      [hazard.pgvUrl, 'USGS ShakeMap - peak ground velocity (PGV).'],
-      [hazard.liquefactionUrl, 'USGS Ground Failure - liquefaction probability.'],
-      [hazard.landslideUrl, 'USGS Ground Failure - landslide probability.'],
-    ].filter(([url]) => url);
-  }, [hazard]);
+    const usgsFigs = hazard ? [
+      [hazard.intensityUrl, 'USGS ShakeMap - macroseismic intensity (MMI).', usgsEventPageUrl],
+      [hazard.pgaUrl, 'USGS ShakeMap - peak ground acceleration (PGA).', usgsEventPageUrl],
+      [hazard.pgvUrl, 'USGS ShakeMap - peak ground velocity (PGV).', usgsEventPageUrl],
+      [hazard.liquefactionUrl, 'USGS Ground Failure - liquefaction probability.', usgsEventPageUrl],
+      [hazard.landslideUrl, 'USGS Ground Failure - landslide probability.', usgsEventPageUrl],
+    ] : [];
+    // Additive, not exclusive - a USGS-primary event with a GeoNet id set (or
+    // vice versa) gets both sets of figures, same as the USGS-backfill fields
+    // never overwriting GeoNet-sourced ones.
+    const geonetFigs = Object.entries(GEONET_SHAKING_LABELS)
+      .map(([key, label]) => [geonetShakingMaps?.[key], `GeoNet Shaking Layers - ${label}.`, geonetEventPageUrl]);
+    return [...usgsFigs, ...geonetFigs].filter(([url]) => url);
+  }, [hazard, geonetShakingMaps, usgsEventPageUrl, geonetEventPageUrl]);
 
   let figNo = 0;
 
@@ -305,12 +315,12 @@ export default function ReportGeneratorLfe() {
         {hazardFigList.length > 0 && (
           <>
             <h3 className="report-h3">Key Event Graphics</h3>
-            {hazardFigList.map(([url, label]) => {
+            {hazardFigList.map(([url, label, sourceUrl]) => {
               figNo += 1;
               return (
                 <figure className="report-fig" key={url}>
                   <img src={url} alt="" />
-                  <figcaption>Figure {figNo}. {label} <Cite url={usgsEventPageUrl} /></figcaption>
+                  <figcaption>Figure {figNo}. {label} <Cite url={sourceUrl} /></figcaption>
                 </figure>
               );
             })}
