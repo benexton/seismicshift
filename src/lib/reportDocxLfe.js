@@ -103,6 +103,41 @@ async function fetchImage(url) {
   } catch { return null; }
 }
 
+// Reads native pixel dimensions from the raw file bytes so figures can be
+// placed at an aspect-correct size - captured/sourced images vary wildly in
+// shape (a portrait USGS ShakeMap JPEG vs. a landscape GeoNet map screenshot),
+// and a single fixed width/height box stretches the former and shrinks the
+// latter's legend/contour detail into illegibility.
+function imageDimensions(buf) {
+  if (buf.length >= 24 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+    return { width: (buf[16] << 24 | buf[17] << 16 | buf[18] << 8 | buf[19]) >>> 0, height: (buf[20] << 24 | buf[21] << 16 | buf[22] << 8 | buf[23]) >>> 0 };
+  }
+  if (buf.length >= 4 && buf[0] === 0xff && buf[1] === 0xd8) {
+    let i = 2;
+    while (i < buf.length - 9) {
+      if (buf[i] !== 0xff) { i += 1; continue; }
+      const marker = buf[i + 1];
+      if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) { i += 2; continue; }
+      const len = (buf[i + 2] << 8) | buf[i + 3];
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        return { height: (buf[i + 5] << 8) | buf[i + 6], width: (buf[i + 7] << 8) | buf[i + 8] };
+      }
+      i += 2 + len;
+    }
+  }
+  return null;
+}
+
+// Fits an image's native size into a maxWidth x maxHeight box, preserving
+// aspect ratio (scales up small images too, so a figure always uses the
+// space it's given rather than sitting tiny inside it). Falls back to the
+// box itself if dimensions couldn't be read.
+function fitSize(dims, maxWidth, maxHeight) {
+  if (!dims?.width || !dims?.height) return { width: maxWidth, height: maxHeight };
+  const scale = Math.min(maxWidth / dims.width, maxHeight / dims.height);
+  return { width: Math.round(dims.width * scale), height: Math.round(dims.height * scale) };
+}
+
 function caption(text, extraRuns = []) {
   return new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 180 },
     children: [new TextRun({ text, italics: true, color: MAROON_LT, size: 18, font: BODY }), ...extraRuns] });
@@ -238,8 +273,9 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
     for (const [url, label, sourceUrl] of hazardFigs) {
       const img = await fetchImage(url);
       if (!img) continue;
+      const size = fitSize(imageDimensions(img.data), 560, 520);
       children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 },
-        children: [new ImageRun({ data: img.data, type: img.type, transformation: { width: 360, height: 270 } })] }));
+        children: [new ImageRun({ data: img.data, type: img.type, transformation: size })] }));
       children.push(caption(`Figure ${figNo}. ${label} `, cite(sourceUrl)));
       figNo += 1;
     }
@@ -289,8 +325,9 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
     if (withPhoto) {
       const img = await fetchImage(withPhoto.media_url);
       if (img) {
+        const size = fitSize(imageDimensions(img.data), 360, 360);
         children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 40 },
-          children: [new ImageRun({ data: img.data, type: img.type, transformation: { width: 360, height: 240 } })] }));
+          children: [new ImageRun({ data: img.data, type: img.type, transformation: size })] }));
         children.push(caption(`Figure ${figNo}. Site #${withPhoto.site_id ?? '-'}, ${region}: ${DAMAGE_LABEL[withPhoto.damage_score]?.split(' - ')[0] ?? ''}${withPhoto.failure_mechanism ? ` - ${withPhoto.failure_mechanism}` : ''}. `, cite(withPhoto.source_url)));
         figNo += 1;
       }
