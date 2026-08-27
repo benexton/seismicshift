@@ -5,11 +5,10 @@
 // that only allows Kumamoto's original six values.
 // No em dashes anywhere in generated output (site style: short dashes only).
 
-// TEMPORARY: hides site/attachment photos from the public viewer only (map
+// Controls whether site/attachment photos render in the public viewer (map
 // tooltip thumbnail, table thumbnail, and detail-modal images) - the
-// internal triage queue and triaged-sites views are unaffected. Flip back to
-// false to restore public images.
-export const PUBLIC_IMAGES_HIDDEN = true;
+// internal triage queue and triaged-sites views are unaffected either way.
+export const PUBLIC_IMAGES_HIDDEN = false;
 
 export {
   GREAT_PERFORMANCE,
