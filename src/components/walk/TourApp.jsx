@@ -220,25 +220,6 @@ export default function TourApp() {
           />
         </div>
 
-        {optimised && stops.length > 0 && (
-          <div className="mt-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-black tracking-tighter text-slate-900">Your route</h2>
-              <div className="flex flex-wrap gap-2">
-                <ShareButton ids={[...selectedIds]} startId={startId} loop={loop} />
-                <PrintButton />
-                <InstallPrompt />
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <RouteMap stops={stops} geometry={geometry} startPoint={hasVirtualStart ? virtualStart : null} userLocation={userLocation} loop={loop} />
-            </div>
-
-            <RouteItinerary stops={stops} legs={legs} closingLeg={closingLeg} onViewDetail={viewDetail} />
-          </div>
-        )}
-
         <p className="text-xs text-slate-400 mt-10">
           <button type="button" className="underline" onClick={() => setDisclaimerOpen(true)}>
             Safety information
@@ -246,14 +227,29 @@ export default function TourApp() {
         </p>
       </div>
 
-      {/* Print-only itinerary: a clean one-page listing, no interactive chrome. */}
+      {/* Not print:hidden - the map and itinerary are exactly what a printed
+          itinerary should include. Only the buttons above it (share/print/
+          install) are interactive-only and get hidden for print. */}
       {optimised && stops.length > 0 && (
-        <div className="hidden print:block">
-          <h1 className="text-2xl font-black mb-1">Seismic Walk itinerary</h1>
-          <p className="text-sm mb-4">
+        <div className="mt-8 print:mt-0">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-black tracking-tighter text-slate-900">Your route</h2>
+            <div className="flex flex-wrap gap-2 print:hidden">
+              <ShareButton ids={[...selectedIds]} startId={startId} loop={loop} />
+              <PrintButton />
+              <InstallPrompt />
+            </div>
+          </div>
+
+          <p className="hidden print:block text-sm text-slate-500 mb-4">
             {stops.length} stops · {formatDistance(routeResult.totalMeters)} · {formatDuration(walkMinutes(routeResult.totalMeters))} walking
           </p>
-          <RouteItinerary stops={stops} legs={legs} closingLeg={closingLeg} onViewDetail={() => {}} printMode />
+
+          <div className="mb-6">
+            <RouteMap stops={stops} geometry={geometry} startPoint={hasVirtualStart ? virtualStart : null} userLocation={userLocation} loop={loop} />
+          </div>
+
+          <RouteItinerary stops={stops} legs={legs} closingLeg={closingLeg} onViewDetail={viewDetail} />
         </div>
       )}
 

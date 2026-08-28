@@ -17,7 +17,7 @@ function LegLine({ fromPoint, toPoint, meters, printMode }) {
           href={directionsUrl(fromPoint, toPoint)}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline"
+          className="underline print:hidden"
           style={{ color: '#17638f' }}
           onClick={() => window.gtag?.('event', 'directions_opened')}
         >

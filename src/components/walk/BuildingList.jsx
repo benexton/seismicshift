@@ -53,7 +53,8 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onViewD
       {/* Mobile: one scrollable row per filter group, edge-to-edge, so the
           filters don't push the building list several screens down. Desktop
           (sm+): wraps into a normal grid of chips instead. */}
-      <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-3 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
+      <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Access</p>
+      <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-4 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
         {ACCESS_FILTERS.map((f) => (
           <FilterChip key={f.value} active={accessFilter === f.value} onClick={() => setAccessFilter(accessFilter === f.value ? null : f.value)}>
             {f.label}
@@ -65,13 +66,16 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onViewD
       </div>
 
       {allTags.length > 0 && (
-        <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-4 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
-          {allTags.map((tag) => (
-            <FilterChip key={tag} active={tagFilter === tag} onClick={() => setTagFilter(tagFilter === tag ? null : tag)}>
-              {tagLabel(tag)}
-            </FilterChip>
-          ))}
-        </div>
+        <>
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Engineering features</p>
+          <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-4 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
+            {allTags.map((tag) => (
+              <FilterChip key={tag} active={tagFilter === tag} onClick={() => setTagFilter(tagFilter === tag ? null : tag)}>
+                {tagLabel(tag)}
+              </FilterChip>
+            ))}
+          </div>
+        </>
       )}
 
       <p className="text-xs text-slate-400 font-bold mb-3">{filtered.length} of {buildings.length} buildings</p>
