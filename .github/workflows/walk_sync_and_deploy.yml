@@ -29,7 +29,11 @@ jobs:
       - name: Sync buildings.csv from Supabase
         env:
           WALK_SUPABASE_URL: ${{ secrets.WALK_SUPABASE_URL }}
-          WALK_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.WALK_SUPABASE_SERVICE_ROLE_KEY }}
+          # Reuses the existing SUPABASE_SERVICE_ROLE_KEY secret - it's
+          # already this same build-to-thrive project's service role key
+          # (set 2026-07-30, pre-dating the LFE_ prefix convention), so no
+          # separate WALK_-prefixed copy is needed.
+          WALK_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: node scripts/sync-buildings-from-supabase.mjs
       - run: npm run build:data
       - name: Rebuild walking-distance matrix
