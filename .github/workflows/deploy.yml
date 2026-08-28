@@ -24,6 +24,9 @@ jobs:
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
           PUBLIC_LFE_SUPABASE_URL: ${{ secrets.PUBLIC_LFE_SUPABASE_URL }}
           PUBLIC_LFE_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_LFE_SUPABASE_ANON_KEY }}
+          PUBLIC_MAPTILER_KEY: ${{ secrets.PUBLIC_MAPTILER_KEY }}
+          PUBLIC_DIRECTIONS_WORKER_URL: ${{ secrets.PUBLIC_DIRECTIONS_WORKER_URL }}
+          ORS_API_KEY: ${{ secrets.ORS_API_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
