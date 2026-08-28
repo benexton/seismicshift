@@ -129,9 +129,6 @@
   .panel h2{font-size:20px;font-weight:900;letter-spacing:-0.01em;margin:0 0 18px;color:var(--ink);}
   .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
   .field-grid .field.full{grid-column:1 / -1;}
-  .checkbox-field{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
-  .checkbox-field input{width:auto;margin:0;accent-color:var(--brand);}
-  .checkbox-field label{margin:0;font-size:13px;font-weight:700;color:var(--ink);text-transform:none;letter-spacing:normal;}
   .panel-actions{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:10px;flex-wrap:wrap;}
   .panel-actions-right{display:flex;gap:10px;}
 </style>
@@ -242,10 +239,6 @@
             <option value="false">No</option>
           </select>
         </div>
-      </div>
-      <div class="checkbox-field">
-        <input type="checkbox" id="f-featured">
-        <label for="f-featured">Featured</label>
       </div>
       <div class="panel-actions">
         <button type="button" class="btn btn-danger" id="btn-delete" style="display:none;">Delete</button>
@@ -358,10 +351,10 @@
       : '<span class="pill-handle" aria-hidden="true" title="Drag to reorder">&#8942;&#8942;</span>';
     return '<div class="pill'+(locked?' locked':'')+'"'+(locked?'':' draggable="true"')+' data-id="'+esc(b.id)+'">'+
       handle+
+      '<button type="button" class="row-edit" data-id="'+esc(b.id)+'">Edit</button>'+
       '<span class="pill-name">'+esc(b.name)+'</span>'+
       accessBadge(b.access_level)+
       '<span class="pill-updated">'+esc(fmt(b.updated_at))+'</span>'+
-      '<button type="button" class="row-edit" data-id="'+esc(b.id)+'">Edit</button>'+
     '</div>';
   }
 
@@ -459,7 +452,6 @@
     field('f-architect').value = b ? (b.architect || '') : '';
     field('f-storeys').value = b && b.storeys != null ? b.storeys : '';
     field('f-step-free').value = b && b.step_free === true ? 'true' : (b && b.step_free === false ? 'false' : '');
-    field('f-featured').checked = !!(b && b.featured);
 
     document.getElementById('overlay').classList.remove('hidden');
   }
@@ -488,8 +480,7 @@
       engineer: field('f-engineer').value.trim(),
       architect: field('f-architect').value.trim(),
       storeys: field('f-storeys').value === '' ? null : Number(field('f-storeys').value),
-      step_free: stepFreeRaw === '' ? null : stepFreeRaw === 'true',
-      featured: field('f-featured').checked
+      step_free: stepFreeRaw === '' ? null : stepFreeRaw === 'true'
     };
     if(editingId) b.id = editingId;
     return b;
