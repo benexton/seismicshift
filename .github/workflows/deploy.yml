@@ -3,6 +3,11 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # Lets walk_sync_and_deploy.yml dispatch a deploy explicitly after its own
+  # commit - a push made with the default GITHUB_TOKEN doesn't trigger the
+  # push event above (GitHub's anti-loop protection), so without this the
+  # `on: push` trigger alone would never fire from that job's commits.
+  workflow_dispatch: {}
 
 permissions:
   contents: read
