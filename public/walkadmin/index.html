@@ -150,7 +150,7 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Name</th><th>Access</th><th>Id</th><th>Updated</th><th></th></tr>
+          <tr><th></th><th>Name</th><th>Access</th><th>Id</th><th>Updated</th></tr>
         </thead>
         <tbody id="rows"></tbody>
       </table>
@@ -364,11 +364,11 @@
     document.getElementById('summary').textContent = buildings.length + ' building' + (buildings.length===1?'':'s') + '.';
     document.getElementById('rows').innerHTML = buildings.map(function(b){
       return '<tr>'+
+        '<td><button type="button" class="row-edit" data-id="'+esc(b.id)+'">Edit</button></td>'+
         '<td>'+esc(b.name)+'</td>'+
         '<td>'+accessBadge(b.access_level)+'</td>'+
         '<td class="id">'+esc(b.id)+'</td>'+
         '<td>'+esc(fmt(b.updated_at))+'</td>'+
-        '<td><button type="button" class="row-edit" data-id="'+esc(b.id)+'">Edit</button></td>'+
       '</tr>';
     }).join('');
     Array.prototype.forEach.call(document.querySelectorAll('.row-edit'), function(btn){
