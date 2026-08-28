@@ -237,6 +237,14 @@ body {
 .login-wrap .hint { color: var(--muted); font-size: 12px; margin-top: 12px; }
 .empty { color: var(--muted); font-size: 14px; margin-top: 40px; text-align: center; }
 
+.account-fab {
+  position: fixed; right: 16px; bottom: 16px; z-index: 500;
+  background: #fff; border: 1px solid var(--border); border-radius: 999px;
+  padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--muted);
+  cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.account-fab:hover { color: var(--ink); border-color: var(--brand); }
+
 /* ---- v3: duplicate banner, attachments, read-only meta -------------------- */
 .dup-banner {
   margin: 0 20px; padding: 10px 12px; background: #fff1f2; border: 1px solid #fecdd3;
