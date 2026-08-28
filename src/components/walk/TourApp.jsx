@@ -16,10 +16,15 @@ import BuildingDetail from './BuildingDetail'
 import ShareButton from './ShareButton'
 import PrintButton from './PrintButton'
 import InstallPrompt from './InstallPrompt'
+import ConferenceVenueCard from './ConferenceVenueCard'
 
 const VIRTUAL_START_ID = '__start__'
 const DEFAULT_START_ID = 'te-pae'
 const buildingsById = Object.fromEntries(buildingsData.map((b) => [b.id, b]))
+// Te Pae is the conference venue and default start point, not a tour stop -
+// it gets its own info card (ConferenceVenueCard) instead of a selectable
+// tile in the building list.
+const tourBuildings = buildingsData.filter((b) => b.id !== DEFAULT_START_ID)
 
 function trackEvent(name, params) {
   if (typeof window !== 'undefined' && typeof window.gtag === 'function') window.gtag('event', name, params)
@@ -186,10 +191,12 @@ export default function TourApp() {
         <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 mb-2">
           Ōtautahi Christchurch: self-guided engineering walking tour
         </h1>
-        <p className="text-slate-500 leading-relaxed mb-8">
+        <p className="text-slate-500 leading-relaxed mb-6">
           Curated for PCEE 2027. Tick the buildings you want to see, set a start point, and get an optimised
           walking route with per-stop engineering detail.
         </p>
+
+        <ConferenceVenueCard building={buildingsById[DEFAULT_START_ID]} />
 
         <StartPointPicker
           buildings={buildingsData}
@@ -203,7 +210,7 @@ export default function TourApp() {
 
         <div className="mt-6">
           <BuildingList
-            buildings={buildingsData}
+            buildings={tourBuildings}
             selectedIds={selectedIds}
             onToggle={toggleSelection}
             onViewDetail={viewDetail}
