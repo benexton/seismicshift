@@ -91,15 +91,20 @@
   .summary{color:var(--body);font-size:14px;margin:0;}
 
   .pill-list{display:flex;flex-direction:column;gap:10px;}
+  .pill-list:empty{display:none;}
+  .pill-list#pinned-rows{margin-bottom:14px;}
+  .pill-list#pinned-rows:empty{margin-bottom:0;}
   .pill{
     display:flex;align-items:center;gap:12px;flex-wrap:wrap;
     background:#fff;border:2px solid var(--line);border-radius:16px;padding:10px 14px;
   }
   .pill.dragging{opacity:.4;}
+  .pill.locked{background:var(--brand-tint);border-color:var(--line-strong);}
   .pill-handle{
     cursor:grab;color:var(--muted);font-size:16px;line-height:1;user-select:none;flex:0 0 auto;
   }
   .pill-handle:active{cursor:grabbing;}
+  .pill-lock{color:var(--muted);font-size:14px;line-height:1;flex:0 0 auto;}
   .pill-name{font-weight:700;color:var(--ink);flex:1 1 160px;min-width:0;}
   .pill-updated{color:var(--muted);font-size:12px;white-space:nowrap;flex:0 0 auto;}
 
@@ -153,6 +158,7 @@
         <button type="button" class="btn" id="btn-add">Add new building</button>
       </div>
     </div>
+    <div class="pill-list" id="pinned-rows"></div>
     <div class="pill-list" id="rows"></div>
   </div>
 </div>
@@ -332,25 +338,45 @@
   }
 
   // --- List (drag-to-reorder pills) ---------------------------------------
+  // Te Pae is the tour's venue and start point, so it's always pinned first
+  // and excluded from the draggable #rows list entirely - nothing can be
+  // dropped above it. Its sort_order is force-kept below every other
+  // building's (see LOCKED_SORT_ORDER below) so the public /walk/ ordering
+  // (also sort_order-ascending, see walk-admin-list) matches.
+  var LOCKED_ID = 'te-pae';
+  var LOCKED_SORT_ORDER = 0;
+
   function accessBadge(level){
     var info = ACCESS_INFO[level];
     if(!info) return esc(level || '');
     return '<span class="badge badge-'+esc(level)+'"><span aria-hidden="true">'+info.icon+'</span>'+esc(info.label)+'</span>';
   }
 
+  function pillHtml(b, locked){
+    var handle = locked
+      ? '<span class="pill-lock" aria-hidden="true" title="Position fixed - this is the tour venue">&#128274;</span>'
+      : '<span class="pill-handle" aria-hidden="true" title="Drag to reorder">&#8942;&#8942;</span>';
+    return '<div class="pill'+(locked?' locked':'')+'"'+(locked?'':' draggable="true"')+' data-id="'+esc(b.id)+'">'+
+      handle+
+      '<span class="pill-name">'+esc(b.name)+'</span>'+
+      accessBadge(b.access_level)+
+      '<span class="pill-updated">'+esc(fmt(b.updated_at))+'</span>'+
+      '<button type="button" class="row-edit" data-id="'+esc(b.id)+'">Edit</button>'+
+    '</div>';
+  }
+
   function renderTable(){
     document.getElementById('summary').textContent = buildings.length + ' building' + (buildings.length===1?'':'s') + '. Drag to reorder.';
+    var locked = buildings.filter(function(b){ return b.id === LOCKED_ID; });
+    var rest = buildings.filter(function(b){ return b.id !== LOCKED_ID; });
+
+    var pinned = document.getElementById('pinned-rows');
+    pinned.innerHTML = locked.map(function(b){ return pillHtml(b, true); }).join('');
+
     var list = document.getElementById('rows');
-    list.innerHTML = buildings.map(function(b){
-      return '<div class="pill" draggable="true" data-id="'+esc(b.id)+'">'+
-        '<span class="pill-handle" aria-hidden="true" title="Drag to reorder">&#8942;&#8942;</span>'+
-        '<span class="pill-name">'+esc(b.name)+'</span>'+
-        accessBadge(b.access_level)+
-        '<span class="pill-updated">'+esc(fmt(b.updated_at))+'</span>'+
-        '<button type="button" class="row-edit" data-id="'+esc(b.id)+'">Edit</button>'+
-      '</div>';
-    }).join('');
-    Array.prototype.forEach.call(list.querySelectorAll('.row-edit'), function(btn){
+    list.innerHTML = rest.map(function(b){ return pillHtml(b, false); }).join('');
+
+    Array.prototype.forEach.call(document.querySelectorAll('.row-edit'), function(btn){
       btn.addEventListener('click', function(){ openForm(btn.getAttribute('data-id')); });
     });
     Array.prototype.forEach.call(list.querySelectorAll('.pill'), function(pill){
@@ -371,7 +397,9 @@
   }
 
   // Reads the pills' current DOM order, renumbers sort_order in steps of 10,
-  // and saves only the buildings whose order actually changed.
+  // and saves only the buildings whose order actually changed. Also keeps
+  // the locked venue's sort_order pinned below everything else, in case it
+  // was ever pushed out of place from outside this UI.
   function persistOrder(){
     var list = document.getElementById('rows');
     var ids = Array.prototype.map.call(list.querySelectorAll('.pill'), function(p){ return p.getAttribute('data-id'); });
@@ -381,6 +409,10 @@
       var b = buildings.filter(function(x){ return x.id === id; })[0];
       if(b && b.sort_order !== newOrder) changes.push({ id: id, sort_order: newOrder });
     });
+    var lockedBuilding = buildings.filter(function(x){ return x.id === LOCKED_ID; })[0];
+    if(lockedBuilding && lockedBuilding.sort_order !== LOCKED_SORT_ORDER){
+      changes.push({ id: LOCKED_ID, sort_order: LOCKED_SORT_ORDER });
+    }
     if(!changes.length) return;
     var status = document.getElementById('order-status');
     status.className = 'status-msg'; status.textContent = 'Saving order...';
