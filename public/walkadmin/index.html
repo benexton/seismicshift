@@ -170,7 +170,7 @@
           <input id="f-name" required>
         </div>
         <div class="field">
-          <label for="f-name-mi">Te reo Maori name</label>
+          <label for="f-name-mi">Te reo Māori name</label>
           <input id="f-name-mi">
         </div>
         <div class="field">
@@ -243,16 +243,14 @@
           <input id="f-image" placeholder="/images/walk/example.svg">
         </div>
         <div class="field">
-          <label for="f-image-credit">Image credit</label>
-          <input id="f-image-credit">
-        </div>
-        <div class="field">
-          <label for="f-external-url">External URL</label>
-          <input id="f-external-url">
-        </div>
-        <div class="field">
           <label for="f-category">Category</label>
-          <input id="f-category" placeholder="heritage, civic, new_build...">
+          <select id="f-category">
+            <option value="">None</option>
+            <option value="heritage">Heritage</option>
+            <option value="civic">Civic</option>
+            <option value="commercial">Commercial</option>
+            <option value="new_build">New build</option>
+          </select>
         </div>
         <div class="field">
           <label for="f-sort-order">Display order</label>
@@ -408,8 +406,6 @@
     field('f-storeys').value = b && b.storeys != null ? b.storeys : '';
     field('f-step-free').value = b && b.step_free === true ? 'true' : (b && b.step_free === false ? 'false' : '');
     field('f-image').value = b ? (b.image || '') : '';
-    field('f-image-credit').value = b ? (b.image_credit || '') : '';
-    field('f-external-url').value = b ? (b.external_url || '') : '';
     field('f-category').value = b ? (b.category || '') : '';
     field('f-sort-order').value = b && b.sort_order != null ? b.sort_order : '';
     field('f-featured').checked = !!(b && b.featured);
@@ -443,8 +439,6 @@
       storeys: field('f-storeys').value === '' ? null : Number(field('f-storeys').value),
       step_free: stepFreeRaw === '' ? null : stepFreeRaw === 'true',
       image: field('f-image').value.trim(),
-      image_credit: field('f-image-credit').value.trim(),
-      external_url: field('f-external-url').value.trim(),
       category: field('f-category').value.trim(),
       sort_order: field('f-sort-order').value === '' ? null : Number(field('f-sort-order').value),
       featured: field('f-featured').checked
