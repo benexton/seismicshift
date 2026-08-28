@@ -34,7 +34,7 @@
     "lat": -43.5311,
     "lng": 172.6367,
     "access_level": "exterior_only",
-    "access_notes": "Reinstatement underway - likely fenced; exterior viewing only",
+    "access_notes": "Reinstatement underway - exterior viewing only. Tours can be arranged online.",
     "year_built": 1904,
     "year_retrofit": null,
     "structural_tags": [
@@ -363,7 +363,7 @@
     "image": "/images/walk/te-kaha.svg",
     "external_url": null,
     "category": "new_build",
-    "featured": null,
+    "featured": false,
     "image_credit": null
   }
 ]
