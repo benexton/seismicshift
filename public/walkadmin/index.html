@@ -89,13 +89,19 @@
   .status-msg.error{color:var(--danger);}
 
   .summary{color:var(--body);font-size:14px;margin:0;}
-  .table-wrap{overflow-x:auto;background:#fff;border:2px solid var(--line);border-radius:24px;}
-  table{width:100%;border-collapse:collapse;font-size:14px;}
-  th,td{padding:12px 16px;text-align:left;border-bottom:2px solid var(--line);white-space:nowrap;}
-  th{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
-  td{color:var(--ink);}
-  td.id{color:var(--muted);font-size:12px;}
-  tr:last-child td{border-bottom:none;}
+
+  .pill-list{display:flex;flex-direction:column;gap:10px;}
+  .pill{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    background:#fff;border:2px solid var(--line);border-radius:16px;padding:10px 14px;
+  }
+  .pill.dragging{opacity:.4;}
+  .pill-handle{
+    cursor:grab;color:var(--muted);font-size:16px;line-height:1;user-select:none;flex:0 0 auto;
+  }
+  .pill-handle:active{cursor:grabbing;}
+  .pill-name{font-weight:700;color:var(--ink);flex:1 1 160px;min-width:0;}
+  .pill-updated{color:var(--muted);font-size:12px;white-space:nowrap;flex:0 0 auto;}
 
   .badge{
     display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;
@@ -115,8 +121,7 @@
   .overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:32px 16px;z-index:10;}
   .overlay.hidden{display:none;}
   .panel{background:#fff;border:2px solid var(--line);border-radius:24px;padding:28px;width:100%;max-width:660px;box-shadow:0 20px 50px rgba(15,23,42,.18);}
-  .panel h2{font-size:20px;font-weight:900;letter-spacing:-0.01em;margin:0 0 4px;color:var(--ink);}
-  .panel .id-note{color:var(--muted);font-size:12px;margin:0 0 18px;}
+  .panel h2{font-size:20px;font-weight:900;letter-spacing:-0.01em;margin:0 0 18px;color:var(--ink);}
   .field-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
   .field-grid .field.full{grid-column:1 / -1;}
   .checkbox-field{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
@@ -142,26 +147,19 @@
     <div class="topbar">
       <p class="summary" id="summary"></p>
       <div class="topbar-actions">
+        <span class="status-msg" id="order-status"></span>
         <span class="status-msg" id="publish-status"></span>
         <button type="button" class="btn btn-secondary" id="btn-publish">Publish now</button>
         <button type="button" class="btn" id="btn-add">Add new building</button>
       </div>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th></th><th>Name</th><th>Access</th><th>Id</th><th>Updated</th></tr>
-        </thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
+    <div class="pill-list" id="rows"></div>
   </div>
 </div>
 
 <div class="overlay hidden" id="overlay">
   <div class="panel">
     <h2 id="panel-title">Add building</h2>
-    <p class="id-note" id="panel-id-note"></p>
     <p class="err" id="form-err" style="display:none;"></p>
     <form id="building-form">
       <div class="field-grid">
@@ -238,24 +236,6 @@
             <option value="false">No</option>
           </select>
         </div>
-        <div class="field full">
-          <label for="f-image">Image (path or URL)</label>
-          <input id="f-image" placeholder="/images/walk/example.svg">
-        </div>
-        <div class="field">
-          <label for="f-category">Category</label>
-          <select id="f-category">
-            <option value="">None</option>
-            <option value="heritage">Heritage</option>
-            <option value="civic">Civic</option>
-            <option value="commercial">Commercial</option>
-            <option value="new_build">New build</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="f-sort-order">Display order</label>
-          <input id="f-sort-order" type="number">
-        </div>
       </div>
       <div class="checkbox-field">
         <input type="checkbox" id="f-featured">
@@ -285,7 +265,7 @@
     publish: SUPABASE_URL + '/functions/v1/walk-admin-publish'
   };
   // Same access_level -> icon/label mapping as src/components/walk/AccessBadge.jsx,
-  // so the table's Access column reads as the same badge people see on /walk/.
+  // so each pill's badge reads as the same one people see on /walk/.
   var ACCESS_INFO = {
     interior_public: { icon: '●', label: 'Interior open' },
     foyer_only: { icon: '◐', label: 'Foyer only' },
@@ -351,7 +331,7 @@
     });
   }
 
-  // --- Table -------------------------------------------------------------
+  // --- List (drag-to-reorder pills) ---------------------------------------
   function accessBadge(level){
     var info = ACCESS_INFO[level];
     if(!info) return esc(level || '');
@@ -359,18 +339,61 @@
   }
 
   function renderTable(){
-    document.getElementById('summary').textContent = buildings.length + ' building' + (buildings.length===1?'':'s') + '.';
-    document.getElementById('rows').innerHTML = buildings.map(function(b){
-      return '<tr>'+
-        '<td><button type="button" class="row-edit" data-id="'+esc(b.id)+'">Edit</button></td>'+
-        '<td>'+esc(b.name)+'</td>'+
-        '<td>'+accessBadge(b.access_level)+'</td>'+
-        '<td class="id">'+esc(b.id)+'</td>'+
-        '<td>'+esc(fmt(b.updated_at))+'</td>'+
-      '</tr>';
+    document.getElementById('summary').textContent = buildings.length + ' building' + (buildings.length===1?'':'s') + '. Drag to reorder.';
+    var list = document.getElementById('rows');
+    list.innerHTML = buildings.map(function(b){
+      return '<div class="pill" draggable="true" data-id="'+esc(b.id)+'">'+
+        '<span class="pill-handle" aria-hidden="true" title="Drag to reorder">&#8942;&#8942;</span>'+
+        '<span class="pill-name">'+esc(b.name)+'</span>'+
+        accessBadge(b.access_level)+
+        '<span class="pill-updated">'+esc(fmt(b.updated_at))+'</span>'+
+        '<button type="button" class="row-edit" data-id="'+esc(b.id)+'">Edit</button>'+
+      '</div>';
     }).join('');
-    Array.prototype.forEach.call(document.querySelectorAll('.row-edit'), function(btn){
+    Array.prototype.forEach.call(list.querySelectorAll('.row-edit'), function(btn){
       btn.addEventListener('click', function(){ openForm(btn.getAttribute('data-id')); });
+    });
+    Array.prototype.forEach.call(list.querySelectorAll('.pill'), function(pill){
+      pill.addEventListener('dragstart', function(){ pill.classList.add('dragging'); });
+      pill.addEventListener('dragend', function(){ pill.classList.remove('dragging'); persistOrder(); });
+    });
+  }
+
+  function dragAfterElement(list, y){
+    var els = Array.prototype.filter.call(list.querySelectorAll('.pill:not(.dragging)'), function(){ return true; });
+    var closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+    els.forEach(function(child){
+      var box = child.getBoundingClientRect();
+      var offset = y - box.top - box.height / 2;
+      if(offset < 0 && offset > closest.offset) closest = { offset: offset, element: child };
+    });
+    return closest.element;
+  }
+
+  // Reads the pills' current DOM order, renumbers sort_order in steps of 10,
+  // and saves only the buildings whose order actually changed.
+  function persistOrder(){
+    var list = document.getElementById('rows');
+    var ids = Array.prototype.map.call(list.querySelectorAll('.pill'), function(p){ return p.getAttribute('data-id'); });
+    var changes = [];
+    ids.forEach(function(id, i){
+      var newOrder = (i + 1) * 10;
+      var b = buildings.filter(function(x){ return x.id === id; })[0];
+      if(b && b.sort_order !== newOrder) changes.push({ id: id, sort_order: newOrder });
+    });
+    if(!changes.length) return;
+    var status = document.getElementById('order-status');
+    status.className = 'status-msg'; status.textContent = 'Saving order...';
+    Promise.all(changes.map(function(c){
+      return call(FN.save, { admin_password: lastPassword, building: { id: c.id, sort_order: c.sort_order } });
+    })).then(function(){
+      return reload();
+    }).then(function(){
+      status.className = 'status-msg ok'; status.textContent = 'Order saved.';
+    }).catch(function(e){
+      status.className = 'status-msg error';
+      status.textContent = e.message || 'Could not save order.';
+      reload();
     });
   }
 
@@ -386,7 +409,6 @@
     var b = id ? buildings.filter(function(x){ return x.id === id; })[0] : null;
     document.getElementById('form-err').style.display = 'none';
     document.getElementById('panel-title').textContent = b ? 'Edit building' : 'Add building';
-    document.getElementById('panel-id-note').textContent = b ? ('id: ' + b.id + ' (fixed - used in shared tour links)') : 'An id will be generated from the name.';
     document.getElementById('btn-delete').style.display = b ? 'inline-block' : 'none';
 
     field('f-name').value = b ? (b.name || '') : '';
@@ -405,9 +427,6 @@
     field('f-architect').value = b ? (b.architect || '') : '';
     field('f-storeys').value = b && b.storeys != null ? b.storeys : '';
     field('f-step-free').value = b && b.step_free === true ? 'true' : (b && b.step_free === false ? 'false' : '');
-    field('f-image').value = b ? (b.image || '') : '';
-    field('f-category').value = b ? (b.category || '') : '';
-    field('f-sort-order').value = b && b.sort_order != null ? b.sort_order : '';
     field('f-featured').checked = !!(b && b.featured);
 
     document.getElementById('overlay').classList.remove('hidden');
@@ -438,9 +457,6 @@
       architect: field('f-architect').value.trim(),
       storeys: field('f-storeys').value === '' ? null : Number(field('f-storeys').value),
       step_free: stepFreeRaw === '' ? null : stepFreeRaw === 'true',
-      image: field('f-image').value.trim(),
-      category: field('f-category').value.trim(),
-      sort_order: field('f-sort-order').value === '' ? null : Number(field('f-sort-order').value),
       featured: field('f-featured').checked
     };
     if(editingId) b.id = editingId;
@@ -503,6 +519,15 @@
     });
   }
 
+  document.getElementById('rows').addEventListener('dragover', function(e){
+    e.preventDefault();
+    var dragging = document.querySelector('.pill.dragging');
+    if(!dragging) return;
+    var list = document.getElementById('rows');
+    var after = dragAfterElement(list, e.clientY);
+    if(after == null) list.appendChild(dragging);
+    else list.insertBefore(dragging, after);
+  });
   document.getElementById('btn-login').addEventListener('click', function(){ login(); });
   document.getElementById('pw').addEventListener('keydown', function(e){ if(e.key==='Enter') login(); });
   document.getElementById('btn-publish').addEventListener('click', publish);
