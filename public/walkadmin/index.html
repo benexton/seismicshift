@@ -82,8 +82,9 @@
   .gate button{display:block;width:100%;text-align:center;}
   .err{color:var(--danger);font-size:13px;font-weight:500;margin-top:10px;}
 
-  .topbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px;}
+  .topbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:10px;}
   .topbar-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .status-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
   .status-msg{font-size:12px;font-weight:700;color:var(--muted);}
   .status-msg.ok{color:var(--safe);}
   .status-msg.error{color:var(--danger);}
@@ -149,11 +150,13 @@
     <div class="topbar">
       <p class="summary" id="summary"></p>
       <div class="topbar-actions">
-        <span class="status-msg" id="order-status"></span>
-        <span class="status-msg" id="publish-status"></span>
         <button type="button" class="btn btn-secondary" id="btn-publish">Publish now</button>
         <button type="button" class="btn" id="btn-add">Add new building</button>
       </div>
+    </div>
+    <div class="status-row">
+      <span class="status-msg" id="order-status"></span>
+      <span class="status-msg" id="publish-status"></span>
     </div>
     <div class="pill-list" id="pinned-rows"></div>
     <div class="pill-list" id="rows"></div>
