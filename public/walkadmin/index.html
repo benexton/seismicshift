@@ -288,7 +288,11 @@
     return d.innerHTML;
   }
   function fmt(iso){
-    try{ return new Date(iso).toLocaleString(); }catch(e){ return iso || ''; }
+    try{
+      return new Date(iso).toLocaleString('en-NZ', {
+        day: 'numeric', month: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit'
+      });
+    }catch(e){ return iso || ''; }
   }
 
   function call(url, body){
