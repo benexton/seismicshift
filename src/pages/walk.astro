@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import TourApp from '../components/walk/TourApp.jsx'
+---
+
+<BaseLayout
+  title="Seismic Walk | Self-Guided Engineering Walking Tour | Seismic Shift"
+  description="A self-guided walking tour of engineering-notable buildings in central Christchurch, curated for PCEE 2027. Pick your stops and get an optimised walking route."
+  canonicalPath="/walk/"
+  manifestHref="/walk-manifest.webmanifest"
+  themeColor="#17638f"
+>
+  <section class="w-full bg-white py-8 md:py-12 flex-1">
+    <TourApp client:load />
+  </section>
+</BaseLayout>
+
+<style>
+  @media print {
+    :global(nav),
+    :global(footer) {
+      display: none !important;
+    }
+  }
+</style>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/walk-sw.js', { scope: '/walk/' }).catch(() => {
+        // offline caching is a nice-to-have - the tour works fine without it
+      })
+    })
+  }
+</script>

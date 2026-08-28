@@ -1,0 +1,14 @@
+{
+  "name": "Seismic Walk - Seismic Shift",
+  "short_name": "Seismic Walk",
+  "description": "A self-guided engineering walking tour of central Christchurch.",
+  "start_url": "/walk/",
+  "scope": "/walk/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#17638f",
+  "icons": [
+    { "src": "/favicon-32x32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "/logo.png", "sizes": "any", "type": "image/png", "purpose": "any" }
+  ]
+}

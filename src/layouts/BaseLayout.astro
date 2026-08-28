@@ -11,6 +11,8 @@ interface Props {
   schema?: object
   includeTurnstile?: boolean
   preloadImage?: string
+  manifestHref?: string
+  themeColor?: string
 }
 
 const {
@@ -21,6 +23,8 @@ const {
   schema,
   includeTurnstile = false,
   preloadImage,
+  manifestHref,
+  themeColor,
 } = Astro.props
 
 const siteURL = 'https://www.seismicshift.nz'
@@ -83,6 +87,10 @@ const ogImageURL = ogImage.startsWith('http') ? ogImage : `${siteURL}${ogImage}`
     {preloadImage && (
       <link rel="preload" as="image" href={preloadImage} fetchpriority="high" />
     )}
+
+    <!-- PWA manifest (page-specific) -->
+    {manifestHref && <link rel="manifest" href={manifestHref} />}
+    {themeColor && <meta name="theme-color" content={themeColor} />}
 
     <!-- Schema.org JSON-LD -->
     {schema && (

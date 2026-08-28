@@ -17,7 +17,8 @@ export default defineConfig({
         !page.includes('/lfe/admin/') &&
         !page.includes('/lfe/public-preview/') &&
         !page.includes('/lfe/codes/') &&
-        !page.endsWith('/lfe/'),
+        !page.endsWith('/lfe/') &&
+        !page.endsWith('/walk/'), // unlinked - reachable by direct URL only, like public/build-to-thrive
     }),
   ],
   vite: {
