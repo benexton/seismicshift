@@ -31,7 +31,7 @@ export default function BuildingDetail({ building, onClose }) {
           </svg>
         </button>
 
-        <div className="overflow-y-auto px-7 py-6">
+        <div className="overflow-y-auto px-7 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           <h2 className="text-2xl font-black tracking-tighter text-slate-900">{building.name}</h2>
           {building.name_mi && <p className="text-sm text-slate-400 italic mb-1">{building.name_mi}</p>}
           <p className="text-sm text-slate-500 mb-3">{building.address}</p>

@@ -31,7 +31,7 @@ function numberMarkerEl(n) {
 // MapTiler key is configured (PUBLIC_MAPTILER_KEY). Without a key the
 // itinerary list remains the primary, fully-usable interface - see
 // docs/seismic-walk-tour-scope.md section 5/7 (map is not a hard dependency).
-export default function RouteMap({ stops, geometry, startPoint, userLocation }) {
+export default function RouteMap({ stops, geometry, startPoint, userLocation, loop }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef([])
@@ -91,9 +91,13 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation }) 
         markersRef.current.push(marker)
       }
 
+      // The fetched geometry already includes the closing leg when looped
+      // (see optimise() in TourApp.jsx), but the straight-line fallback
+      // needs its own last point re-added to actually close the loop.
+      const fallbackPoints = loop && points.length > 1 ? [...points, points[0]] : points
       const lineCoords = geometry && geometry.length > 0
         ? geometry.map((p) => [p.lng, p.lat])
-        : points.map((p) => [p.lng, p.lat])
+        : fallbackPoints.map((p) => [p.lng, p.lat])
 
       const source = map.getSource('route-line')
       const data = {
@@ -123,7 +127,7 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation }) 
     return () => {
       cancelled = true
     }
-  }, [stops, geometry, startPoint, userLocation])
+  }, [stops, geometry, startPoint, userLocation, loop])
 
   if (!MAPTILER_KEY) {
     return (
@@ -136,5 +140,5 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation }) 
     )
   }
 
-  return <div ref={containerRef} className="w-full h-[420px] rounded-3xl overflow-hidden border-2 border-slate-100" />
+  return <div ref={containerRef} className="w-full h-72 sm:h-96 md:h-[420px] rounded-3xl overflow-hidden border-2 border-slate-100" />
 }

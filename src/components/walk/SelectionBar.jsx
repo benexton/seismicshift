@@ -6,7 +6,7 @@ export default function SelectionBar({ count, estimatedMeters, optimised, onOpti
   if (count === 0) return null
 
   return (
-    <div className="sticky bottom-0 left-0 right-0 z-30 bg-white border-t-2 border-slate-100 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-4 py-3 md:rounded-t-3xl">
+    <div className="sticky bottom-0 left-0 right-0 z-30 bg-white border-t-2 border-slate-100 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:rounded-t-3xl">
       <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
         <div>
           <p className="font-black text-slate-900 text-sm">{count} building{count === 1 ? '' : 's'} selected</p>

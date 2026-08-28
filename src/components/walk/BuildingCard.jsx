@@ -4,15 +4,21 @@ import { tagLabel } from '../../lib/structuralTags'
 const BRAND = '#17638f'
 
 export default function BuildingCard({ building, selected, onToggle, onViewDetail }) {
+  // The whole card toggles selection on tap - much easier to hit on a phone
+  // than the checkbox alone. The thumbnail and title stay dedicated "view
+  // details" targets by stopping the click from bubbling to this handler.
+  const stop = (e) => e.stopPropagation()
+
   return (
     <div
-      className={`rounded-3xl border-2 bg-white p-4 flex gap-4 transition-colors ${
+      onClick={() => onToggle(building.id)}
+      className={`rounded-3xl border-2 bg-white p-4 flex gap-4 transition-colors cursor-pointer active:bg-slate-50 ${
         selected ? 'border-[#17638f]/50' : 'border-slate-100'
       }`}
     >
       <button
         type="button"
-        onClick={() => onViewDetail(building)}
+        onClick={(e) => { stop(e); onViewDetail(building) }}
         className="group flex-shrink-0 w-20 h-20 rounded-2xl bg-slate-100 overflow-hidden flex items-center justify-center"
         aria-label={`View details for ${building.name}`}
       >
@@ -30,16 +36,16 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
 
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2">
-          <button type="button" onClick={() => onViewDetail(building)} className="text-left min-w-0">
+          <button type="button" onClick={(e) => { stop(e); onViewDetail(building) }} className="text-left min-w-0">
             <h3 className="font-black text-slate-900 leading-tight truncate">{building.name}</h3>
             {building.name_mi && <p className="text-xs text-slate-400 italic">{building.name_mi}</p>}
           </button>
-          <label className="flex-shrink-0 inline-flex items-center">
+          <label className="flex-shrink-0 inline-flex items-center p-2 -m-2" onClick={stop}>
             <input
               type="checkbox"
               checked={selected}
               onChange={() => onToggle(building.id)}
-              className="w-5 h-5 rounded border-2 border-slate-300 accent-[#17638f]"
+              className="w-6 h-6 sm:w-5 sm:h-5 rounded border-2 border-slate-300 accent-[#17638f]"
               aria-label={`Select ${building.name} for your route`}
             />
           </label>

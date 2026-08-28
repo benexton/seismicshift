@@ -47,7 +47,7 @@ export default function StartPointPicker({ buildings, startId, onStartChange, lo
         <select
           value={userLocation ? '' : startId ?? ''}
           onChange={(e) => onStartChange(e.target.value || null)}
-          className="px-3 py-1.5 rounded-full border-2 border-slate-300 font-bold text-xs tracking-wide text-slate-600 bg-white"
+          className="px-3 py-1.5 rounded-full border-2 border-slate-300 font-bold text-base sm:text-xs tracking-wide text-slate-600 bg-white max-w-full"
         >
           <option value="">No fixed start</option>
           {buildings.map((b) => (

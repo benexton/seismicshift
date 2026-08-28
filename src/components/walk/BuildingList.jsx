@@ -16,7 +16,7 @@ function FilterChip({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className="px-3 py-1.5 rounded-full border-2 font-bold text-xs tracking-wide transition-colors"
+      className="flex-shrink-0 px-3 py-2 sm:py-1.5 rounded-full border-2 font-bold text-xs tracking-wide transition-colors"
       style={
         active
           ? { borderColor: BRAND, backgroundColor: '#eef1f3', color: BRAND }
@@ -50,7 +50,10 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onViewD
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2 mb-3">
+      {/* Mobile: one scrollable row per filter group, edge-to-edge, so the
+          filters don't push the building list several screens down. Desktop
+          (sm+): wraps into a normal grid of chips instead. */}
+      <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-3 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
         {ACCESS_FILTERS.map((f) => (
           <FilterChip key={f.value} active={accessFilter === f.value} onClick={() => setAccessFilter(accessFilter === f.value ? null : f.value)}>
             {f.label}
@@ -62,7 +65,7 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onViewD
       </div>
 
       {allTags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-nowrap sm:flex-wrap gap-2 mb-4 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
           {allTags.map((tag) => (
             <FilterChip key={tag} active={tagFilter === tag} onClick={() => setTagFilter(tagFilter === tag ? null : tag)}>
               {tagLabel(tag)}

@@ -61,7 +61,7 @@ export default function DisclaimerGate({ open, dismissable = false, onAcknowledg
             Your location, if you choose to share it, stays on your device - nothing about your position is sent to a server.
           </p>
         </div>
-        <div className="px-7 py-5 border-t border-slate-100 flex-shrink-0">
+        <div className="px-7 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] border-t border-slate-100 flex-shrink-0">
           <button
             onClick={acknowledge}
             className="w-full text-white px-5 py-3 text-sm font-bold tracking-widest rounded-full transition shadow-md hover:opacity-90"

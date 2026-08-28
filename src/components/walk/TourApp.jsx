@@ -45,7 +45,7 @@ export default function TourApp() {
 
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   const [startId, setStartId] = useState(DEFAULT_START_ID)
-  const [loop, setLoop] = useState(false)
+  const [loop, setLoop] = useState(true)
   const [userLocation, setUserLocation] = useState(null)
   const [detailBuilding, setDetailBuilding] = useState(null)
   // Snapshot of the route inputs at the moment "Optimise" was last clicked,
@@ -165,7 +165,10 @@ export default function TourApp() {
     setOptimisedSnapshot({ key, geometry: null })
     trackEvent('route_optimized', { count: selectedBuildings.length, estimated_meters: Math.round(routeResult?.totalMeters ?? 0) })
     const points = orderedPoints.map((p) => ({ lat: p.lat, lng: p.lng }))
-    fetchRouteGeometry(points).then((geo) => {
+    // Close the loop for the routing request too, or the fetched polyline
+    // stops at the last stop and never draws the leg back to the start.
+    const routePoints = loop && points.length > 1 ? [...points, points[0]] : points
+    fetchRouteGeometry(routePoints).then((geo) => {
       setOptimisedSnapshot((prev) => (prev?.key === key ? { key, geometry: geo } : prev))
     })
   }
@@ -229,7 +232,7 @@ export default function TourApp() {
             </div>
 
             <div className="mb-6">
-              <RouteMap stops={stops} geometry={geometry} startPoint={hasVirtualStart ? virtualStart : null} userLocation={userLocation} />
+              <RouteMap stops={stops} geometry={geometry} startPoint={hasVirtualStart ? virtualStart : null} userLocation={userLocation} loop={loop} />
             </div>
 
             <RouteItinerary stops={stops} legs={legs} closingLeg={closingLeg} onViewDetail={viewDetail} />
