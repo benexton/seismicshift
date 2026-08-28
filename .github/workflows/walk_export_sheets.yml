@@ -1,0 +1,32 @@
+name: Walk - Backup buildings to Google Sheets
+
+# Mirrors the walk_buildings Supabase table into a Google Sheet each morning,
+# so an accidental bad edit in /walkadmin/ (or a wipe) has a same-day
+# recovery source. Same pattern as .github/workflows/lfe_export_sheets.yml.
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 13 * * *'   # daily, ~1am NZST
+
+concurrency:
+  group: walk-export-sheets
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r scripts/requirements-sheets.txt
+      - name: Export to Google Sheets
+        env:
+          WALK_SUPABASE_URL: ${{ secrets.WALK_SUPABASE_URL }}
+          WALK_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.WALK_SUPABASE_SERVICE_ROLE_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          WALK_GSHEET_ID: ${{ secrets.WALK_GSHEET_ID }}
+        run: python scripts/walk/export_to_sheets.py

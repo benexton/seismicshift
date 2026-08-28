@@ -1,0 +1,49 @@
+name: Walk - Sync buildings from Supabase & deploy
+
+# Pulls the walk_buildings Supabase table (edited via /walkadmin/) into
+# src/data/buildings.csv, regenerates buildings.json + matrix.json, and
+# commits + pushes if anything changed - which triggers deploy.yml. Runs
+# nightly as a safety net, or on demand via the "Publish now" button in
+# /walkadmin/ (walk-admin-publish Edge Function dispatches this).
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 14 * * *'   # nightly, ~2am NZST
+
+concurrency:
+  group: walk-sync-and-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - name: Sync buildings.csv from Supabase
+        env:
+          WALK_SUPABASE_URL: ${{ secrets.WALK_SUPABASE_URL }}
+          WALK_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.WALK_SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/sync-buildings-from-supabase.mjs
+      - run: npm run build:data
+      - name: Rebuild walking-distance matrix
+        env:
+          ORS_API_KEY: ${{ secrets.ORS_API_KEY }}
+        run: npm run build:matrix
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/data/buildings.csv src/data/buildings.json src/data/matrix.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Sync Seismic Walk buildings from Supabase"
+            git push
+          fi
