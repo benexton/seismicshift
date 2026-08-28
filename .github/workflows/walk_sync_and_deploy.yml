@@ -2,9 +2,13 @@ name: Walk - Sync buildings from Supabase & deploy
 
 # Pulls the walk_buildings Supabase table (edited via /walkadmin/) into
 # src/data/buildings.csv, regenerates buildings.json + matrix.json, and
-# commits + pushes if anything changed - which triggers deploy.yml. Runs
-# nightly as a safety net, or on demand via the "Publish now" button in
-# /walkadmin/ (walk-admin-publish Edge Function dispatches this).
+# commits + pushes if anything changed, then explicitly dispatches
+# deploy.yml (a push made with the default GITHUB_TOKEN deliberately does
+# NOT trigger other on:push workflows - GitHub's anti-loop protection - so
+# deploy.yml would otherwise silently never fire from this job's own
+# commits; confirmed the hard way on 2026-08-28). Runs nightly as a safety
+# net, or on demand via the "Publish now" button in /walkadmin/
+# (walk-admin-publish Edge Function dispatches this workflow itself).
 on:
   workflow_dispatch: {}
   schedule:
@@ -16,6 +20,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   sync:
@@ -41,13 +46,25 @@ jobs:
           ORS_API_KEY: ${{ secrets.ORS_API_KEY }}
         run: npm run build:matrix
       - name: Commit and push if changed
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add src/data/buildings.csv src/data/buildings.json src/data/matrix.json
           if git diff --cached --quiet; then
             echo "No changes to commit."
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "Sync Seismic Walk buildings from Supabase"
             git push
+            echo "pushed=true" >> "$GITHUB_OUTPUT"
           fi
+      - name: Trigger Pages deploy
+        # See the top-of-file comment - this job's own push doesn't trigger
+        # deploy.yml on its own, so dispatch it explicitly. Only when
+        # something actually changed - a no-op sync shouldn't cause a
+        # pointless redeploy.
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy.yml --ref main --repo ${{ github.repository }}
