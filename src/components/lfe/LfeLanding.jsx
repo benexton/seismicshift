@@ -55,7 +55,7 @@ function EventList({ reviewer, signOut }) {
               <ul className="event-list">
                 {memberships.map((m) => (
                   <li key={m.events.id}>
-                    <a href={`/lfe/triage/?event=${encodeURIComponent(m.events.slug)}`}><b>{m.events.name}</b></a>
+                    <a href={`/erp/triage/?event=${encodeURIComponent(m.events.slug)}`}><b>{m.events.name}</b></a>
                     {m.events.country ? ` - ${m.events.country}` : ''}
                     {m.events.event_datetime ? ` - ${fmtDate(m.events.event_datetime)}` : ''}
                     {' '}<span className="muted small">({m.role})</span>

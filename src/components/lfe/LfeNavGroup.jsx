@@ -9,16 +9,16 @@ import { useEffect, useRef, useState } from 'react';
 // link matches the current page, the same way the tab buttons highlight the
 // active tab.
 //
-// "Public view" deliberately points at /lfe/public-preview/, not the true
-// public /lfe/public/ - this nav bar is only ever rendered for logged-in
-// volunteers/admins, and /lfe/public-preview/ is the same content wrapped in
-// this same bar so they keep a way back. The bare /lfe/public/ URL (what
+// "Public view" deliberately points at /erp/public-preview/, not the true
+// public /erp/public/ - this nav bar is only ever rendered for logged-in
+// volunteers/admins, and /erp/public-preview/ is the same content wrapped in
+// this same bar so they keep a way back. The bare /erp/public/ URL (what
 // gets shared with the actual public) never renders this component at all.
 const NAV_LINKS = [
-  ['/lfe/', 'Your events'],
-  ['/lfe/codes/', 'Codes & standards'],
-  ['/lfe/public-preview/', 'Public view'],
-  ['/lfe/admin/', 'Admin'],
+  ['/erp/', 'Your events'],
+  ['/erp/codes/', 'Codes & standards'],
+  ['/erp/public-preview/', 'Public view'],
+  ['/erp/admin/', 'Admin'],
 ];
 
 function normalize(p) {

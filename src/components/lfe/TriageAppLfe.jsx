@@ -43,7 +43,7 @@ function Workspace({ reviewer, userId, signOut, updateName }) {
     return (
       <div className="container">
         <p className="err">{error || 'Event not found.'}</p>
-        <p><a href="/lfe/">Back to your events</a></p>
+        <p><a href="/erp/">Back to your events</a></p>
       </div>
     );
   }

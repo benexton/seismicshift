@@ -1392,7 +1392,7 @@ function AdminWorkspace({ signOut }) {
     return (
       <div className="container">
         <p className="err">You do not have ERP admin access. Contact an existing admin if you believe you need it.</p>
-        <p><a href="/lfe/">Back to your events</a></p>
+        <p><a href="/erp/">Back to your events</a></p>
       </div>
     );
   }

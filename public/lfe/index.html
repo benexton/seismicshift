@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- ERP's URLs moved from /lfe/ to /erp/ (matches its "ERP" branding - see
+     every TriageLayout title in src/pages/erp/). This site is static
+     GitHub Pages with no server-side redirects, so this stub (kept for every
+     old /lfe/* route) is what stands in for one - JS-first so a query string
+     (e.g. /lfe/triage/?event=slug, used in volunteer-shared links) survives
+     the hop; the meta refresh is the no-JS fallback and necessarily drops it. -->
+<meta http-equiv="refresh" content="0; url=/erp/">
+<meta name="robots" content="noindex, follow">
+<title>Moved to /erp/</title>
+<script>location.replace('/erp/' + location.search + location.hash);</script>
+</head>
+<body>
+<p>This page has moved to <a href="/erp/">/erp/</a>.</p>
+</body>
+</html>
