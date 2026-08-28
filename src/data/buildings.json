@@ -27,32 +27,6 @@
     "image_credit": null
   },
   {
-    "id": "christ-church-cathedral",
-    "name": "Christchurch Cathedral",
-    "name_mi": null,
-    "address": "Cathedral Square",
-    "lat": -43.5311,
-    "lng": 172.6367,
-    "access_level": "exterior_only",
-    "access_notes": "Reinstatement underway - exterior viewing only. Tours can be arranged online.",
-    "year_built": 1904,
-    "year_retrofit": null,
-    "structural_tags": [
-      "urm_retrofit"
-    ],
-    "summary": "PLACEHOLDER: earthquake-damaged stone cathedral under reinstatement - verify",
-    "story": null,
-    "engineer": null,
-    "architect": null,
-    "storeys": null,
-    "step_free": null,
-    "image": "/images/walk/christ-church-cathedral.svg",
-    "external_url": null,
-    "category": "heritage",
-    "featured": null,
-    "image_credit": null
-  },
-  {
     "id": "turanga",
     "name": "Tūranga (Christchurch Central Library)",
     "name_mi": "Tūranga",
@@ -102,6 +76,32 @@
     "image": "/images/walk/christchurch-art-gallery.svg",
     "external_url": null,
     "category": "civic",
+    "featured": null,
+    "image_credit": null
+  },
+  {
+    "id": "christ-church-cathedral",
+    "name": "Christchurch Cathedral",
+    "name_mi": null,
+    "address": "Cathedral Square",
+    "lat": -43.5311,
+    "lng": 172.6367,
+    "access_level": "exterior_only",
+    "access_notes": "Reinstatement underway - exterior viewing only. Tours can be arranged online.",
+    "year_built": 1904,
+    "year_retrofit": null,
+    "structural_tags": [
+      "urm_retrofit"
+    ],
+    "summary": "PLACEHOLDER: earthquake-damaged stone cathedral under reinstatement - verify",
+    "story": null,
+    "engineer": null,
+    "architect": null,
+    "storeys": null,
+    "step_free": null,
+    "image": "/images/walk/christ-church-cathedral.svg",
+    "external_url": null,
+    "category": "heritage",
     "featured": null,
     "image_credit": null
   },
