@@ -1,6 +1,6 @@
 import sharp from 'sharp'
 import { readdir, stat } from 'fs/promises'
-import { join, extname, basename } from 'path'
+import { join, dirname, extname, basename } from 'path'
 
 const PUBLIC_DIR = new URL('../public/', import.meta.url).pathname.replace(/^\/([A-Z]:)/, '$1')
 
@@ -21,6 +21,13 @@ const IMAGES = [
   { file: 'help2.png',          width: 800 },
   { file: 'help3.png',          width: 800 },
   { file: 'Plinth.png',         width: 600 },
+  // Bracing before/after sliders — room pair renders up to the page's
+  // max-w-7xl content width, corner pair sits in a much narrower max-w-xl
+  // column (see src/pages/bracing-check.astro and public/images/bracing/README.md).
+  { file: 'images/bracing/room-standard.png',    width: 1200 },
+  { file: 'images/bracing/room-resilient.png',   width: 1200 },
+  { file: 'images/bracing/corner-standard.png',  width: 800 },
+  { file: 'images/bracing/corner-resilient.png', width: 800 },
 ]
 
 async function fileSize(path) {
@@ -31,7 +38,7 @@ function kb(bytes) { return (bytes / 1024).toFixed(0) + ' KB' }
 
 for (const { file, width } of IMAGES) {
   const input = join(PUBLIC_DIR, file)
-  const output = join(PUBLIC_DIR, basename(file, extname(file)) + '.webp')
+  const output = join(PUBLIC_DIR, dirname(file), basename(file, extname(file)) + '.webp')
 
   const beforeSize = await fileSize(input)
   if (!beforeSize) { console.log(`⚠  Skipping ${file} (not found)`); continue }
