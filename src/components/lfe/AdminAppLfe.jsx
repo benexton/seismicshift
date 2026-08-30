@@ -2,6 +2,8 @@ import { Fragment, useEffect, useState } from 'react';
 import { supabaseLfe, edgeFunctionErrorMessage } from '../../lib/supabaseLfe.js';
 import LoginGateLfe from './LoginGateLfe.jsx';
 import LfeNavGroup from './LfeNavGroup.jsx';
+import AccountMenu from './AccountMenu.jsx';
+import InviteUsersPanel from './InviteUsersPanel.jsx';
 import { BASEMAP_PRESETS, TSUNAMI_OPTIONS, VERT_DEPLOYMENT_OPTIONS, PHYSICAL_DEPLOYMENT_OPTIONS, withCurrentOption, fmtDate } from '../../lib/constantsLfe.js';
 import { geonetIdFromInput, fetchGeonetEvent } from '../../lib/geonetLfe.js';
 
@@ -1359,7 +1361,7 @@ function ProvisionUsersPanel({ events }) {
   );
 }
 
-function AdminWorkspace({ signOut }) {
+function AdminWorkspace({ reviewer, signOut, updateName }) {
   const [isAdmin, setIsAdmin] = useState(null);
   const [events, setEvents] = useState([]);
   const [loadingEvents, setLoadingEvents] = useState(true);
@@ -1405,14 +1407,16 @@ function AdminWorkspace({ signOut }) {
         <button className={tab === 'create' ? 'active' : ''} onClick={() => setTab('create')}>Create event</button>
         <button className={tab === 'manage' ? 'active' : ''} onClick={() => setTab('manage')}>Manage events</button>
         <button className={tab === 'provision' ? 'active' : ''} onClick={() => setTab('provision')}>Provision users</button>
+        <button className={tab === 'invite' ? 'active' : ''} onClick={() => setTab('invite')}>Add new users</button>
         <span className="tab-spacer" />
-        <button className="signout" onClick={signOut}>Sign out</button>
+        <AccountMenu reviewer={reviewer} signOut={signOut} updateName={updateName} />
       </div>
       <div className="tab-body">
         <div className="panel-scroll">
           {tab === 'create' && <CreateEventPanel onCreated={loadEvents} />}
           {tab === 'manage' && <ManageEventsPanel events={events} loading={loadingEvents} onChanged={loadEvents} />}
           {tab === 'provision' && <ProvisionUsersPanel events={events} />}
+          {tab === 'invite' && <InviteUsersPanel />}
         </div>
       </div>
     </div>
@@ -1422,7 +1426,7 @@ function AdminWorkspace({ signOut }) {
 export default function AdminAppLfe() {
   return (
     <LoginGateLfe>
-      {({ signOut }) => <AdminWorkspace signOut={signOut} />}
+      {({ reviewer, signOut, updateName }) => <AdminWorkspace reviewer={reviewer} signOut={signOut} updateName={updateName} />}
     </LoginGateLfe>
   );
 }

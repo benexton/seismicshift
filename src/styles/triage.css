@@ -78,6 +78,27 @@ body {
   text-decoration: none; display: inline-flex; align-items: center;
 }
 
+/* ---- Account menu ---------------------------------------------------------
+   Sits at the right of a topbar (after .tab-spacer), so it does not want
+   .tabs .navgroup's left-side divider (border/margin/padding-right). */
+.tabs .navgroup.accountmenu { border-right: none; padding-right: 0; margin-right: 0; }
+.accountmenu-btn {
+  background: transparent; color: #9fb0c9; border: none;
+  cursor: pointer; font-size: 13px; font-weight: 600; padding: 9px 12px; border-radius: 6px;
+}
+.accountmenu-btn:hover, .accountmenu-btn[aria-expanded="true"] { background: #1b3050; color: #cdd6e4; }
+.accountmenu-drop { left: auto; right: 0; }
+.accountmenu-name-edit { display: flex; align-items: center; gap: 6px; padding: 8px 10px; }
+.accountmenu-name-edit input {
+  flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid #263a58; border-radius: 6px;
+  background: #0f1c30; color: #cdd6e4; font-size: 13px;
+}
+.link-btn {
+  background: none; border: none; padding: 0; color: var(--brand); font-size: 13px;
+  font-weight: 600; cursor: pointer; text-decoration: underline;
+}
+.link-btn:hover { color: var(--brand-dark); }
+
 /* ---- Scrollable panels (scraper, manual, report) -------------------------- */
 .panel-scroll { height: 100%; overflow-y: auto; }
 .panel-inner { max-width: 900px; margin: 0 auto; padding: 22px 20px 60px; }
@@ -236,14 +257,6 @@ body {
 .login-wrap .err { color: var(--danger); font-size: 13px; margin-top: 10px; }
 .login-wrap .hint { color: var(--muted); font-size: 12px; margin-top: 12px; }
 .empty { color: var(--muted); font-size: 14px; margin-top: 40px; text-align: center; }
-
-.account-fab {
-  position: fixed; right: 16px; bottom: 16px; z-index: 500;
-  background: #fff; border: 1px solid var(--border); border-radius: 999px;
-  padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--muted);
-  cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12);
-}
-.account-fab:hover { color: var(--ink); border-color: var(--brand); }
 
 /* ---- v3: duplicate banner, attachments, read-only meta -------------------- */
 .dup-banner {

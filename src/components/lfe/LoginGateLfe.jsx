@@ -19,12 +19,7 @@ export default function LoginGateLfe({ children }) {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
-  const [showPwModal, setShowPwModal] = useState(false);
-  const [newPw, setNewPw] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
-  const [pwErr, setPwErr] = useState('');
-  const [pwBusy, setPwBusy] = useState(false);
-  const [pwDone, setPwDone] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     supabaseLfe.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true); });
@@ -49,20 +44,15 @@ export default function LoginGateLfe({ children }) {
     if (error) setErr(error.message);
   }
 
-  function openPasswordModal() {
-    setNewPw(''); setConfirmPw(''); setPwErr(''); setPwDone(false); setShowPwModal(true);
-  }
-
-  async function changePassword(e) {
+  async function sendPasswordReset(e) {
     e.preventDefault();
-    setPwErr('');
-    if (newPw.length < 6) { setPwErr('Password must be at least 6 characters.'); return; }
-    if (newPw !== confirmPw) { setPwErr('Passwords do not match.'); return; }
-    setPwBusy(true);
-    const { error } = await supabaseLfe.auth.updateUser({ password: newPw });
-    setPwBusy(false);
-    if (error) { setPwErr(error.message); return; }
-    setPwDone(true);
+    setErr(''); setResetSent(false);
+    if (!email.trim()) { setErr('Enter your email above first, then click "Forgot password?".'); return; }
+    const { error } = await supabaseLfe.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/erp/reset-password/`,
+    });
+    if (error) { setErr(error.message); return; }
+    setResetSent(true);
   }
 
   if (!ready) return <div className="container">Loading...</div>;
@@ -82,12 +72,16 @@ export default function LoginGateLfe({ children }) {
               onChange={(e) => setPassword(e.target.value)} required />
             <div style={{ marginTop: 14 }}>
               <button className="btn" type="submit" disabled={busy}>{busy ? 'Signing in...' : 'Sign in'}</button>
+              <button type="button" className="link-btn" onClick={sendPasswordReset} style={{ marginLeft: 12 }}>
+                Forgot password?
+              </button>
             </div>
+            {resetSent && <p className="muted">Check your email for a password reset link.</p>}
             {err && <p className="err">{err}</p>}
           </form>
           <p className="hint">
-            Accounts are provisioned by an ERP admin. Contact your team lead if
-            you need access.
+            Ask your ERP admin to invite your email, then{' '}
+            <a href="/erp/register/">register here</a>.
           </p>
         </div>
       </div>
@@ -117,40 +111,5 @@ export default function LoginGateLfe({ children }) {
     );
   }
 
-  return (
-    <>
-      {children({ session, signOut, reviewer: displayName, updateName })}
-      <button type="button" className="account-fab" onClick={openPasswordModal}>Change password</button>
-      {showPwModal && (
-        <div className="modal-backdrop" onClick={() => setShowPwModal(false)}>
-          <div className="modal" style={{ width: 'min(360px, 100%)' }} onClick={(e) => e.stopPropagation()}>
-            <div className="head">
-              <h2>Change password</h2>
-              <button type="button" className="x" onClick={() => setShowPwModal(false)}>&times;</button>
-            </div>
-            <div className="body" style={{ gridTemplateColumns: '1fr' }}>
-              {pwDone ? (
-                <p className="muted">Password updated.</p>
-              ) : (
-                <form onSubmit={changePassword}>
-                  <div className="field">
-                    <label htmlFor="new-pw">New password</label>
-                    <input id="new-pw" type="password" autoComplete="new-password" value={newPw}
-                      onChange={(e) => setNewPw(e.target.value)} required minLength={6} />
-                  </div>
-                  <div className="field">
-                    <label htmlFor="confirm-pw">Confirm new password</label>
-                    <input id="confirm-pw" type="password" autoComplete="new-password" value={confirmPw}
-                      onChange={(e) => setConfirmPw(e.target.value)} required minLength={6} />
-                  </div>
-                  <button className="btn" type="submit" disabled={pwBusy}>{pwBusy ? 'Saving...' : 'Save password'}</button>
-                  {pwErr && <p className="err">{pwErr}</p>}
-                </form>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
+  return children({ session, signOut, reviewer: displayName, updateName });
 }

@@ -1,6 +1,7 @@
 import LoginGateLfe from './LoginGateLfe.jsx';
 import PublicViewLfe from './PublicViewLfe.jsx';
 import LfeNavGroup from './LfeNavGroup.jsx';
+import AccountMenu from './AccountMenu.jsx';
 
 // Same content as the true public page (PublicViewLfe), but wrapped in the
 // internal tool's top bar. Logged-in volunteers/admins land here (not on
@@ -17,12 +18,13 @@ import LfeNavGroup from './LfeNavGroup.jsx';
 export default function PublicPreviewLfe() {
   return (
     <LoginGateLfe>
-      {() => (
+      {({ reviewer, signOut, updateName }) => (
         <div className="triage-shell">
           <div className="tabs">
             <LfeNavGroup />
             <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6, color: '#cdd6e4' }}>Public view</span>
             <span className="tab-spacer" />
+            <AccountMenu reviewer={reviewer} signOut={signOut} updateName={updateName} />
           </div>
           <div className="tab-body">
             <PublicViewLfe />

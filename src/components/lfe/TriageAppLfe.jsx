@@ -3,6 +3,7 @@ import { usePresenceLfe } from '../../lib/usePresenceLfe.js';
 import { EventProvider, useEvent } from '../../lib/useEvent.js';
 import LoginGateLfe from './LoginGateLfe.jsx';
 import LfeNavGroup from './LfeNavGroup.jsx';
+import AccountMenu from './AccountMenu.jsx';
 import InstructionsLfe from './InstructionsLfe.jsx';
 import ScraperConfigLfe from './ScraperConfigLfe.jsx';
 import ManualInputLfe from './ManualInputLfe.jsx';
@@ -30,13 +31,6 @@ function Workspace({ reviewer, userId, signOut, updateName }) {
   const { event, loading, error } = useEvent();
   const { othersByRecord, setActiveRecord } = usePresenceLfe(event?.id, userId, reviewer);
   const [tab, setTab] = useState('instructions');
-  const [editingName, setEditingName] = useState(false);
-  const [nameDraft, setNameDraft] = useState(reviewer);
-
-  async function saveName() {
-    await updateName(nameDraft);
-    setEditingName(false);
-  }
 
   if (loading) return <div className="container">Loading event...</div>;
   if (error || !event) {
@@ -64,18 +58,7 @@ function Workspace({ reviewer, userId, signOut, updateName }) {
           <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>
         ))}
         <span className="tab-spacer" />
-        {editingName ? (
-          <span className="name-edit">
-            <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') saveName(); }} autoFocus />
-            <button className="mini" onClick={saveName}>Save</button>
-          </span>
-        ) : (
-          <button className="signout" onClick={() => { setNameDraft(reviewer); setEditingName(true); }} title="Edit display name">
-            {reviewer} (edit)
-          </button>
-        )}
-        <button className="signout" onClick={signOut}>Sign out</button>
+        <AccountMenu reviewer={reviewer} signOut={signOut} updateName={updateName} />
       </div>
 
       <div className="tab-body">

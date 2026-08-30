@@ -3,8 +3,9 @@ import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import { fmtDate } from '../../lib/constants.js';
 import LoginGateLfe from './LoginGateLfe.jsx';
 import LfeNavGroup from './LfeNavGroup.jsx';
+import AccountMenu from './AccountMenu.jsx';
 
-function EventList({ reviewer, signOut }) {
+function EventList({ reviewer, signOut, updateName }) {
   const [memberships, setMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
@@ -39,8 +40,7 @@ function EventList({ reviewer, signOut }) {
         <LfeNavGroup />
         <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6, color: '#cdd6e4' }}>ERP</span>
         <span className="tab-spacer" />
-        <span className="signout">{reviewer}</span>
-        <button className="signout" onClick={signOut}>Sign out</button>
+        <AccountMenu reviewer={reviewer} signOut={signOut} updateName={updateName} />
       </div>
       <div className="tab-body">
         <div className="panel-scroll">
@@ -73,7 +73,7 @@ function EventList({ reviewer, signOut }) {
 export default function LfeLanding() {
   return (
     <LoginGateLfe>
-      {({ reviewer, signOut }) => <EventList reviewer={reviewer} signOut={signOut} />}
+      {({ reviewer, signOut, updateName }) => <EventList reviewer={reviewer} signOut={signOut} updateName={updateName} />}
     </LoginGateLfe>
   );
 }

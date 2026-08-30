@@ -4,6 +4,7 @@ import DOMPurify from 'dompurify';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import LoginGateLfe from './LoginGateLfe.jsx';
 import LfeNavGroup from './LfeNavGroup.jsx';
+import AccountMenu from './AccountMenu.jsx';
 
 function mdHtml(t) {
   return DOMPurify.sanitize(marked.parse(String(t || '')));
@@ -333,7 +334,7 @@ function CountryDetail({ country, canWrite, reviewer, onBack }) {
   );
 }
 
-function CodesWorkspace({ reviewer, signOut }) {
+function CodesWorkspace({ reviewer, signOut, updateName }) {
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
@@ -381,7 +382,7 @@ function CodesWorkspace({ reviewer, signOut }) {
         <LfeNavGroup />
         <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6, color: '#cdd6e4' }}>Codes & standards</span>
         <span className="tab-spacer" />
-        <button className="signout" onClick={signOut}>Sign out</button>
+        <AccountMenu reviewer={reviewer} signOut={signOut} updateName={updateName} />
       </div>
       <div className="tab-body">
         {loading ? <div className="container">Loading...</div> : (
@@ -397,7 +398,7 @@ function CodesWorkspace({ reviewer, signOut }) {
 export default function CountryCodesLfe() {
   return (
     <LoginGateLfe>
-      {({ signOut, reviewer }) => <CodesWorkspace reviewer={reviewer} signOut={signOut} />}
+      {({ signOut, reviewer, updateName }) => <CodesWorkspace reviewer={reviewer} signOut={signOut} updateName={updateName} />}
     </LoginGateLfe>
   );
 }
