@@ -39,9 +39,10 @@ export default function LoginGateLfe({ children }) {
 
   async function updateName(name) {
     const clean = (name ?? '').trim();
-    if (!clean) return;
+    if (!clean) return { error: null };
     const { error } = await supabaseLfe.auth.updateUser({ data: { display_name: clean } });
     if (error) setErr(error.message);
+    return { error };
   }
 
   async function sendPasswordReset(e) {

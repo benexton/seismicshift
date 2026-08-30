@@ -28,7 +28,13 @@ export default function RegisterLfe() {
     setBusy(false);
     if (error) return setErr(error.message);
     if (data === 'invited') { setStep('details'); return; }
-    setStatus(data);
+    if (data === 'not_invited' || data === 'already_registered') { setStatus(data); return; }
+    setErr('Something unexpected happened checking that email. Please try again.');
+  }
+
+  function backToEmail() {
+    setErr('');
+    setStep('email');
   }
 
   async function register(e) {
@@ -67,7 +73,10 @@ export default function RegisterLfe() {
       <div className="login-wrap">
         <div className="card">
           <h2>Complete your registration</h2>
-          <p className="muted">{email.trim()} is invited. Choose a display name and password to finish.</p>
+          <p className="muted">
+            {email.trim()} is invited. Choose a display name and password to finish, or{' '}
+            <button type="button" className="link-btn" onClick={backToEmail}>use a different email</button>.
+          </p>
           <form onSubmit={register}>
             <label htmlFor="dn">Display name</label>
             <input id="dn" type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)}

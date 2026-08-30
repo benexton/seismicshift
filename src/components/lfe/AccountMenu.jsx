@@ -13,6 +13,8 @@ export default function AccountMenu({ reviewer, signOut, updateName }) {
   const [open, setOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(reviewer);
+  const [nameErr, setNameErr] = useState('');
+  const [nameBusy, setNameBusy] = useState(false);
   const [showPwModal, setShowPwModal] = useState(false);
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
@@ -52,12 +54,18 @@ export default function AccountMenu({ reviewer, signOut, updateName }) {
 
   function startEditName() {
     setNameDraft(reviewer);
+    setNameErr('');
     setEditingName(true);
   }
 
   async function saveName() {
+    if (nameBusy) return;
     const clean = nameDraft.trim();
-    if (clean) await updateName(clean);
+    if (!clean) return;
+    setNameBusy(true); setNameErr('');
+    const { error } = await updateName(clean);
+    setNameBusy(false);
+    if (error) { setNameErr(error.message); return; }
     setEditingName(false);
     setOpen(false);
   }
@@ -78,13 +86,19 @@ export default function AccountMenu({ reviewer, signOut, updateName }) {
           <div className="navmenu-drop accountmenu-drop" role="menu">
             {editingName ? (
               <div className="accountmenu-name-edit">
-                <input
-                  value={nameDraft}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') saveName(); }}
-                  autoFocus
-                />
-                <button type="button" className="mini" onClick={saveName}>Save</button>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') saveName(); }}
+                    autoFocus
+                    disabled={nameBusy}
+                  />
+                  <button type="button" className="mini" onClick={saveName} disabled={nameBusy}>
+                    {nameBusy ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+                {nameErr && <p className="err" style={{ margin: '6px 0 0', fontSize: 12 }}>{nameErr}</p>}
               </div>
             ) : (
               <button type="button" className="navmenu-item" role="menuitem" onClick={startEditName}>

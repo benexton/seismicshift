@@ -5,12 +5,15 @@ import { supabaseLfe } from '../../lib/supabaseLfe.js';
 // sendPasswordReset -> supabaseLfe.auth.resetPasswordForEmail). The
 // Supabase client already has detectSessionInUrl: true (see
 // src/lib/supabaseLfe.js), so arriving here from that link auto-establishes
-// a temporary recovery session - this page just waits for that, then lets
-// the visitor set a new password with the same updateUser() call used
-// everywhere else a password gets changed.
+// a temporary recovery session - this page waits specifically for the
+// PASSWORD_RECOVERY auth event (not just "is there a session"), so that
+// someone who already has an ordinary signed-in session (e.g. a shared
+// device, or a stale browser tab) can't reach the "set new password" form
+// just by navigating to this URL directly - that would silently let them
+// change the current account's password with no re-authentication.
 export default function ResetPasswordLfe() {
   const [ready, setReady] = useState(false);
-  const [hasSession, setHasSession] = useState(false);
+  const [isRecovery, setIsRecovery] = useState(false);
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [err, setErr] = useState('');
@@ -18,9 +21,15 @@ export default function ResetPasswordLfe() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
-    supabaseLfe.auth.getSession().then(({ data }) => { setHasSession(!!data.session); setReady(true); });
-    const { data: sub } = supabaseLfe.auth.onAuthStateChange((_e, s) => setHasSession(!!s));
-    return () => sub.subscription.unsubscribe();
+    const { data: sub } = supabaseLfe.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') setIsRecovery(true);
+      setReady(true);
+    });
+    // If the URL never carried a recovery token at all, no auth event fires
+    // for it - without this fallback the page would show "Loading..."
+    // forever instead of the "expired or invalid" state.
+    const timer = setTimeout(() => setReady(true), 3000);
+    return () => { sub.subscription.unsubscribe(); clearTimeout(timer); };
   }, []);
 
   async function submit(e) {
@@ -30,8 +39,12 @@ export default function ResetPasswordLfe() {
     if (newPw !== confirmPw) { setErr('Passwords do not match.'); return; }
     setBusy(true);
     const { error } = await supabaseLfe.auth.updateUser({ password: newPw });
+    if (error) { setBusy(false); setErr(error.message); return; }
+    // Sign out of the temporary recovery session rather than leaving the
+    // device signed in - the recovery link is single-purpose (set a new
+    // password), not meant to double as a "log me in" link.
+    await supabaseLfe.auth.signOut();
     setBusy(false);
-    if (error) { setErr(error.message); return; }
     setDone(true);
   }
 
@@ -49,7 +62,7 @@ export default function ResetPasswordLfe() {
     );
   }
 
-  if (!hasSession) {
+  if (!isRecovery) {
     return (
       <div className="login-wrap">
         <div className="card">

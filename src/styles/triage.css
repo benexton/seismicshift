@@ -88,7 +88,7 @@ body {
 }
 .accountmenu-btn:hover, .accountmenu-btn[aria-expanded="true"] { background: #1b3050; color: #cdd6e4; }
 .accountmenu-drop { left: auto; right: 0; }
-.accountmenu-name-edit { display: flex; align-items: center; gap: 6px; padding: 8px 10px; }
+.accountmenu-name-edit { padding: 8px 10px; }
 .accountmenu-name-edit input {
   flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid #263a58; border-radius: 6px;
   background: #0f1c30; color: #cdd6e4; font-size: 13px;

@@ -28,15 +28,24 @@ export default function InviteUsersPanel() {
   useEffect(() => { loadInvited(); }, []);
 
   async function addEmails() {
-    const list = [...new Set(emails.split(',').map((e) => e.trim()).filter(Boolean))];
+    // Split on commas AND newlines - a pasted one-per-line list (the
+    // natural way to paste a roster) is just as valid input as a
+    // comma-separated one; splitting on comma alone would fold it into a
+    // single bogus entry with embedded newlines.
+    const list = [...new Set(emails.split(/[,\n]+/).map((e) => e.trim()).filter(Boolean))];
     if (!list.length) return;
     setBusy(true); setResult(null); setErr('');
     const { data, error } = await supabaseLfe.rpc('add_invited_emails', { p_emails: list });
     setBusy(false);
     if (error) return setErr(error.message);
-    const added = (data ?? []).filter((r) => r.status === 'added').map((r) => r.email);
-    const alreadyInvited = (data ?? []).filter((r) => r.status === 'already_invited').map((r) => r.email);
-    const alreadyRegistered = (data ?? []).filter((r) => r.status === 'already_registered').map((r) => r.email);
+    const rows = data ?? [];
+    const added = rows.filter((r) => r.status === 'added').map((r) => r.email);
+    const alreadyInvited = rows.filter((r) => r.status === 'already_invited').map((r) => r.email);
+    const alreadyRegistered = rows.filter((r) => r.status === 'already_registered').map((r) => r.email);
+    const unrecognized = rows.filter((r) => !['added', 'already_invited', 'already_registered'].includes(r.status));
+    if (unrecognized.length) {
+      setErr(`Unexpected response for: ${unrecognized.map((r) => r.email).join(', ')}. Nothing else was affected - try again.`);
+    }
     setResult({ added, alreadyInvited, alreadyRegistered });
     setEmails('');
     loadInvited();
@@ -52,7 +61,7 @@ export default function InviteUsersPanel() {
       </p>
 
       <div className="field">
-        <label>Emails to invite (comma-separated)</label>
+        <label>Emails to invite (comma or newline separated)</label>
         <div className="link-add">
           <input type="text" value={emails} onChange={(e) => setEmails(e.target.value)}
             placeholder="a@example.com, b@example.com, c@example.com" style={{ flex: 1 }} />
