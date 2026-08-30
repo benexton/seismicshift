@@ -31,7 +31,7 @@
     "name": "Tūranga (Christchurch Central Library)",
     "name_mi": "Tūranga",
     "address": "60 Cathedral Square",
-    "lat": -43.5305,
+    "lat": -69.5305,
     "lng": 172.6373,
     "access_level": "interior_public",
     "access_notes": "Open library hours",
@@ -41,7 +41,7 @@
       "steel_moment_frame",
       "low_damage"
     ],
-    "summary": "PLACEHOLDER: central library - verify structural system",
+    "summary": "PLACEHOLDER: central library - verify structural system. Needs further work",
     "story": null,
     "engineer": null,
     "architect": null,
