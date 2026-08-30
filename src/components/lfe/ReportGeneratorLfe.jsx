@@ -33,6 +33,12 @@ const META_FIELDS = [
 
 const EMPTY_META = Object.fromEntries([...META_FIELDS.map(([k]) => k), 'contributors'].map((k) => [k, '']));
 
+function Cite({ url, refIndex }) {
+  const n = url ? refIndex.get(url) : undefined;
+  if (!n) return null;
+  return <sup className="report-cite"><a href={`#ref-${n}`}>{n}</a></sup>;
+}
+
 export default function ReportGeneratorLfe() {
   const { event } = useEvent();
   const eventId = event?.id;
@@ -196,11 +202,6 @@ export default function ReportGeneratorLfe() {
   const refIndex = useMemo(() => new Map(references.map((r, i) => [r.url, i + 1])), [references]);
   const usgsEventPageUrl = event?.usgs_event_id ? `https://earthquake.usgs.gov/earthquakes/eventpage/${event.usgs_event_id}` : null;
   const geonetEventPageUrl = event?.geonet_event_id ? `https://www.geonet.org.nz/earthquake/${event.geonet_event_id}` : null;
-  const Cite = ({ url }) => {
-    const n = url ? refIndex.get(url) : undefined;
-    if (!n) return null;
-    return <sup className="report-cite"><a href={`#ref-${n}`}>{n}</a></sup>;
-  };
   const parsed = useMemo(() => parseReportSections(conclusions), [conclusions]);
   const sec = parsed?.structured ? parsed.sections : null;
   // conclusions_md is meant to be pipeline-written only, but the base RLS
@@ -320,7 +321,7 @@ export default function ReportGeneratorLfe() {
               return (
                 <figure className="report-fig" key={url}>
                   <img src={url} alt="" />
-                  <figcaption>Figure {figNo}. {label} <Cite url={sourceUrl} /></figcaption>
+                  <figcaption>Figure {figNo}. {label} <Cite url={sourceUrl} refIndex={refIndex} /></figcaption>
                 </figure>
               );
             })}
@@ -398,7 +399,7 @@ export default function ReportGeneratorLfe() {
               {photo && (
                 <figure className="report-fig">
                   <img src={photo.media_url} alt="" />
-                  <figcaption>Figure {figNo}. Site #{photo.site_id ?? '-'}, {region}: {DAMAGE_LABEL[photo.damage_score]?.split(' - ')[0] ?? ''}{photo.failure_mechanism ? ` - ${photo.failure_mechanism}` : ''}. <Cite url={photo.source_url} /></figcaption>
+                  <figcaption>Figure {figNo}. Site #{photo.site_id ?? '-'}, {region}: {DAMAGE_LABEL[photo.damage_score]?.split(' - ')[0] ?? ''}{photo.failure_mechanism ? ` - ${photo.failure_mechanism}` : ''}. <Cite url={photo.source_url} refIndex={refIndex} /></figcaption>
                 </figure>
               )}
               <div className="report-ph">AUTHOR TO ADD: additional detail, photographs, and references for {region}.</div>

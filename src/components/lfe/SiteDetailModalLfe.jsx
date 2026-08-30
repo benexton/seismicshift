@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import {
-  DAMAGE_LABEL, DAMAGE_COLOR, SOURCE_LABEL, observationTypesLabel, provenanceLabel, cap,
+  DAMAGE_LABEL, DAMAGE_COLOR, SOURCE_LABEL, observationTypesLabel, provenanceLabel,
 } from '../../lib/constantsLfe.js';
 import RecordFieldsLfe, { fieldsPatch } from './RecordFieldsLfe.jsx';
 import Zoomable from '../Zoomable.jsx';

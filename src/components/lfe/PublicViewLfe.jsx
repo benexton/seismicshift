@@ -101,7 +101,7 @@ function PublicDetail({ site, onClose }) {
 
           <div className="pub-links">
             {site.source_url && safeHref(site.source_url) && <a href={site.source_url} target="_blank" rel="noreferrer">Source link</a>}
-            {site.streetview_url && <a href={site.streetview_url} target="_blank" rel="noreferrer">Street View</a>}
+            {site.streetview_url && safeHref(site.streetview_url) && <a href={site.streetview_url} target="_blank" rel="noreferrer">Street View</a>}
           </div>
 
           {site.attachments?.length > 0 && (
