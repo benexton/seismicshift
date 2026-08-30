@@ -163,6 +163,20 @@
   </div>
 </div>
 
+<div class="overlay hidden" id="lock-overlay">
+  <div class="panel" style="max-width:420px;">
+    <h2>Currently being edited</h2>
+    <p class="summary" style="margin-bottom:18px;">
+      Someone else has this location's edit form open right now. To avoid overwriting
+      each other's changes, please work on a different location for the time being and
+      try this one again shortly.
+    </p>
+    <div class="panel-actions" style="justify-content:flex-end;">
+      <button type="button" class="btn" id="btn-lock-ok">OK</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay hidden" id="overlay">
   <div class="panel">
     <h2 id="panel-title">Add building</h2>
@@ -264,8 +278,20 @@
     list: SUPABASE_URL + '/functions/v1/walk-admin-list',
     save: SUPABASE_URL + '/functions/v1/walk-admin-save',
     del: SUPABASE_URL + '/functions/v1/walk-admin-delete',
-    publish: SUPABASE_URL + '/functions/v1/walk-admin-publish'
+    publish: SUPABASE_URL + '/functions/v1/walk-admin-publish',
+    lock: SUPABASE_URL + '/functions/v1/walk-admin-lock'
   };
+  // Identifies this browser tab for the soft edit-lock below - there are no
+  // real user accounts in this tool (shared admin_password only), so this
+  // is a session token, not a person's identity. Regenerated on every page
+  // load, which is fine: a reload just looks like "a new session" to the
+  // lock, and the old lock self-clears via the staleness window server-side
+  // if it isn't explicitly released first.
+  var SESSION_ID = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() :
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
+      var r = Math.random()*16|0, v = c==='x' ? r : (r&0x3|0x8);
+      return v.toString(16);
+    });
   // Same access_level -> icon/label mapping as src/components/walk/AccessBadge.jsx,
   // so each pill's badge reads as the same one people see on /walk/.
   var ACCESS_INFO = {
@@ -436,7 +462,44 @@
     return F[id];
   }
 
-  function openForm(id){
+  // --- Edit lock -------------------------------------------------------
+  // Only applies to editing an EXISTING building - a not-yet-created row
+  // has no possibility of two people racing to edit it. See
+  // supabase/functions/walk-admin-lock for the server-side claim logic.
+  var heartbeatTimer = null;
+
+  function claimLock(id){
+    return call(FN.lock, { admin_password: lastPassword, action: 'claim', id: id, session_id: SESSION_ID })
+      .then(function(data){ return !!data.locked; });
+  }
+  function releaseLock(id){
+    // Fire-and-forget - closing the form shouldn't wait on this, and
+    // there's nothing useful to do if it fails (the staleness window
+    // server-side covers it either way).
+    call(FN.lock, { admin_password: lastPassword, action: 'release', id: id, session_id: SESSION_ID }).catch(function(){});
+  }
+  function startHeartbeat(id){
+    stopHeartbeat();
+    // Well inside the 5-minute staleness window, so a genuinely active
+    // edit never goes stale out from under someone.
+    heartbeatTimer = setInterval(function(){ claimLock(id); }, 60000);
+  }
+  function stopHeartbeat(){
+    if(heartbeatTimer){ clearInterval(heartbeatTimer); heartbeatTimer = null; }
+  }
+  // Best-effort release if the tab is closed/navigated away with the form
+  // still open, so the lock doesn't sit around for the full staleness
+  // window unnecessarily. sendBeacon can't set the apikey header the other
+  // calls use, so this may not always reach the function - the staleness
+  // window is the reliable fallback regardless, this is just to make the
+  // common "closed the tab normally" case release promptly.
+  window.addEventListener('pagehide', function(){
+    if(!editingId || !navigator.sendBeacon) return;
+    var body = JSON.stringify({ admin_password: lastPassword, action: 'release', id: editingId, session_id: SESSION_ID });
+    navigator.sendBeacon(FN.lock, new Blob([body], { type: 'application/json' }));
+  });
+
+  function showForm(id){
     editingId = id || null;
     var b = id ? buildings.filter(function(x){ return x.id === id; })[0] : null;
     document.getElementById('form-err').style.display = 'none';
@@ -461,10 +524,25 @@
     field('f-step-free').value = b && b.step_free === true ? 'true' : (b && b.step_free === false ? 'false' : '');
 
     document.getElementById('overlay').classList.remove('hidden');
+    if(id) startHeartbeat(id);
+  }
+
+  function openForm(id){
+    if(!id){ showForm(null); return; }
+    claimLock(id).then(function(ok){
+      if(ok) showForm(id);
+      else document.getElementById('lock-overlay').classList.remove('hidden');
+    }).catch(function(){
+      // Lock check itself failed (network hiccup) - fail open rather than
+      // blocking all editing just because the lock service is unreachable.
+      showForm(id);
+    });
   }
 
   function closeForm(){
     document.getElementById('overlay').classList.add('hidden');
+    stopHeartbeat();
+    if(editingId) releaseLock(editingId);
     editingId = null;
   }
 
@@ -567,6 +645,12 @@
   document.getElementById('building-form').addEventListener('submit', saveBuilding);
   document.getElementById('overlay').addEventListener('click', function(e){
     if(e.target.id === 'overlay') closeForm();
+  });
+  document.getElementById('btn-lock-ok').addEventListener('click', function(){
+    document.getElementById('lock-overlay').classList.add('hidden');
+  });
+  document.getElementById('lock-overlay').addEventListener('click', function(e){
+    if(e.target.id === 'lock-overlay') e.currentTarget.classList.add('hidden');
   });
 })();
 </script>
