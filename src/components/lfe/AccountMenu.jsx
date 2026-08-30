@@ -55,9 +55,9 @@ export default function AccountMenu({ reviewer, signOut, updateName }) {
     setEditingName(true);
   }
 
-  function saveName() {
+  async function saveName() {
     const clean = nameDraft.trim();
-    if (clean) updateName(clean);
+    if (clean) await updateName(clean);
     setEditingName(false);
     setOpen(false);
   }

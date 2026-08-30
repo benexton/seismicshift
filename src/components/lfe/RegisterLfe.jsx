@@ -43,7 +43,7 @@ export default function RegisterLfe() {
     });
     if (error) {
       setBusy(false);
-      setErr(edgeFunctionErrorMessage(error));
+      setErr(await edgeFunctionErrorMessage(error));
       return;
     }
     if (data?.error) {
