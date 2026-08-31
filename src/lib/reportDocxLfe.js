@@ -219,10 +219,15 @@ export async function buildReportDocxBlob(records, meta, conclusions, extra = {}
   const aiNote = () => new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: 'AI-assisted draft from the verified observations only. Review before use.', italics: true, color: GREY, size: 18, font: BODY })] });
 
   const children = [];
-  const logo = await fetchImage('/NZSEELogo.png');
-  if (logo) {
-    children.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { after: 40 },
-      children: [new ImageRun({ data: logo.data, type: logo.type, transformation: { width: 140, height: 56 } })] }));
+  const [erpLogo, nzseeLogo] = await Promise.all([fetchImage('/ERPLogo.png'), fetchImage('/NZSEELogo.png')]);
+  const logoRuns = [];
+  // ERPLogo.png is a ~3.28:1 wide wordmark - scaled by width so it never
+  // looks squashed/stretched next to the NZSEE logo alongside it.
+  if (erpLogo) logoRuns.push(new ImageRun({ data: erpLogo.data, type: erpLogo.type, transformation: { width: 172, height: 52 } }));
+  if (erpLogo && nzseeLogo) logoRuns.push(new TextRun({ text: '   ' }));
+  if (nzseeLogo) logoRuns.push(new ImageRun({ data: nzseeLogo.data, type: nzseeLogo.type, transformation: { width: 140, height: 56 } }));
+  if (logoRuns.length) {
+    children.push(new Paragraph({ alignment: AlignmentType.RIGHT, spacing: { after: 40 }, children: logoRuns }));
   }
   children.push(new Paragraph({ spacing: { after: 60 }, children: [new TextRun({ text: 'EARTHQUAKE RECONNAISSANCE PROGRAMME', bold: true, color: MAROON_LT, size: 20, font: BODY, characterSpacing: 30 })] }));
   children.push(new Paragraph({ spacing: { after: 40 }, children: [new TextRun({ text: 'Significant Event Report', bold: true, color: MAROON, size: 48, font: BODY })] }));

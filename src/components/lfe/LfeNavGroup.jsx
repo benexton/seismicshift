@@ -44,6 +44,7 @@ export default function LfeNavGroup() {
 
   return (
     <span className="navgroup" ref={rootRef}>
+      <img className="navgroup-logo" src="/ERPLogoIcon.png" alt="ERP" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
       <button
         type="button"
         className="navmenu-btn"

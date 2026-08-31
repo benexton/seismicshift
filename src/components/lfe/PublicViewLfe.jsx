@@ -422,9 +422,12 @@ export default function PublicViewLfe() {
   return (
     <div className="public-wrap">
       <header className="public-head">
-        <img className="public-logo" src="/NZSEELogo.png" alt="NZSEE" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+        <div className="public-head-logos">
+          <img className="public-logo-erp" src="/ERPLogo.png" alt="Earthquake Reconnaissance Programme" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+          <img className="public-logo" src="/NZSEELogo.png" alt="NZSEE" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+        </div>
         <div className="public-head-title">
-          <h1>NZ Earthquake Reconnaissance Programme</h1>
+          <h1 className="sr-only">NZ Earthquake Reconnaissance Programme</h1>
           <p>Verified sites · <span className="beta-tag">Beta</span></p>
         </div>
         <div className="public-head-controls">
@@ -513,7 +516,10 @@ export default function PublicViewLfe() {
       {step < DISCLAIMERS.length && (
         <div className="disclaimer-backdrop">
           <div className="disclaimer">
-            <img className="disclaimer-logo" src="/NZSEELogo.png" alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <div className="disclaimer-logos">
+              <img className="disclaimer-logo-erp" src="/ERPLogo.png" alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              <img className="disclaimer-logo" src="/NZSEELogo.png" alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            </div>
             <h2>{DISCLAIMERS[step].title}</h2>
             <div className="disclaimer-body">{DISCLAIMERS[step].body}</div>
             <div className="disclaimer-actions">
