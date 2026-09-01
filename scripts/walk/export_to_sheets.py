@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 
 try:
     import gspread
@@ -49,6 +50,26 @@ COLUMNS = [
     "architect", "storeys", "step_free", "image", "image_credit", "external_url",
     "category", "featured", "sort_order", "updated_at",
 ]
+
+
+def with_retries(fn, *, attempts: int = 4, base_delay: float = 5.0):
+    """Retry transient Google Sheets API failures (5xx / connection errors).
+
+    Both call sites below are idempotent - clear+update, or worksheet-exists
+    then clear+update on a retry after a partial add_worksheet - so a blind
+    retry is safe. 4xx errors (bad auth, missing sheet) are raised
+    immediately since retrying won't help.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            return fn()
+        except (gspread.exceptions.APIError, requests.exceptions.RequestException) as e:
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            if (status is not None and status < 500) or attempt == attempts:
+                raise
+            delay = base_delay * attempt
+            print(f"  Google Sheets API error ({e}); retrying in {delay:.0f}s ({attempt}/{attempts})...", file=sys.stderr)
+            time.sleep(delay)
 
 
 def require_env(**kv) -> None:
@@ -113,10 +134,11 @@ def main() -> int:
         "https://www.googleapis.com/auth/spreadsheets",
     ])
     gc = gspread.authorize(creds)
-    sh = gc.open_by_key(GSHEET_ID)
+    sh = with_retries(lambda: gc.open_by_key(GSHEET_ID))
 
     print(f"Exporting {len(rows)} building(s)...")
-    write_grid(sh, "buildings", buildings_grid(rows))
+    grid = buildings_grid(rows)
+    with_retries(lambda: write_grid(sh, "buildings", grid))
     print("Done.")
     return 0
 
