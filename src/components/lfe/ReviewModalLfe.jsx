@@ -43,6 +43,14 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
   const set = (key) => (e) => setV((m) => ({ ...m, [key]: e.target.value }));
   const movedLocation = Number(lat) !== record.latitude || Number(lng) !== record.longitude;
 
+  // Coordinates only, never anything scraper/user-supplied - no safeHref
+  // guard needed, unlike source_url below.
+  const latNum = Number(lat);
+  const lngNum = Number(lng);
+  const historicalImageryUrl = Number.isFinite(latNum) && Number.isFinite(lngNum)
+    ? `https://earth.google.com/web/@${latNum},${lngNum},50a,300d,35y,0h,0t,0r`
+    : null;
+
   function coordGuard() {
     const e = coordError(lat, lng);
     if (e) { setErr(e); return false; }
@@ -216,6 +224,14 @@ export default function ReviewModalLfe({ record, reviewer, others = [], onClose,
               <div><label>Longitude</label><input type="number" step="0.00001" value={lng} onChange={(e) => setLng(e.target.value)} /></div>
             </div>
             {movedLocation && <p className="muted small">Coordinates edited; will be saved as exact.</p>}
+            {historicalImageryUrl && (
+              <p className="kv">
+                <a href={historicalImageryUrl} target="_blank" rel="noreferrer">
+                  Check historical imagery (Google Earth)
+                </a>{' '}
+                <span className="muted small">- use the time slider to judge when this building was built, for Seismic-code era</span>
+              </p>
+            )}
             <div className="field">
               <label>Engineer notes</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="RC frame behaviour, joints, caveats..." />
