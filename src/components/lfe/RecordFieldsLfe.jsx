@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import {
-  CLASSIFICATION_SCORES, DAMAGE_LABEL, RETROFIT_OPTIONS,
+  CLASSIFICATION_SCORES, DAMAGE_LABEL, CODE_ERAS, RETROFIT_OPTIONS,
   OBSERVATION_TYPES, OBSERVATION_LABEL, LOCATION_CONFIDENCE,
-  BUILDING_TYPES, PRIMARY_MATERIALS, HEIGHT_CLASSES, TYPE_DETAIL_FIELDS, cap,
+  BUILDING_TYPES, PRIMARY_MATERIALS, HEIGHT_CLASSES, TYPE_DETAIL_FIELDS,
+  withCurrentOption, cap,
 } from '../../lib/constantsLfe.js';
 
 /**
@@ -55,6 +56,21 @@ export default function RecordFieldsLfe({ v, set, country, lat, lng, onLatChange
     return () => { cancelled = true; clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [v.year_built, country]);
+
+  // The full set of valid era buckets for this country (not just the one
+  // matching year_built) - populates a constrained dropdown below instead of
+  // free text, so this column doesn't end up full of one-off variants across
+  // records for the same country. Fetched once per country, independently of
+  // year_built - a reviewer can pick manually even without using the
+  // historical-imagery pathway.
+  const [eraBuckets, setEraBuckets] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    supabaseLfe.rpc('code_era_buckets_for', { p_country: country }).then(({ data, error }) => {
+      if (!cancelled) setEraBuckets(error ? [] : (data ?? []));
+    });
+    return () => { cancelled = true; };
+  }, [country]);
 
   const types = v.observation_types ?? ['building'];
   const isBuilding = types.includes('building');
@@ -145,8 +161,10 @@ export default function RecordFieldsLfe({ v, set, country, lat, lng, onLatChange
         <>
           {historicalImageryUrl && (
             <p className="kv">
-              <strong>Confirm the pin above is correct before using this</strong> - the date you read off
-              the timeline is only meaningful if it's pointed at the actual building or structure.{' '}
+              After confirming the latitude and longitude above, click the Google Earth link here and use
+              the slider to work out when the structure was built - enter that year into the Year built box
+              beneath. It's then automatically cross-referenced against this country's own timeline in the{' '}
+              <b>Codes &amp; standards</b> tab to suggest a Seismic-code era in the box after that.{' '}
               <a href={historicalImageryUrl} target="_blank" rel="noreferrer">
                 Check historical imagery (Google Earth)
               </a>
@@ -158,20 +176,19 @@ export default function RecordFieldsLfe({ v, set, country, lat, lng, onLatChange
               type="number" min="1800" max={new Date().getFullYear()}
               value={v.year_built ?? ''} onChange={set('year_built')} placeholder="e.g. 2005"
             />
-            <span className="muted small">
-              Check historical imagery above to estimate this, once the location is confirmed accurate -
-              it's used to fill in the Seismic-code era below from this country's own code timeline.
-            </span>
           </div>
           <div className="field">
             <label>Seismic-code era</label>
-            <input type="text" value={v.code_era ?? ''} onChange={set('code_era')} placeholder="e.g. unknown, or 2004-2016" />
+            <select value={v.code_era ?? 'unknown'} onChange={set('code_era')}>
+              {withCurrentOption(eraBuckets.length ? ['unknown', ...eraBuckets] : CODE_ERAS, v.code_era)
+                .map((c) => <option key={c} value={c}>{cap(c)}</option>)}
+            </select>
             {eraLoading && <span className="muted small">Calculating from year built...</span>}
             {!eraLoading && computedEra && (
-              <span className="muted small">Auto-filled from year built ({computedEra}) - edit if you disagree.</span>
+              <span className="muted small">Auto-selected from year built - change it above if you disagree.</span>
             )}
-            {!eraLoading && v.year_built && !computedEra && (
-              <span className="muted small">No code timeline recorded for this country yet - set the era manually.</span>
+            {!eraLoading && v.year_built && !eraBuckets.length && (
+              <span className="muted small">No code timeline recorded for this country yet - set the era manually for now.</span>
             )}
           </div>
         </>
