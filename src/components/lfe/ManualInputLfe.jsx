@@ -243,6 +243,7 @@ export default function ManualInputLfe({ reviewer }) {
               v={v} set={set} country={event?.country}
               lat={lat} lng={lng}
               onLatChange={(e) => setLat(e.target.value)} onLngChange={(e) => setLng(e.target.value)}
+              isManual
             />
 
             <div className="field">

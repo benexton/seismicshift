@@ -17,13 +17,15 @@ import {
  * parent modal (which owns that state, since saving it triggers a separate
  * move_observation RPC) but rendered here so the coordinates and the
  * historical-imagery link sit in the right place in the field order.
+ * `isManual` suppresses hints that only apply to AI-triaged records (e.g. the
+ * region field's "AI's first guess" note - a manual entry has no AI guess).
  *
  * Observation type is multi-select (a record can tick more than one
  * category), so it renders as a checkbox group instead of a single dropdown,
  * and each ticked type (other than building/other) gets its own small detail
  * fields from TYPE_DETAIL_FIELDS, stored in the type_details jsonb column.
  */
-export default function RecordFieldsLfe({ v, set, country, lat, lng, onLatChange, onLngChange, movedLocation }) {
+export default function RecordFieldsLfe({ v, set, country, lat, lng, onLatChange, onLngChange, movedLocation, isManual }) {
   // Debounced: code_era_for() is a DB round-trip (it joins country_code_entries),
   // not worth firing on every keystroke. The dependency on `country` re-derives
   // if the record's event context ever changes underneath this component.
@@ -151,10 +153,12 @@ export default function RecordFieldsLfe({ v, set, country, lat, lng, onLatChange
       <div className="field">
         <label>Region</label>
         <input type="text" value={v.region ?? ''} onChange={set('region')} />
-        <span className="muted small">
-          Feeds the report's region groupings and headings - keep it in English (the
-          AI's first guess occasionally comes through in the local language).
-        </span>
+        {!isManual && (
+          <span className="muted small">
+            Feeds the report's region groupings and headings - keep it in English (the
+            AI's first guess occasionally comes through in the local language).
+          </span>
+        )}
       </div>
 
       {showConstructionDate && (
