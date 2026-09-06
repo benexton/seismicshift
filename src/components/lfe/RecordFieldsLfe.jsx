@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import {
   CLASSIFICATION_SCORES, DAMAGE_LABEL, CODE_ERAS, RETROFIT_OPTIONS,
   OBSERVATION_TYPES, OBSERVATION_LABEL, LOCATION_CONFIDENCE,
@@ -8,12 +10,31 @@ import {
  * The full set of editable attribute fields for a record, shared by the triage
  * review panel and the triaged-site detail panel so both offer the same
  * editing. `v` is the values object; `set(key)` returns an onChange handler.
- * Observation type is multi-select (a record can tick more than one category),
- * so it renders as a checkbox group instead of a single dropdown, and each
- * ticked type (other than building/other) gets its own small detail fields
- * from TYPE_DETAIL_FIELDS, stored in the type_details jsonb column.
+ * `country` is the record's event's country (see country_code_entries), used
+ * to derive the code-era bucket from `year_built` - see the Seismic-code era
+ * field below. Observation type is multi-select (a record can tick more than
+ * one category), so it renders as a checkbox group instead of a single
+ * dropdown, and each ticked type (other than building/other) gets its own
+ * small detail fields from TYPE_DETAIL_FIELDS, stored in the type_details
+ * jsonb column.
  */
-export default function RecordFieldsLfe({ v, set }) {
+export default function RecordFieldsLfe({ v, set, country }) {
+  // Debounced: code_era_for() is a DB round-trip (it joins country_code_entries),
+  // not worth firing on every keystroke. The dependency on `country` re-derives
+  // if the record's event context ever changes underneath this component.
+  const [computedEra, setComputedEra] = useState(null);
+  const [eraLoading, setEraLoading] = useState(false);
+  useEffect(() => {
+    const year = Number(v.year_built);
+    if (!v.year_built || !Number.isFinite(year)) { setComputedEra(null); setEraLoading(false); return; }
+    let cancelled = false;
+    setEraLoading(true);
+    const timer = setTimeout(async () => {
+      const { data, error } = await supabaseLfe.rpc('code_era_for', { p_country: country, p_year: year });
+      if (!cancelled) { setComputedEra(error ? null : data); setEraLoading(false); }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [v.year_built, country]);
   const types = v.observation_types ?? ['building'];
   const isBuilding = types.includes('building');
   const typeDetails = v.type_details ?? {};
@@ -79,10 +100,32 @@ export default function RecordFieldsLfe({ v, set }) {
             </select>
           </div>
           <div className="field">
-            <label>Seismic-code era</label>
-            <select value={v.code_era ?? 'unknown'} onChange={set('code_era')}>
-              {CODE_ERAS.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
-            </select>
+            <label>Year built (approx.)</label>
+            <input
+              type="number" min="1800" max={new Date().getFullYear()}
+              value={v.year_built ?? ''} onChange={set('year_built')} placeholder="e.g. 2005"
+            />
+            <span className="muted small">
+              Only enter this once the location above is confirmed accurate - it's used to compute
+              the Seismic-code era below against this country's own code-publication timeline.
+            </span>
+          </div>
+          <div className="field">
+            <label>Seismic-code era{computedEra ? ' (computed from year built)' : ''}</label>
+            {eraLoading ? (
+              <p className="muted small">Calculating...</p>
+            ) : computedEra ? (
+              <p className="kv"><b>{computedEra}</b></p>
+            ) : (
+              <>
+                <select value={v.code_era ?? 'unknown'} onChange={set('code_era')}>
+                  {CODE_ERAS.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
+                </select>
+                {v.year_built && (
+                  <span className="muted small">No code timeline recorded for this country yet - set the era manually for now.</span>
+                )}
+              </>
+            )}
           </div>
           <div className="field">
             <label>Observed retrofits</label>
@@ -150,7 +193,7 @@ export default function RecordFieldsLfe({ v, set }) {
 // The record columns RecordFieldsLfe edits (used when persisting).
 export const EDITABLE_KEYS = [
   'observation_types', 'damage_score', 'building_name', 'building_type',
-  'primary_material', 'height_class', 'code_era', 'observed_retrofits',
+  'primary_material', 'height_class', 'code_era', 'year_built', 'observed_retrofits',
   'failure_mechanism', 'region', 'address', 'location_confidence', 'type_details',
 ];
 
@@ -159,6 +202,7 @@ export function fieldsPatch(v) {
   const types = v.observation_types?.length ? v.observation_types : ['building'];
   const isBuilding = types.includes('building');
   const orNull = (x) => (x === '' || x === undefined ? null : x);
+  const yearOrNull = (x) => (x === '' || x === undefined || x === null || !Number.isFinite(Number(x)) ? null : Number(x));
   // Only keep type_details for types still ticked, so un-ticking a type
   // drops its stale detail fields instead of leaving them orphaned.
   const typeDetails = Object.fromEntries(
@@ -176,6 +220,7 @@ export function fieldsPatch(v) {
     primary_material: isBuilding ? orNull(v.primary_material) : null,
     height_class: isBuilding ? orNull(v.height_class) : null,
     code_era: isBuilding ? orNull(v.code_era) : null,
+    year_built: isBuilding ? yearOrNull(v.year_built) : null,
     observed_retrofits: isBuilding ? orNull(v.observed_retrofits) : null,
     nonstructural_damage: !!v.nonstructural_damage,
     type_details: typeDetails,

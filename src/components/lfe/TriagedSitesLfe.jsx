@@ -146,6 +146,7 @@ export default function TriagedSitesLfe({ reviewer, othersByRecord, setActiveRec
           record={selected}
           reviewer={reviewer}
           others={othersByRecord?.get(selected.id) ?? []}
+          country={event.country}
           onClose={closeRecord}
           onSaved={(id, patch) => setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))}
           onUnverified={(id) => { setRecords((prev) => prev.filter((r) => r.id !== id)); closeRecord(); }}

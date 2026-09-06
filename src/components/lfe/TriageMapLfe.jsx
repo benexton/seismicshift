@@ -200,6 +200,7 @@ export default function TriageMapLfe({ reviewer, othersByRecord, setActiveRecord
           record={selected}
           reviewer={reviewer}
           others={othersByRecord?.get(selected.id) ?? []}
+          country={event.country}
           onClose={closeRecord}
           onResolved={handleResolved}
           onSavedDraft={handleSavedDraft}

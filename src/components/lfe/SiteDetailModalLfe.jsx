@@ -17,7 +17,7 @@ import { safeHref } from '../../lib/url.js';
  * images, links, notes). Changes save in place. Unverify (confirmed) sends
  * the site back to the Unverified queue for re-review.
  */
-export default function SiteDetailModalLfe({ record, reviewer, others = [], onClose, onSaved, onUnverified }) {
+export default function SiteDetailModalLfe({ record, reviewer, others = [], country, onClose, onSaved, onUnverified }) {
   const [v, setV] = useState({ ...record });
   const [notes, setNotes] = useState(record.engineer_notes ?? '');
   const [lat, setLat] = useState(record.latitude ?? '');
@@ -133,7 +133,7 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], onCl
           </div>
 
           <div>
-            <RecordFieldsLfe v={v} set={set} />
+            <RecordFieldsLfe v={v} set={set} country={country} />
             <div className="field latlng">
               <div><label>Latitude</label><input type="number" step="0.00001" value={lat} onChange={(e) => setLat(e.target.value)} /></div>
               <div><label>Longitude</label><input type="number" step="0.00001" value={lng} onChange={(e) => setLng(e.target.value)} /></div>
