@@ -3,11 +3,7 @@ import { MapContainer, TileLayer, CircleMarker, useMapEvents } from 'react-leafl
 import 'leaflet/dist/leaflet.css';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import { useEvent, basemapEntries, mapCenterOf, epicentreOf } from '../../lib/useEvent.js';
-import {
-  CLASSIFICATION_SCORES, DAMAGE_LABEL, CODE_ERAS, RETROFIT_OPTIONS,
-  OBSERVATION_TYPES, OBSERVATION_LABEL, TYPE_DETAIL_FIELDS,
-  LOCATION_CONFIDENCE, BUILDING_TYPES, PRIMARY_MATERIALS, HEIGHT_CLASSES, cap,
-} from '../../lib/constantsLfe.js';
+import RecordFieldsLfe, { fieldsPatch } from './RecordFieldsLfe.jsx';
 import { uploadImage, uploadFile } from '../../lib/mediaLfe.js';
 import { coordError, isFarFromEvent } from '../../lib/coordsLfe.js';
 
@@ -19,11 +15,33 @@ function LocationPicker({ pos, setPos }) {
   ) : null;
 }
 
+// Sensible starting defaults for the common case (matches the pre-refactor
+// form's own defaults) - reset to this exact object after each submission so
+// a value from one record can't silently leak into the next unrelated one.
+const INITIAL_V = {
+  observation_types: ['building'],
+  damage_score: 2,
+  nonstructural_damage: false,
+  location_confidence: 'high',
+  address: '',
+  region: '',
+  year_built: '',
+  code_era: 'unknown',
+  building_name: '',
+  building_type: 'residential',
+  primary_material: 'reinforced concrete',
+  height_class: 'low-rise',
+  observed_retrofits: 'none',
+  failure_mechanism: '',
+  type_details: {},
+};
+
 /**
  * Manual observation entry, event-scoped. An engineer sets an exact location
  * (map click or typed coordinates), records building/site attributes and
- * imagery, and submits for a second person to verify. Enters the queue as
- * source_type='human'.
+ * imagery via the same RecordFieldsLfe field set (and order) as the review
+ * queue and triaged-site detail views, and submits for a second person to
+ * verify. Enters the queue as source_type='human'.
  */
 export default function ManualInputLfe({ reviewer }) {
   const { event } = useEvent();
@@ -34,19 +52,7 @@ export default function ManualInputLfe({ reviewer }) {
 
   const [pos, setPos] = useState(null);
   const [basemap, setBasemap] = useState(options[0]?.[0] ?? '');
-  const [obsTypes, setObsTypes] = useState(['building']);
-  const [typeDetails, setTypeDetailsState] = useState({});
-  const [region, setRegion] = useState('');
-  const [address, setAddress] = useState('');
-  const [locConfidence, setLocConfidence] = useState('high');
-  const [buildingName, setBuildingName] = useState('');
-  const [buildingType, setBuildingType] = useState('residential');
-  const [material, setMaterial] = useState('reinforced concrete');
-  const [heightClass, setHeightClass] = useState('low-rise');
-  const [damage, setDamage] = useState(2);
-  const [codeEra, setCodeEra] = useState('unknown');
-  const [mechanism, setMechanism] = useState('');
-  const [retrofit, setRetrofit] = useState('none');
+  const [v, setV] = useState(INITIAL_V);
   const [notes, setNotes] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [links, setLinks] = useState([]);
@@ -54,29 +60,17 @@ export default function ManualInputLfe({ reviewer }) {
   const [images, setImages] = useState([]);
   const [docs, setDocs] = useState([]);
   const [streetview, setStreetview] = useState(null);
-  const [nonstructural, setNonstructural] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState(null);
   const [farConfirm, setFarConfirm] = useState(false);
   const [submittedSite, setSubmittedSite] = useState(null);
   const [showWarning, setShowWarning] = useState(true);
 
-  const isBuilding = obsTypes.includes('building');
+  const set = (key) => (e) => setV((m) => ({ ...m, [key]: e.target.value }));
 
-  function setLat(v) { setFarConfirm(false); const n = v === '' ? null : Number(v); setPos((p) => [n, p ? p[1] : center[1]]); }
-  function setLng(v) { setFarConfirm(false); const n = v === '' ? null : Number(v); setPos((p) => [p ? p[0] : center[0], n]); }
-  function addLink() { const v = linkDraft.trim(); if (v) { setLinks((l) => [...l, v]); setLinkDraft(''); } }
-  function toggleObsType(t) {
-    setObsTypes((prev) => {
-      const next = prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t];
-      return next.length ? next : [t];
-    });
-  }
-  function setTypeDetail(type, key) {
-    return (e) => {
-      setTypeDetailsState((prev) => ({ ...prev, [type]: { ...(prev[type] ?? {}), [key]: e.target.value } }));
-    };
-  }
+  function setLat(val) { setFarConfirm(false); const n = val === '' ? null : Number(val); setPos((p) => [n, p ? p[1] : center[1]]); }
+  function setLng(val) { setFarConfirm(false); const n = val === '' ? null : Number(val); setPos((p) => [p ? p[0] : center[0], n]); }
+  function addLink() { const v2 = linkDraft.trim(); if (v2) { setLinks((l) => [...l, v2]); setLinkDraft(''); } }
 
   async function submit(e) {
     e.preventDefault();
@@ -94,27 +88,29 @@ export default function ManualInputLfe({ reviewer }) {
       const mediaUrl = imageUrls[0] ?? null;
       const streetviewUrl = streetview ? await uploadImage(streetview) : null;
 
+      const patch = fieldsPatch(v);
       const { data: newId, error } = await supabaseLfe.rpc('submit_observation', {
         p_event_id: eventId,
         p_lng: pos[1], p_lat: pos[0],
-        p_observation_types: obsTypes,
-        p_region: region || null,
+        p_observation_types: patch.observation_types,
+        p_region: patch.region,
         p_media_url: mediaUrl,
         p_source_url: sourceUrl || null,
-        p_damage_score: Number(damage),
-        p_code_era: isBuilding ? codeEra : null,
-        p_failure_mechanism: mechanism || null,
-        p_observed_retrofits: isBuilding ? retrofit : null,
+        p_damage_score: patch.damage_score,
+        p_code_era: patch.code_era,
+        p_year_built: patch.year_built,
+        p_failure_mechanism: patch.failure_mechanism,
+        p_observed_retrofits: patch.observed_retrofits,
         p_notes: notes || null,
         p_submitted_by: reviewer,
-        p_building_name: isBuilding ? (buildingName || null) : null,
-        p_address: address || null,
-        p_location_confidence: locConfidence,
+        p_building_name: patch.building_name,
+        p_address: patch.address,
+        p_location_confidence: patch.location_confidence,
         p_streetview_url: streetviewUrl,
-        p_building_type: isBuilding ? buildingType : null,
-        p_primary_material: isBuilding ? material : null,
-        p_height_class: isBuilding ? heightClass : null,
-        p_type_details: Object.fromEntries(Object.entries(typeDetails).filter(([t]) => obsTypes.includes(t))),
+        p_building_type: patch.building_type,
+        p_primary_material: patch.primary_material,
+        p_height_class: patch.height_class,
+        p_type_details: patch.type_details,
       });
       if (error) throw error;
 
@@ -132,7 +128,7 @@ export default function ManualInputLfe({ reviewer }) {
         const att = await supabaseLfe.from('record_attachments').insert(attachRows);
         if (att.error) throw att.error;
       }
-      if (nonstructural && newId) {
+      if (patch.nonstructural_damage && newId) {
         const ns = await supabaseLfe.from('triage_records').update({ nonstructural_damage: true }).eq('id', newId);
         if (ns.error) throw ns.error;
       }
@@ -146,14 +142,9 @@ export default function ManualInputLfe({ reviewer }) {
       }
 
       setStatus(null);
-      setPos(null); setObsTypes(['building']); setTypeDetailsState({}); setRegion(''); setAddress(''); setBuildingName(''); setMechanism('');
-      setNotes(''); setSourceUrl(''); setLinks([]); setImages([]); setDocs([]); setStreetview(null); setNonstructural(false); setFarConfirm(false);
-      // Reset every field that carries a non-empty default, so it can't
-      // silently leak into the next, unrelated submission (e.g. a D4/URM
-      // building's damage score and material being left set while the next
-      // record only changes the pin and photo).
-      setLocConfidence('high'); setBuildingType('residential'); setMaterial('reinforced concrete');
-      setHeightClass('low-rise'); setDamage(2); setCodeEra('unknown'); setRetrofit('none');
+      setPos(null);
+      setV(INITIAL_V);
+      setNotes(''); setSourceUrl(''); setLinks([]); setImages([]); setDocs([]); setStreetview(null); setFarConfirm(false);
       setSubmittedSite(siteNum ?? true);
     } catch (ex) {
       setStatus({ kind: 'err', msg: `Submit failed: ${ex.message ?? ex}` });
@@ -165,6 +156,8 @@ export default function ManualInputLfe({ reviewer }) {
   function submitAnother() { setSubmittedSite(null); }
 
   const base = options.find(([k]) => k === basemap)?.[1];
+  const lat = pos && pos[0] != null ? pos[0] : '';
+  const lng = pos && pos[1] != null ? pos[1] : '';
 
   return (
     <div className="panel-scroll">
@@ -195,136 +188,15 @@ export default function ManualInputLfe({ reviewer }) {
               <div className="map-controls">
                 <label htmlFor="mi-bm">Basemap</label>
                 <select id="mi-bm" value={basemap} onChange={(e) => setBasemap(e.target.value)}>
-                  {options.map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  {options.map(([k, val]) => <option key={k} value={k}>{val.label}</option>)}
                 </select>
               </div>
             </div>
             <p className="muted small">
               {pos && pos[0] != null && pos[1] != null
-                ? 'Pin set. Fine-tune the numbers below if needed.'
-                : 'Click the map, or type coordinates below.'}
+                ? 'Pin set. Fine-tune the numbers in the fields on the right if needed.'
+                : 'Click the map, or set coordinates in the fields on the right.'}
             </p>
-            <div className="field latlng">
-              <div>
-                <label>Latitude</label>
-                <input type="number" step="0.00001" value={pos && pos[0] != null ? pos[0] : ''}
-                  onChange={(e) => setLat(e.target.value)} />
-              </div>
-              <div>
-                <label>Longitude</label>
-                <input type="number" step="0.00001" value={pos && pos[1] != null ? pos[1] : ''}
-                  onChange={(e) => setLng(e.target.value)} />
-              </div>
-            </div>
-            <div className="field">
-              <label>Location confidence</label>
-              <select value={locConfidence} onChange={(e) => setLocConfidence(e.target.value)}>
-                {LOCATION_CONFIDENCE.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
-              </select>
-            </div>
-            <div className="field">
-              <label>Address</label>
-              <input type="text" value={address} onChange={(e) => setAddress(e.target.value)}
-                placeholder="Street address if known" />
-            </div>
-          </div>
-
-          <form onSubmit={submit} className="manual-form">
-            <div className="field">
-              <label>Observation type (tick all that apply)</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {OBSERVATION_TYPES.map((t) => (
-                  <label key={t} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontWeight: 600, cursor: 'pointer' }}>
-                    <input type="checkbox" checked={obsTypes.includes(t)} onChange={() => toggleObsType(t)} style={{ width: 'auto', flexShrink: 0, marginTop: 3 }} />
-                    <span>{OBSERVATION_LABEL[t]}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div className="field">
-              <label>Region / area</label>
-              <input type="text" value={region} onChange={(e) => setRegion(e.target.value)}
-                placeholder="e.g. a suburb or district name" />
-            </div>
-
-            {isBuilding && (
-              <>
-                <div className="field">
-                  <label>Building name</label>
-                  <input type="text" value={buildingName} onChange={(e) => setBuildingName(e.target.value)}
-                    placeholder="If known" />
-                </div>
-                <div className="field">
-                  <label>Building type</label>
-                  <select value={buildingType} onChange={(e) => setBuildingType(e.target.value)}>
-                    {BUILDING_TYPES.map((t) => <option key={t} value={t}>{cap(t)}</option>)}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Primary material</label>
-                  <select value={material} onChange={(e) => setMaterial(e.target.value)}>
-                    {PRIMARY_MATERIALS.map((m) => <option key={m} value={m}>{cap(m)}</option>)}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>Height class</label>
-                  <select value={heightClass} onChange={(e) => setHeightClass(e.target.value)}>
-                    {HEIGHT_CLASSES.map((h) => <option key={h.value} value={h.value}>{h.label}</option>)}
-                  </select>
-                </div>
-              </>
-            )}
-
-            {obsTypes.filter((t) => TYPE_DETAIL_FIELDS[t]).map((t) => (
-              <div key={t} style={{ borderTop: '1px solid #e5e7eb', paddingTop: 8, marginTop: 4 }}>
-                <div className="fld-label">{OBSERVATION_LABEL[t]} details</div>
-                {TYPE_DETAIL_FIELDS[t].map(([key, label, opts]) => (
-                  <div className="field" key={key}>
-                    <label>{label}</label>
-                    {opts ? (
-                      <select value={typeDetails[t]?.[key] ?? ''} onChange={setTypeDetail(t, key)}>
-                        <option value="">-</option>
-                        {opts.map((o) => <option key={o} value={o}>{cap(o)}</option>)}
-                      </select>
-                    ) : (
-                      <input type="text" value={typeDetails[t]?.[key] ?? ''} onChange={setTypeDetail(t, key)} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            ))}
-
-            <div className="field">
-              <label>Damage / classification</label>
-              <select value={damage} onChange={(e) => setDamage(e.target.value)}>
-                {CLASSIFICATION_SCORES.map((s) => <option key={s} value={s}>{DAMAGE_LABEL[s]}</option>)}
-              </select>
-            </div>
-
-            {isBuilding && (
-              <div className="field">
-                <label>Seismic-code era</label>
-                <select value={codeEra} onChange={(e) => setCodeEra(e.target.value)}>
-                  {CODE_ERAS.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
-                </select>
-              </div>
-            )}
-
-            <div className="field">
-              <label>{isBuilding ? 'Failure mechanism' : 'Mechanism / feature'}</label>
-              <input type="text" value={mechanism} onChange={(e) => setMechanism(e.target.value)}
-                placeholder={isBuilding ? 'e.g. soft-story collapse' : 'e.g. liquefaction, road washout'} />
-            </div>
-
-            {isBuilding && (
-              <div className="field">
-                <label>Observed retrofits</label>
-                <select value={retrofit} onChange={(e) => setRetrofit(e.target.value)}>
-                  {RETROFIT_OPTIONS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}
-                </select>
-              </div>
-            )}
 
             <div className="field">
               <label>Photos</label>
@@ -336,13 +208,6 @@ export default function ManualInputLfe({ reviewer }) {
               <label>Files (PDF, docs, etc.)</label>
               <input type="file" multiple onChange={(e) => setDocs(Array.from(e.target.files ?? []))} />
               {docs.length > 0 && <span className="muted small">{docs.length} file(s) selected.</span>}
-            </div>
-
-            <div className="field">
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontWeight: 600, cursor: 'pointer' }}>
-                <input type="checkbox" checked={nonstructural} onChange={(e) => setNonstructural(e.target.checked)} style={{ width: 'auto', flexShrink: 0 }} />
-                <span>Damage to non-structural elements?</span>
-              </label>
             </div>
 
             <div className="field">
@@ -371,6 +236,14 @@ export default function ManualInputLfe({ reviewer }) {
                 </div>
               ))}
             </div>
+          </div>
+
+          <form onSubmit={submit} className="manual-form">
+            <RecordFieldsLfe
+              v={v} set={set} country={event?.country}
+              lat={lat} lng={lng}
+              onLatChange={(e) => setLat(e.target.value)} onLngChange={(e) => setLng(e.target.value)}
+            />
 
             <div className="field">
               <label>Notes</label>
