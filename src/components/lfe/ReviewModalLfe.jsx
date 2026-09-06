@@ -43,20 +43,6 @@ export default function ReviewModalLfe({ record, reviewer, others = [], country,
   const set = (key) => (e) => setV((m) => ({ ...m, [key]: e.target.value }));
   const movedLocation = Number(lat) !== record.latitude || Number(lng) !== record.longitude;
 
-  // Coordinates only, never anything scraper/user-supplied - no safeHref
-  // guard needed, unlike source_url below. The data= suffix is Google
-  // Earth Web's opaque (protobuf) flag for Historical Imagery mode - it is
-  // location-independent (verified against two unrelated coordinates), so
-  // it can be appended as-is to any @lat,lng,... camera position. Only
-  // shown for building observations - a landslide/lifeline/etc. record has
-  // no "code era" field this is meant to inform.
-  const latNum = Number(lat);
-  const lngNum = Number(lng);
-  const isBuildingRecord = (v.observation_types ?? ['building']).includes('building');
-  const historicalImageryUrl = isBuildingRecord && Number.isFinite(latNum) && Number.isFinite(lngNum)
-    ? `https://earth.google.com/web/@${latNum},${lngNum},50a,300d,35y,0h,0t,0r/data=CgwqBggBEgAYAUICCAE6AwoBMEICCABKDQj___________8BEAA`
-    : null;
-
   function coordGuard() {
     const e = coordError(lat, lng);
     if (e) { setErr(e); return false; }
@@ -224,21 +210,12 @@ export default function ReviewModalLfe({ record, reviewer, others = [], country,
           </div>
 
           <div>
-            <RecordFieldsLfe v={v} set={set} country={country} />
-            <div className="field latlng">
-              <div><label>Latitude</label><input type="number" step="0.00001" value={lat} onChange={(e) => setLat(e.target.value)} /></div>
-              <div><label>Longitude</label><input type="number" step="0.00001" value={lng} onChange={(e) => setLng(e.target.value)} /></div>
-            </div>
-            {movedLocation && <p className="muted small">Coordinates edited; will be saved as exact.</p>}
-            {historicalImageryUrl && (
-              <p className="kv">
-                <strong>Confirm the pin above is correct before using this</strong> - the date you read off
-                the timeline is only meaningful if it's pointed at the actual building.{' '}
-                <a href={historicalImageryUrl} target="_blank" rel="noreferrer">
-                  Check historical imagery (Google Earth)
-                </a>
-              </p>
-            )}
+            <RecordFieldsLfe
+              v={v} set={set} country={country}
+              lat={lat} lng={lng}
+              onLatChange={(e) => setLat(e.target.value)} onLngChange={(e) => setLng(e.target.value)}
+              movedLocation={movedLocation}
+            />
             <div className="field">
               <label>Engineer notes</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="RC frame behaviour, joints, caveats..." />

@@ -133,11 +133,12 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], coun
           </div>
 
           <div>
-            <RecordFieldsLfe v={v} set={set} country={country} />
-            <div className="field latlng">
-              <div><label>Latitude</label><input type="number" step="0.00001" value={lat} onChange={(e) => setLat(e.target.value)} /></div>
-              <div><label>Longitude</label><input type="number" step="0.00001" value={lng} onChange={(e) => setLng(e.target.value)} /></div>
-            </div>
+            <RecordFieldsLfe
+              v={v} set={set} country={country}
+              lat={lat} lng={lng}
+              onLatChange={(e) => setLat(e.target.value)} onLngChange={(e) => setLng(e.target.value)}
+              movedLocation={movedLocation}
+            />
             <div className="field">
               <label>Engineer notes</label>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
