@@ -231,14 +231,30 @@ export default function ReviewModalLfe({ record, reviewer, others = [], country,
         {pendingWarn && <p className="pending-warn">You have unsaved images or files. Click Add to save them, or Discard, before leaving this record.</p>}
 
         {confirmReject ? (
-          <div className="foot confirm">
-            <span className="confirm-text">Reject this record? Rejected records are hard to recover.</span>
-            <select value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} disabled={busy}>
-              {REJECTION_REASONS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}
-            </select>
-            <span className="grow" />
-            <button className="btn secondary" onClick={() => setConfirmReject(false)} disabled={busy}>Keep it</button>
-            <button className="btn-reject" onClick={() => resolve('Rejected', rejectReason)} disabled={busy}>{busy ? 'Rejecting...' : 'Yes, reject'}</button>
+          <div className="foot confirm" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span className="confirm-text">Reject this record? Rejected records are hard to recover.</span>
+              <select value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} disabled={busy}>
+                {REJECTION_REASONS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}
+              </select>
+            </div>
+            {rejectReason === 'duplicate' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className="confirm-text">Are you sure you don't want to merge with the duplicate record instead?</span>
+                <button
+                  type="button" className="mini"
+                  onClick={() => { if (!blockedByPending()) { setConfirmReject(false); setMerging(true); } }}
+                  disabled={busy}
+                >
+                  Merge instead
+                </button>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <span className="grow" />
+              <button className="btn secondary" onClick={() => setConfirmReject(false)} disabled={busy}>Keep it</button>
+              <button className="btn-reject" onClick={() => resolve('Rejected', rejectReason)} disabled={busy}>{busy ? 'Rejecting...' : 'Yes, reject'}</button>
+            </div>
           </div>
         ) : (
           <div className="foot">
