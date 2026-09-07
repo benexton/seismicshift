@@ -18,7 +18,7 @@ import { safeHref } from '../../lib/url.js';
  * the site back to the Unverified queue for re-review.
  */
 export default function SiteDetailModalLfe({ record, reviewer, others = [], country, onClose, onSaved, onUnverified }) {
-  const [v, setV] = useState({ ...record });
+  const [v, setV] = useState({ ...record, year_built: record.year_built ?? record.ai_original?.year_built_guess ?? null });
   const [notes, setNotes] = useState(record.engineer_notes ?? '');
   const [lat, setLat] = useState(record.latitude ?? '');
   const [lng, setLng] = useState(record.longitude ?? '');
@@ -138,6 +138,7 @@ export default function SiteDetailModalLfe({ record, reviewer, others = [], coun
               lat={lat} lng={lng}
               onLatChange={(e) => setLat(e.target.value)} onLngChange={(e) => setLng(e.target.value)}
               movedLocation={movedLocation}
+              aiYearGuess={record.ai_original?.year_built_guess} aiYearConfidence={record.ai_original?.year_built_confidence}
             />
             <div className="field">
               <label>Engineer notes</label>

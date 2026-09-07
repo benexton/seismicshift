@@ -18,7 +18,7 @@ import { safeHref } from '../../lib/url.js';
  * Approve, and Merge (reconcile into an existing site).
  */
 export default function ReviewModalLfe({ record, reviewer, others = [], country, onClose, onResolved, onSavedDraft }) {
-  const [v, setV] = useState({ ...record });
+  const [v, setV] = useState({ ...record, year_built: record.year_built ?? record.ai_original?.year_built_guess ?? null });
   const [notes, setNotes] = useState(record.engineer_notes ?? '');
   const [lat, setLat] = useState(record.latitude ?? '');
   const [lng, setLng] = useState(record.longitude ?? '');
@@ -215,6 +215,7 @@ export default function ReviewModalLfe({ record, reviewer, others = [], country,
               lat={lat} lng={lng}
               onLatChange={(e) => setLat(e.target.value)} onLngChange={(e) => setLng(e.target.value)}
               movedLocation={movedLocation}
+              aiYearGuess={record.ai_original?.year_built_guess} aiYearConfidence={record.ai_original?.year_built_confidence}
             />
             <div className="field">
               <label>Engineer notes</label>

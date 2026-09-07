@@ -44,8 +44,8 @@ export const LFE_MEDIA_BUCKET = 'lfe-observation-media';
 // longitude/latitude columns instead).
 export const LFE_RECORD_COLUMNS =
   'id, event_id, site_id, created_at, source_url, media_url, region, longitude, latitude, ' +
-  'damage_score, code_era, failure_mechanism, observed_retrofits, ai_confidence, ' +
-  'ai_model, status, engineer_notes, reviewed_by, reviewed_at, ' +
+  'damage_score, code_era, year_built, failure_mechanism, observed_retrofits, ai_confidence, ' +
+  'ai_model, ai_original, status, engineer_notes, reviewed_by, reviewed_at, ' +
   'source_type, observation_types, location_precision, submitted_by, phash, merged_into, ' +
   'building_name, address, location_confidence, streetview_url, building_type, primary_material, height_class, ' +
   'nonstructural_damage, type_details, source_text, source_text_en';
