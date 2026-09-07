@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import {
   DAMAGE_LABEL, DAMAGE_COLOR, observationTypesLabel, SOURCE_LABEL, SOURCE_COLOR, provenanceLabel, cap,
+  REJECTION_REASONS,
 } from '../../lib/constantsLfe.js';
 import RecordFieldsLfe, { fieldsPatch } from './RecordFieldsLfe.jsx';
 import Zoomable from '../Zoomable.jsx';
@@ -25,6 +26,7 @@ export default function ReviewModalLfe({ record, reviewer, others = [], country,
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [confirmReject, setConfirmReject] = useState(false);
+  const [rejectReason, setRejectReason] = useState(REJECTION_REASONS[0]);
   const [merging, setMerging] = useState(false);
   const [attachPending, setAttachPending] = useState(false);
   const [pendingWarn, setPendingWarn] = useState(false);
@@ -83,7 +85,7 @@ export default function ReviewModalLfe({ record, reviewer, others = [], country,
     } catch (ex) { setBusy(false); setErr(`Save failed: ${ex.message ?? ex}`); }
   }
 
-  async function resolve(newStatus) {
+  async function resolve(newStatus, rejectionReason) {
     if (blockedByPending()) return;
     if (newStatus === 'Approved' && !coordGuard()) return;
     setBusy(true); setErr('');
@@ -92,6 +94,7 @@ export default function ReviewModalLfe({ record, reviewer, others = [], country,
       const streetviewUrl = streetviewFile ? await uploadImage(streetviewFile) : null;
       const { error } = await supabaseLfe.from('triage_records').update({
         ...patch(streetviewUrl), status: newStatus, reviewed_by: reviewer, reviewed_at: new Date().toISOString(),
+        ...(newStatus === 'Rejected' ? { rejection_reason: rejectionReason } : {}),
       }).eq('id', record.id);
       if (error) throw error;
       setBusy(false);
@@ -230,9 +233,12 @@ export default function ReviewModalLfe({ record, reviewer, others = [], country,
         {confirmReject ? (
           <div className="foot confirm">
             <span className="confirm-text">Reject this record? Rejected records are hard to recover.</span>
+            <select value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} disabled={busy}>
+              {REJECTION_REASONS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}
+            </select>
             <span className="grow" />
             <button className="btn secondary" onClick={() => setConfirmReject(false)} disabled={busy}>Keep it</button>
-            <button className="btn-reject" onClick={() => resolve('Rejected')} disabled={busy}>{busy ? 'Rejecting...' : 'Yes, reject'}</button>
+            <button className="btn-reject" onClick={() => resolve('Rejected', rejectReason)} disabled={busy}>{busy ? 'Rejecting...' : 'Yes, reject'}</button>
           </div>
         ) : (
           <div className="foot">

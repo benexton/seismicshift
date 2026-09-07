@@ -28,6 +28,14 @@ export {
   fmtDate,
 } from './constants.js';
 
+// Why a record got rejected - captured so a rejection (a human saying "this
+// whole thing is wrong", a stronger signal than a single-field correction)
+// isn't otherwise indistinguishable from an accidental duplicate submission.
+// See project memory: LFE recursive self-improvement.
+export const REJECTION_REASONS = [
+  'not earthquake-related', 'duplicate', 'wrong location', 'hallucinated/fabricated', 'other',
+];
+
 // ---- Provenance / source type (adds 'twitter', which Kumamoto's schema does
 // not accept - forked for the same reason observation types are, above) -----
 export const SOURCE_TYPES = ['human', 'bluesky', 'twitter', 'rss', 'other'];
