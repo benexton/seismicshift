@@ -3,7 +3,7 @@ import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
-import { ERA_BUCKETS, BUCKET_COLOR, TITLE_MIN_ZOOM } from '../../lib/buildingStockAge.js';
+import { ERA_BUCKETS, ALL_BUCKETS, BUCKET_COLOR, TITLE_MIN_ZOOM } from '../../lib/buildingStockAge.js';
 
 const MAPTILER_KEY = import.meta.env.PUBLIC_MAPTILER_KEY;
 const SOURCE_ID = 'building-stock';
@@ -32,14 +32,17 @@ const CHOROPLETH_COLOR_EXPR = [
 
 const TITLE_COLOR_EXPR = [
   'match', ['get', 'era_bucket'],
-  ...ERA_BUCKETS.flatMap((b) => [b.key, BUCKET_COLOR[b.key]]),
+  ...ALL_BUCKETS.flatMap((b) => [b.key, BUCKET_COLOR[b.key]]),
   BUCKET_COLOR.unknown,
 ];
 
 // The one place each era bucket's governing standard gets resolved, from
 // country_code_entries rather than a duplicated string - a bucket with no
-// startYear (pre-1935, unknown) has no governing standard by design (NZ had
-// no seismic design provisions before NZSS 95).
+// standardStartYear (pre-1935) has no governing standard by design (NZ had
+// no seismic design provisions before NZSS 95). Only the 7 ordinal
+// ERA_BUCKETS are looked up here - 'mixed'/'unknown' (SPECIAL_BUCKETS)
+// aren't ages at all, so they're simply absent from the result, and any
+// later `standards[key]` lookup for them naturally comes back undefined.
 function useEraStandards(countryLabel) {
   const [standards, setStandards] = useState({});
   const [loading, setLoading] = useState(true);
@@ -55,7 +58,7 @@ function useEraStandards(countryLabel) {
         if (cancelled) return;
         const byYear = Object.fromEntries((data ?? []).map((e) => [e.year_start, e.title]));
         const byBucket = Object.fromEntries(
-          ERA_BUCKETS.map((b) => [b.key, b.startYear != null ? byYear[b.startYear] ?? null : null]),
+          ERA_BUCKETS.map((b) => [b.key, b.standardStartYear != null ? byYear[b.standardStartYear] ?? null : null]),
         );
         setStandards(byBucket);
         setLoading(false);
@@ -70,7 +73,7 @@ function Legend({ standards, activeBuckets, onToggle, viewMode, viewCounts, view
   return (
     <div className="bsa-legend">
       <div className="bsa-legend-title">Seismic design era</div>
-      {ERA_BUCKETS.map((b) => {
+      {ALL_BUCKETS.map((b) => {
         const count = viewCounts?.[b.key] ?? 0;
         const pct = viewTotal ? Math.round((100 * count) / viewTotal) : null;
         const on = activeBuckets.has(b.key);
@@ -125,7 +128,7 @@ export default function BuildingStockMapLfe({ country }) {
   const mapRef = useRef(null);
   const popupRef = useRef(null);
   const [zoom, setZoom] = useState(0);
-  const [activeBuckets, setActiveBuckets] = useState(() => new Set(ERA_BUCKETS.map((b) => b.key)));
+  const [activeBuckets, setActiveBuckets] = useState(() => new Set(ALL_BUCKETS.map((b) => b.key)));
   const [viewCounts, setViewCounts] = useState(null);
   const [mapError, setMapError] = useState(null);
   const { standards, loading: standardsLoading } = useEraStandards(country.label);
@@ -185,7 +188,7 @@ export default function BuildingStockMapLfe({ country }) {
       map.on('click', 'titles-fill', (e) => {
         const f = e.features?.[0];
         if (!f) return;
-        const bucket = ERA_BUCKETS.find((b) => b.key === f.properties.era_bucket);
+        const bucket = ALL_BUCKETS.find((b) => b.key === f.properties.era_bucket);
         const standard = standards[f.properties.era_bucket];
         popupRef.current?.remove();
         popupRef.current = new maplibregl.Popup({ offset: 8 })
@@ -194,7 +197,7 @@ export default function BuildingStockMapLfe({ country }) {
             <strong>${f.properties.address ?? 'Address unknown'}</strong><br/>
             DVR decade: ${f.properties.dvr_decade ?? 'unknown'}<br/>
             Seismic era: ${bucket?.label ?? 'Unknown'}<br/>
-            ${standard ? `Governing standard: ${standard}` : 'No governing standard (pre-code)'}
+            ${standard ? `Governing standard: ${standard}` : 'No governing standard'}
           `)
           .addTo(map);
       });
@@ -209,7 +212,7 @@ export default function BuildingStockMapLfe({ country }) {
           features = map.queryRenderedFeatures({ layers: [layerId] });
         } catch { /* layer not ready yet on the very first idle */ }
         if (layerId === 'titles-fill') {
-          const counts = Object.fromEntries(ERA_BUCKETS.map((b) => [b.key, 0]));
+          const counts = Object.fromEntries(ALL_BUCKETS.map((b) => [b.key, 0]));
           for (const f of features) {
             const key = f.properties.era_bucket;
             if (key in counts) counts[key] += 1;
