@@ -217,8 +217,9 @@ body {
 .bsa-methodology summary { font-weight: 600; cursor: pointer; }
 .bsa-methodology p { margin: 6px 0 0; color: var(--muted); }
 .bsa-zoom-hint {
-  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 1000;
-  background: rgba(16,24,40,0.85); color: #fff; padding: 6px 14px; border-radius: 999px; font-size: 12px;
+  position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;
+  background: rgba(16,24,40,0.9); color: #fff; padding: 8px 18px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; box-shadow: 0 2px 10px rgba(0,0,0,.25);
 }
 .bsa-map-error { position: absolute; top: 12px; left: 12px; z-index: 1000; background: #fff; padding: 6px 10px; border-radius: 8px; }
 .bsa-pending { padding: 24px; max-width: 640px; }

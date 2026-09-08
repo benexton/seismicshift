@@ -114,6 +114,22 @@ export const BUCKET_COLOR = {
   unknown: '#9ca3af',
 };
 
+// Below-threshold (zoomed-out) choropleth colours - deliberately a
+// completely separate, independent palette from BUCKET_COLOR above, per
+// 2026-09-08 decision: at this zoom the map shows WHETHER a Territorial
+// Authority has any DVR coverage at all, not a proportion-of-old-stock
+// gradient - real coverage is only 6 of 68 TAs (see MethodologyNote), so
+// "where is there data" is the more useful signal at a glance than a
+// continuous age gradient that only 6 areas can ever show anyway. Teal
+// (has data) vs. a near-white neutral (no data, reads as "empty/absent"
+// rather than as any specific era) - neither colour appears anywhere in
+// the title-level ordinal ramp or the mixed/unknown colours, so the two
+// legends never share a swatch a viewer could confuse between modes.
+export const COVERAGE_COLOR = {
+  covered: '#0d9488',
+  uncovered: '#e5e7eb',
+};
+
 // Zoom level the map switches from the SA2/territorial-authority choropleth
 // to individual titles at. A tunable constant, not a structural decision -
 // 12 is roughly where individual property parcels become visually

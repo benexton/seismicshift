@@ -3,7 +3,7 @@ import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
-import { ERA_BUCKETS, ALL_BUCKETS, BUCKET_COLOR, TITLE_MIN_ZOOM } from '../../lib/buildingStockAge.js';
+import { ERA_BUCKETS, ALL_BUCKETS, BUCKET_COLOR, COVERAGE_COLOR, TITLE_MIN_ZOOM } from '../../lib/buildingStockAge.js';
 
 const MAPTILER_KEY = import.meta.env.PUBLIC_MAPTILER_KEY;
 const SOURCE_ID = 'building-stock';
@@ -20,14 +20,11 @@ function ensurePmtilesProtocol() {
   pmtilesRegistered = true;
 }
 
-// Continuous 0-1 -> colour interpolation for the choropleth (pct_two_oldest
-// has no discrete buckets of its own - it's a proportion), anchored to the
-// same newest/oldest colours as the title-level ramp so the two rendering
-// modes read as one consistent scale rather than two unrelated palettes.
+// Binary coverage colour, not a pct_two_oldest gradient - see
+// COVERAGE_COLOR's own comment for why. total_count is null (not present)
+// for a TA build_areas_layer.py found no DVR-covered properties in.
 const CHOROPLETH_COLOR_EXPR = [
-  'interpolate', ['linear'], ['coalesce', ['get', 'pct_two_oldest'], 0],
-  0, BUCKET_COLOR['2004-plus'],
-  1, BUCKET_COLOR['pre-1935'],
+  'case', ['==', ['get', 'total_count'], null], COVERAGE_COLOR.uncovered, COVERAGE_COLOR.covered,
 ];
 
 const TITLE_COLOR_EXPR = [
@@ -69,7 +66,30 @@ function useEraStandards(countryLabel) {
   return { standards, loading };
 }
 
-function Legend({ standards, activeBuckets, onToggle, viewMode, viewCounts, viewTotal }) {
+// Zoomed out: a self-contained coverage key, independent of the era-bucket
+// palette below - see COVERAGE_COLOR's comment for why. Not interactive
+// (nothing to toggle - "has data"/"no data" isn't a filterable set the way
+// era buckets are).
+function CoverageLegend() {
+  return (
+    <div className="bsa-legend">
+      <div className="bsa-legend-title">Data coverage</div>
+      <div className="bsa-legend-row">
+        <span className="bsa-swatch" style={{ background: COVERAGE_COLOR.covered }} />
+        <span className="bsa-legend-label">Has building-age data</span>
+      </div>
+      <div className="bsa-legend-row">
+        <span className="bsa-swatch" style={{ background: COVERAGE_COLOR.uncovered }} />
+        <span className="bsa-legend-label">No data yet</span>
+      </div>
+      <p className="muted small" style={{ marginTop: 6, fontWeight: 600 }}>
+        Zoom in on a coloured area to see individual buildings by seismic-design era.
+      </p>
+    </div>
+  );
+}
+
+function EraLegend({ standards, activeBuckets, onToggle, viewCounts, viewTotal }) {
   return (
     <div className="bsa-legend">
       <div className="bsa-legend-title">Seismic design era</div>
@@ -88,20 +108,12 @@ function Legend({ standards, activeBuckets, onToggle, viewMode, viewCounts, view
               {b.label}
               {standards[b.key] && <span className="muted small"> - {standards[b.key]}</span>}
             </span>
-            {viewMode === 'titles' && (
-              <span className="muted small bsa-legend-count">
-                {count}{pct != null ? ` (${pct}%)` : ''}
-              </span>
-            )}
+            <span className="muted small bsa-legend-count">
+              {count}{pct != null ? ` (${pct}%)` : ''}
+            </span>
           </button>
         );
       })}
-      {viewMode === 'areas' && (
-        <p className="muted small" style={{ marginTop: 6 }}>
-          Zoomed out: colour shows the share of stock in the two oldest eras per area.
-          Per-era counts aren't available at this zoom - zoom in for individual titles.
-        </p>
-      )}
     </div>
   );
 }
@@ -261,7 +273,8 @@ export default function BuildingStockMapLfe({ country }) {
   }, [country.tilesetUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Bucket-visibility toggles only affect the titles layer - the choropleth
-  // has no per-bucket breakdown to filter (see Legend's "areas" note above).
+  // is now a binary coverage colour (CoverageLegend), not an era breakdown,
+  // so there's nothing there for these toggles to apply to.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.getLayer('titles-fill')) return;
@@ -300,18 +313,20 @@ export default function BuildingStockMapLfe({ country }) {
     <>
       <div ref={containerRef} className="triage-map" />
       <div className="map-controls bsa-controls">
-        {standardsLoading ? (
+        {viewMode === 'areas' ? (
+          <CoverageLegend />
+        ) : standardsLoading ? (
           <p className="muted small">Loading era standards...</p>
         ) : (
-          <Legend
+          <EraLegend
             standards={standards} activeBuckets={activeBuckets} onToggle={toggleBucket}
-            viewMode={viewMode} viewCounts={viewCounts} viewTotal={viewTotal}
+            viewCounts={viewCounts} viewTotal={viewTotal}
           />
         )}
         <MethodologyNote />
       </div>
       {viewMode === 'areas' && (
-        <div className="bsa-zoom-hint">Zoom in to see individual titles and per-era counts</div>
+        <div className="bsa-zoom-hint">Zoom in for individual buildings and seismic-era detail</div>
       )}
       {mapError && <p className="status-line err bsa-map-error">{mapError}</p>}
     </>
