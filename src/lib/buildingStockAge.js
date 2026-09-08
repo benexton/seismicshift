@@ -1,17 +1,28 @@
 // Config + shared logic for the "Building Stock Age" ERP tab. Adding a
 // country later is a config change here (a new COUNTRIES entry with a real
-// tilesetUrl) - never a UI refactor. tilesetUrl is null until the LINZ ->
-// tippecanoe -> PMTiles pipeline (scripts/lfe/... in seismicshift-pipeline,
-// not yet built as of 2026-09-08) has produced and uploaded a real archive;
-// BuildingStockMapLfe shows a clear pending state rather than a broken map
-// for any country whose tilesetUrl is still null.
+// tilesetUrl) - never a UI refactor. tilesetUrl is null (BuildingStockMapLfe
+// shows a clear pending state, not a broken map) until the LINZ -> tippecanoe
+// -> PMTiles pipeline (scripts/building_stock/ in seismicshift-pipeline,
+// .github/workflows/lfe_build_building_stock_tiles.yml) has produced and
+// uploaded a real archive to the building-stock-tiles Supabase Storage
+// bucket - built from the same PUBLIC_LFE_SUPABASE_URL env var the rest of
+// the app already uses, not hardcoded, so it tracks the right project in
+// every environment.
 // defaultView centers the map on wherever the tileset actually has data,
 // not just the country's geographic centre - real coverage is currently
 // partial (see BuildingStockMapLfe.jsx's MethodologyNote), heavily weighted
 // to Christchurch, so opening on generic central-NZ would show an
 // almost-empty map. Update this if/when coverage broadens.
+const LFE_SUPABASE_URL = import.meta.env.PUBLIC_LFE_SUPABASE_URL;
+
 export const COUNTRIES = [
-  { code: 'NZ', label: 'New Zealand', tilesetUrl: null, defaultView: { center: [172.64, -43.53], zoom: 11 } },
+  {
+    code: 'NZ', label: 'New Zealand',
+    tilesetUrl: LFE_SUPABASE_URL
+      ? `${LFE_SUPABASE_URL}/storage/v1/object/public/building-stock-tiles/nz/building-stock-nz.pmtiles`
+      : null,
+    defaultView: { center: [172.64, -43.53], zoom: 11 },
+  },
 ];
 
 // How the not-yet-built ETL must decode LINZ's raw building_age_indicator
