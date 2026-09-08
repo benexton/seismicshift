@@ -9,6 +9,7 @@ import ScraperConfigLfe from './ScraperConfigLfe.jsx';
 import ManualInputLfe from './ManualInputLfe.jsx';
 import TriageMapLfe from './TriageMapLfe.jsx';
 import TriagedSitesLfe from './TriagedSitesLfe.jsx';
+import RejectedSitesLfe from './RejectedSitesLfe.jsx';
 import ReportGeneratorLfe from './ReportGeneratorLfe.jsx';
 
 const TABS = [
@@ -17,6 +18,7 @@ const TABS = [
   ['manual', 'Manual input'],
   ['triage', 'Triage queue'],
   ['triaged', 'Triaged sites'],
+  ['rejected', 'Rejected'],
   ['report', 'Report generator'],
 ];
 
@@ -67,6 +69,7 @@ function Workspace({ reviewer, userId, signOut, updateName }) {
         {tab === 'manual' && <ManualInputLfe reviewer={reviewer} />}
         {tab === 'triage' && <TriageMapLfe reviewer={reviewer} othersByRecord={othersByRecord} setActiveRecord={setActiveRecord} />}
         {tab === 'triaged' && <TriagedSitesLfe reviewer={reviewer} othersByRecord={othersByRecord} setActiveRecord={setActiveRecord} />}
+        {tab === 'rejected' && <RejectedSitesLfe />}
         {tab === 'report' && <ReportGeneratorLfe reviewer={reviewer} />}
       </div>
     </div>

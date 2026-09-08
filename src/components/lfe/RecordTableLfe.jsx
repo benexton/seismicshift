@@ -5,12 +5,16 @@ import { DAMAGE_LABEL, DAMAGE_COLOR, observationTypesLabel, provenanceLabel, PUB
 /**
  * Table view of the (filtered) records for a tab, with key metadata and a
  * thumbnail that enlarges on hover. Clicking a row opens the same panel as the
- * map. `mode` picks the final column (submitter for the queue, verifier for
- * triaged sites). The Type column joins all ticked observation types.
+ * map (a no-op for mode="rejected", which has no such panel - rejected
+ * records are terminal, this is a read-only audit view). `mode` picks the
+ * final column (submitter for the queue, verifier for triaged sites, the
+ * rejecting reviewer plus their reason for rejected). The Type column joins
+ * all ticked observation types.
  */
 export default function RecordTableLfe({ records, mode, othersByRecord, onOpen }) {
   const isPublic = mode === 'public';
-  const personHeader = mode === 'triaged' ? 'Verified by' : 'Submitted by';
+  const isRejected = mode === 'rejected';
+  const personHeader = mode === 'triaged' ? 'Verified by' : isRejected ? 'Rejected by' : 'Submitted by';
   const [preview, setPreview] = useState(null);
 
   return (
@@ -22,6 +26,7 @@ export default function RecordTableLfe({ records, mode, othersByRecord, onOpen }
             <th>Site</th><th>Region</th><th>Damage</th><th>Type</th>
             <th>Non-struct.</th>
             {!isPublic && <><th>Source</th><th>{personHeader}</th></>}
+            {isRejected && <th>Reason</th>}
           </tr>
         </thead>
         <tbody>
@@ -49,15 +54,16 @@ export default function RecordTableLfe({ records, mode, othersByRecord, onOpen }
                 {!isPublic && <td>{provenanceLabel(r)}</td>}
                 {!isPublic && (
                   <td>
-                    {mode === 'triaged' ? (r.reviewed_by ?? '-') : (r.submitted_by ?? '-')}
+                    {mode === 'triaged' || isRejected ? (r.reviewed_by ?? '-') : (r.submitted_by ?? '-')}
                     {others.length ? <span className="muted"> · in use by {others.join(', ')}</span> : null}
                   </td>
                 )}
+                {isRejected && <td>{r.rejection_reason ?? '-'}</td>}
               </tr>
             );
           })}
           {records.length === 0 && (
-            <tr><td colSpan={isPublic ? 6 : 8} className="muted" style={{ textAlign: 'center', padding: 20 }}>No records match.</td></tr>
+            <tr><td colSpan={isPublic ? 6 : (isRejected ? 9 : 8)} className="muted" style={{ textAlign: 'center', padding: 20 }}>No records match.</td></tr>
           )}
         </tbody>
       </table>
