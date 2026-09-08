@@ -5,8 +5,13 @@
 // not yet built as of 2026-09-08) has produced and uploaded a real archive;
 // BuildingStockMapLfe shows a clear pending state rather than a broken map
 // for any country whose tilesetUrl is still null.
+// defaultView centers the map on wherever the tileset actually has data,
+// not just the country's geographic centre - real coverage is currently
+// partial (see BuildingStockMapLfe.jsx's MethodologyNote), heavily weighted
+// to Christchurch, so opening on generic central-NZ would show an
+// almost-empty map. Update this if/when coverage broadens.
 export const COUNTRIES = [
-  { code: 'NZ', label: 'New Zealand', tilesetUrl: null },
+  { code: 'NZ', label: 'New Zealand', tilesetUrl: null, defaultView: { center: [172.64, -43.53], zoom: 11 } },
 ];
 
 // How the not-yet-built ETL must decode LINZ's raw building_age_indicator

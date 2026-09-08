@@ -106,18 +106,45 @@ function Legend({ standards, activeBuckets, onToggle, viewMode, viewCounts, view
   );
 }
 
+// The LINZ "National District Valuation Roll" is open-licence data only
+// for Territorial Authorities that specifically opted in to public sharing
+// - "National" describes the table's schema, not its geographic coverage.
+// As of the 2026-09-08 build, only these 6 (of 68) TAs have any data at
+// all; Christchurch City alone is ~190k of the ~274k covered properties.
+// True full-country coverage exists only as the restricted-access version,
+// gated to qualifying NZ Central/Local Government users. Worth deriving
+// this list from the tileset itself (which areas have real data) rather
+// than hand-listing it here, if/when the covered-TA set is expected to
+// change - static for now since re-deriving it isn't worth the complexity
+// for a snapshot that only changes when someone re-runs the ETL pipeline.
+const COVERED_TAS = 'Christchurch City, Selwyn, Southland, Kaipara, Ōtorohanga, and Kawerau districts';
+
 function MethodologyNote() {
   return (
     <details className="bsa-methodology">
       <summary>About this data</summary>
       <p>
-        Building ages come from the LINZ National District Valuation Roll (rating
-        valuation data), which is decade-banded rather than exact, and reflects the
-        property&apos;s primary improvement - a significant renovation or rebuild can
-        shift the recorded date well off the original construction year. Coverage and
-        data quality vary by territorial authority. Where a decade straddles a seismic-
-        code boundary, it is rounded down to the earlier era, which is conservative for
-        seismic risk but means bucket counts are biased toward older eras overall.
+        <strong>Coverage is partial, not national</strong>, despite the source
+        dataset&apos;s name: only {COVERED_TAS} have shared their District Valuation
+        Roll data under an open licence. Every other territorial authority - including
+        Auckland and Wellington - has no data here at all yet.
+      </p>
+      <p>
+        Building ages come from that Roll (rating valuation data), which is
+        decade-banded rather than exact, and reflects the property&apos;s primary
+        improvement - a significant renovation or rebuild can shift the recorded date
+        well off the original construction year. Coverage and data quality vary by
+        territorial authority even within the covered set. Where a decade straddles a
+        seismic-code boundary, it is rounded down to the earlier era, which is
+        conservative for seismic risk but means bucket counts are biased toward older
+        eras overall.
+      </p>
+      <p>
+        Each polygon is a building footprint, not a property boundary - a property with
+        several buildings on it (e.g. a house plus a shed) shows every one of them with
+        that property&apos;s single recorded age. A building shared across multiple
+        legal properties (common for townhouses/apartments) shows one of those
+        properties&apos; age for the whole building.
       </p>
     </details>
   );
@@ -150,8 +177,8 @@ export default function BuildingStockMapLfe({ country }) {
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
-      center: [172.6, -41.3], // roughly central NZ - fine as a default while country is NZ-only
-      zoom: 5,
+      center: country.defaultView?.center ?? [172.6, -41.3],
+      zoom: country.defaultView?.zoom ?? 5,
     });
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
