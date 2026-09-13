@@ -1,4 +1,7 @@
-// Config + shared logic for the "Building Stock Age" ERP tab. Adding a
+// Config + shared logic for the "Building stock information" ERP tab
+// (file/module names kept as buildingStockAge for git history - the tab
+// itself covers more than age now, see the EPB register layer below).
+// Adding a
 // country later is a config change here (a new COUNTRIES entry with a real
 // tilesetUrl) - never a UI refactor. tilesetUrl is null (BuildingStockMapLfe
 // shows a clear pending state, not a broken map) until the LINZ -> tippecanoe
@@ -135,3 +138,63 @@ export const COVERAGE_COLOR = {
 // 12 is roughly where individual property parcels become visually
 // distinguishable on a standard web map.
 export const TITLE_MIN_ZOOM = 12;
+
+// MBIE earthquake-prone building (EPB) register, overlaid as point markers -
+// independent of the LINZ/DVR age tileset above (different source, national
+// coverage rather than the 6-TA partial one, and not zoom-gated). Built once
+// from "ALL Buildings.csv" + "Unremediated.csv" (2026-09-14): every address
+// in the ALL export that does NOT also appear in the Unremediated export has
+// had its notice lifted, i.e. is remediated - see
+// scripts/building-stock/build_epb_geojson.mjs, which is the one place that
+// diffing happens; this file only points at its output.
+export const EPB_GEOJSON_URL = '/data/epb-buildings.geojson';
+export const EPB_SOURCE_ID = 'epb-buildings';
+
+// Red = still on the register (a live seismic-risk notice), green = notice
+// lifted. Deliberately not reusing BUCKET_COLOR's red (pre-1935) or any
+// COVERAGE_COLOR value - these are circle markers on top of the fill layers
+// above, but a shared hue would still read as "the same legend" at a glance.
+export const EPB_COLOR = {
+  unremediated: '#dc2626',
+  remediated: '#16a34a',
+};
+
+// Christchurch liquefaction vulnerability overlay (Tonkin & Taylor study for
+// CCC, 2019, following MBIE/MfE 2017 guidance) - toggleable independently of
+// the EPB and era-bucket layers, per 2026-09-14 user decision. Source data
+// (docs/LiquefactionVulnerability.geojson -> scripts/building-stock/
+// build_liquefaction_geojson.mjs) carries 5 real categories, not 4: CCC's
+// own published legend (confirmed by the user against
+// https://ccc.govt.nz - "Vulnerability to Liquefaction") shows "Liquefaction
+// Damage is Possible" as a genuine category in its own right - the
+// lower-precision sibling of "Medium/High" for areas where the evidence
+// couldn't distinguish which, the same way "Liquefaction Damage is Unlikely"
+// is the lower-precision sibling of "Very Low/Low". It is NOT interchangeable
+// with "Medium" - folding it in would claim a severity grading the source
+// data explicitly does not support, for what is this dataset's single
+// largest category (193 of 600 polygons). Ordered highest-severity first,
+// matching ERA_BUCKETS' oldest-first convention. 'possible' is placed and
+// coloured between 'medium' and 'high' per CCC's own diagram (it spans that
+// upper part of the "increasing severity" arrow, never the lower/Low end).
+export const LIQUEFACTION_BUCKETS = [
+  { key: 'high', label: 'High', sourceValue: 'High Liquefaction Vulnerability' },
+  { key: 'possible', label: 'Possible (Medium-High, undetermined)', sourceValue: 'Liquefaction Damage is Possible' },
+  { key: 'medium', label: 'Medium', sourceValue: 'Medium Liquefaction Vulnerability' },
+  { key: 'low', label: 'Low', sourceValue: 'Low Liquefaction Vulnerability' },
+  { key: 'unlikely', label: 'No / unlikely', sourceValue: 'Liquefaction Damage is Unlikely' },
+];
+
+// ColorBrewer "BuPu" 5-class sequential ramp (colourblind-safe, single hue
+// family) - deliberately not the reds/oranges/yellows BUCKET_COLOR and
+// EPB_COLOR already use, since this layer can be on screen at the same time
+// as both of those and needs its own readable identity, not a competing red.
+export const LIQUEFACTION_COLOR = {
+  unlikely: '#edf8fb',
+  low: '#b3cde3',
+  medium: '#8c96c6',
+  possible: '#8856a7',
+  high: '#810f7c',
+};
+
+export const LIQUEFACTION_GEOJSON_URL = '/data/liquefaction-vulnerability.geojson';
+export const LIQUEFACTION_SOURCE_ID = 'liquefaction-vulnerability';

@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from 'react';
 const NAV_LINKS = [
   ['/erp/', 'Your events'],
   ['/erp/codes/', 'Codes & standards'],
-  ['/erp/building-stock-age/', 'Building stock age'],
+  ['/erp/building-stock-age/', 'Building stock information'],
   ['/erp/public-preview/', 'Public view'],
   ['/erp/admin/', 'Admin'],
 ];

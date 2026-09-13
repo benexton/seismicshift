@@ -3,10 +3,24 @@ import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
-import { ERA_BUCKETS, ALL_BUCKETS, BUCKET_COLOR, COVERAGE_COLOR, TITLE_MIN_ZOOM } from '../../lib/buildingStockAge.js';
+import {
+  ERA_BUCKETS, ALL_BUCKETS, BUCKET_COLOR, COVERAGE_COLOR, TITLE_MIN_ZOOM,
+  EPB_GEOJSON_URL, EPB_SOURCE_ID, EPB_COLOR,
+  LIQUEFACTION_BUCKETS, LIQUEFACTION_COLOR, LIQUEFACTION_GEOJSON_URL, LIQUEFACTION_SOURCE_ID,
+} from '../../lib/buildingStockAge.js';
 
 const MAPTILER_KEY = import.meta.env.PUBLIC_MAPTILER_KEY;
 const SOURCE_ID = 'building-stock';
+const EPB_UNREMEDIATED_LAYER = 'epb-unremediated';
+const EPB_REMEDIATED_LAYER = 'epb-remediated';
+const LIQUEFACTION_FILL_LAYER = 'liquefaction-fill';
+const LIQUEFACTION_OUTLINE_LAYER = 'liquefaction-outline';
+
+const LIQUEFACTION_COLOR_EXPR = [
+  'match', ['get', 'liq_bucket'],
+  ...LIQUEFACTION_BUCKETS.flatMap((b) => [b.key, LIQUEFACTION_COLOR[b.key]]),
+  '#cccccc',
+];
 
 // Registered once per page load, not per mount - addProtocol is a global
 // registration on maplibregl itself, and re-adding it on every remount
@@ -118,6 +132,70 @@ function EraLegend({ standards, activeBuckets, onToggle, viewCounts, viewTotal }
   );
 }
 
+// EPB register overlay - independent of the areas/titles zoom split above
+// (national coverage, not gated to TITLE_MIN_ZOOM), so it gets its own
+// always-visible legend section rather than living inside CoverageLegend or
+// EraLegend. Two independent toggles (both can be on at once), matching the
+// EraLegend row pattern rather than a single tri-state control.
+function EpbLegend({ visible, onToggle, counts }) {
+  return (
+    <div className="bsa-legend">
+      <div className="bsa-legend-title">Earthquake-prone buildings (MBIE register)</div>
+      <button
+        type="button" className={`bsa-legend-row${visible.unremediated ? '' : ' off'}`}
+        onClick={() => onToggle('unremediated')}
+        title={visible.unremediated ? 'Click to hide' : 'Click to show'}
+      >
+        <span className="bsa-swatch bsa-swatch-dot" style={{ background: EPB_COLOR.unremediated }} />
+        <span className="bsa-legend-label">Show EPBs</span>
+        <span className="muted small bsa-legend-count">{counts ? counts.unremediated : '...'}</span>
+      </button>
+      <button
+        type="button" className={`bsa-legend-row${visible.remediated ? '' : ' off'}`}
+        onClick={() => onToggle('remediated')}
+        title={visible.remediated ? 'Click to hide' : 'Click to show'}
+      >
+        <span className="bsa-swatch bsa-swatch-dot" style={{ background: EPB_COLOR.remediated }} />
+        <span className="bsa-legend-label">Show remediated EPBs</span>
+        <span className="muted small bsa-legend-count">{counts ? counts.remediated : '...'}</span>
+      </button>
+      <p className="muted small" style={{ marginTop: 6 }}>
+        &quot;Remediated&quot; means the address no longer appears in MBIE&apos;s current
+        earthquake-prone building list - it doesn&apos;t confirm what seismic work, if any,
+        was done.
+      </p>
+    </div>
+  );
+}
+
+// Liquefaction vulnerability overlay - like EpbLegend, independent of the
+// areas/titles zoom split (its own GeoJSON source, national-title-agnostic),
+// so it gets its own always-visible legend section. All buckets default off
+// (see the state init below) rather than mirroring EraLegend's all-on
+// default - three simultaneous choropleth-style overlays (era, EPB,
+// liquefaction) all visible on first load would be unreadable.
+function LiquefactionLegend({ activeBuckets, onToggle, counts }) {
+  return (
+    <div className="bsa-legend">
+      <div className="bsa-legend-title">Liquefaction vulnerability (Christchurch)</div>
+      {LIQUEFACTION_BUCKETS.map((b) => {
+        const on = activeBuckets.has(b.key);
+        return (
+          <button
+            key={b.key} type="button" className={`bsa-legend-row${on ? '' : ' off'}`}
+            onClick={() => onToggle(b.key)}
+            title={on ? 'Click to hide' : 'Click to show'}
+          >
+            <span className="bsa-swatch" style={{ background: LIQUEFACTION_COLOR[b.key] }} />
+            <span className="bsa-legend-label">{b.label}</span>
+            <span className="muted small bsa-legend-count">{counts ? counts[b.key] ?? 0 : '...'}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // The LINZ "National District Valuation Roll" is open-licence data only
 // for Territorial Authorities that specifically opted in to public sharing
 // - "National" describes the table's schema, not its geographic coverage.
@@ -158,6 +236,26 @@ function MethodologyNote() {
         legal properties (common for townhouses/apartments) shows one of those
         properties&apos; age for the whole building.
       </p>
+      <p>
+        <strong>EPB markers</strong> come from MBIE&apos;s national earthquake-prone
+        building register (a 2026-09-14 export), one point per notified street address.
+        A point is geocoded from that street address (not a legal title or footprint) via
+        OpenStreetMap, so placement can be off by a building or two on a long block; a
+        small number of addresses (about 1 in 10) couldn&apos;t be matched and are missing
+        from the map entirely. &quot;Remediated&quot; is inferred by diffing the full
+        register against the current unremediated list - it means the address is no
+        longer notified, not that specific seismic work has been verified.
+      </p>
+      <p>
+        <strong>Liquefaction vulnerability</strong> covers Christchurch City only - the
+        Tonkin &amp; Taylor study commissioned by Christchurch City Council (2019),
+        following MBIE/MfE&apos;s 2017 national liquefaction guidance. &quot;Possible
+        (Medium-High, undetermined)&quot; is not a stand-in for &quot;Medium&quot; - it is
+        the study&apos;s own category for areas where the evidence supports damage being
+        possible but wasn&apos;t sufficient to grade the severity further, and it is this
+        dataset&apos;s single largest category. Polygon boundaries follow assessed land
+        zones, not property or building footprints.
+      </p>
     </details>
   );
 }
@@ -170,12 +268,33 @@ export default function BuildingStockMapLfe({ country }) {
   const [activeBuckets, setActiveBuckets] = useState(() => new Set(ALL_BUCKETS.map((b) => b.key)));
   const [viewCounts, setViewCounts] = useState(null);
   const [mapError, setMapError] = useState(null);
+  // Unremediated on by default (the headline "which buildings are still
+  // earthquake-prone" question); remediated is opt-in extra context, off by
+  // default to avoid ~7,300 combined points cluttering the map on first load.
+  const [epbVisible, setEpbVisible] = useState({ unremediated: true, remediated: false });
+  const [epbCounts, setEpbCounts] = useState(null);
+  // All off by default - see LiquefactionLegend's comment.
+  const [activeLiqBuckets, setActiveLiqBuckets] = useState(() => new Set());
+  const [liqCounts, setLiqCounts] = useState(null);
   const { standards, loading: standardsLoading } = useEraStandards(country.label);
 
   const activeBucketsArray = useMemo(() => [...activeBuckets], [activeBuckets]);
+  const activeLiqBucketsArray = useMemo(() => [...activeLiqBuckets], [activeLiqBuckets]);
 
   function toggleBucket(key) {
     setActiveBuckets((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  function toggleEpb(key) {
+    setEpbVisible((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function toggleLiq(key) {
+    setActiveLiqBuckets((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
@@ -243,6 +362,127 @@ export default function BuildingStockMapLfe({ country }) {
       map.on('mouseenter', 'titles-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
       map.on('mouseleave', 'titles-fill', () => { map.getCanvas().style.cursor = ''; });
 
+      // Liquefaction vulnerability overlay - a single filtered fill layer
+      // (like titles-fill's era_bucket filter), not one layer per bucket
+      // like the EPB markers, since all 5 buckets share one geometry type
+      // and toggling is just "which liq_bucket values pass the filter".
+      // Starts fully filtered out (activeLiqBuckets starts empty) - the
+      // layer exists from load, the filter effect below just never lets
+      // anything through until a legend row is clicked. Added before the
+      // EPB markers below (not after) so its polygon fill always renders
+      // under the point layer - otherwise a semi-transparent fill on top
+      // would wash out the EPB dots whenever both overlays are on.
+      map.addSource(LIQUEFACTION_SOURCE_ID, { type: 'geojson', data: LIQUEFACTION_GEOJSON_URL });
+      map.addLayer({
+        id: LIQUEFACTION_FILL_LAYER, type: 'fill', source: LIQUEFACTION_SOURCE_ID,
+        filter: ['in', ['get', 'liq_bucket'], ['literal', []]],
+        paint: { 'fill-color': LIQUEFACTION_COLOR_EXPR, 'fill-opacity': 0.55 },
+      });
+      map.addLayer({
+        id: LIQUEFACTION_OUTLINE_LAYER, type: 'line', source: LIQUEFACTION_SOURCE_ID,
+        filter: ['in', ['get', 'liq_bucket'], ['literal', []]],
+        paint: { 'line-color': '#4c1d95', 'line-width': 0.5, 'line-opacity': 0.4 },
+      });
+      map.on('click', LIQUEFACTION_FILL_LAYER, (e) => {
+        const f = e.features?.[0];
+        if (!f) return;
+        const bucket = LIQUEFACTION_BUCKETS.find((b) => b.key === f.properties.liq_bucket);
+        popupRef.current?.remove();
+        popupRef.current = new maplibregl.Popup({ offset: 8 })
+          .setLngLat(e.lngLat)
+          .setHTML(`
+            <strong>${bucket?.label ?? f.properties.liq_cat_raw}</strong><br/>
+            Source category: ${f.properties.liq_cat_raw ?? 'unknown'}<br/>
+            Assessment detail: ${f.properties.detail ?? 'unknown'}<br/>
+            Study date: ${f.properties.study_date ? f.properties.study_date.slice(0, 10) : 'unknown'}
+          `)
+          .addTo(map);
+      });
+      map.on('mouseenter', LIQUEFACTION_FILL_LAYER, () => { map.getCanvas().style.cursor = 'pointer'; });
+      map.on('mouseleave', LIQUEFACTION_FILL_LAYER, () => { map.getCanvas().style.cursor = ''; });
+
+      const onLiqSourceData = (e) => {
+        if (e.sourceId !== LIQUEFACTION_SOURCE_ID || !e.isSourceLoaded) return;
+        const features = map.querySourceFeatures(LIQUEFACTION_SOURCE_ID);
+        const counts = Object.fromEntries(LIQUEFACTION_BUCKETS.map((b) => [b.key, 0]));
+        for (const f of features) {
+          if (f.properties.liq_bucket in counts) counts[f.properties.liq_bucket] += 1;
+        }
+        setLiqCounts(counts);
+        map.off('sourcedata', onLiqSourceData);
+      };
+      map.on('sourcedata', onLiqSourceData);
+
+      // National MBIE EPB register overlay - a plain GeoJSON source (not
+      // PMTiles) since it's a one-off static file rather than a build
+      // pipeline, and small enough (~7k points) not to need vector tiling.
+      // Two layers, not one filtered layer, so each can be shown/hidden
+      // independently via the legend toggles below without touching the
+      // other's filter.
+      map.addSource(EPB_SOURCE_ID, { type: 'geojson', data: EPB_GEOJSON_URL });
+      map.addLayer({
+        id: EPB_UNREMEDIATED_LAYER, type: 'circle', source: EPB_SOURCE_ID,
+        filter: ['==', ['get', 'remediated'], false],
+        layout: { visibility: epbVisible.unremediated ? 'visible' : 'none' },
+        paint: {
+          'circle-color': EPB_COLOR.unremediated, 'circle-radius': 5,
+          'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1,
+        },
+      });
+      map.addLayer({
+        id: EPB_REMEDIATED_LAYER, type: 'circle', source: EPB_SOURCE_ID,
+        filter: ['==', ['get', 'remediated'], true],
+        layout: { visibility: epbVisible.remediated ? 'visible' : 'none' },
+        paint: {
+          'circle-color': EPB_COLOR.remediated, 'circle-radius': 5,
+          'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1,
+        },
+      });
+
+      const epbPopupHtml = (p) => `
+        <strong>${p.address ?? 'Address unknown'}</strong>
+        ${p.common_names ? `<br/>${p.common_names}` : ''}<br/>
+        ${p.remediated ? 'Remediated - no longer on the EPB register' : 'Currently earthquake-prone'}<br/>
+        Notice type: ${p.notice_type ?? 'unknown'}<br/>
+        Date of issue: ${p.date_of_issue ?? 'unknown'}<br/>
+        Earthquake rating: ${p.earthquake_rating ?? 'unknown'}<br/>
+        Seismic work deadline: ${p.seismic_work_deadline ?? 'unknown'}<br/>
+        Priority building: ${p.priority_building ? 'Yes' : 'No'}<br/>
+        Notice issued by: ${p.notice_issued_by ?? 'unknown'}
+        ${p.heritage_status ? `<br/>Heritage status: ${p.heritage_status}` : ''}
+        ${p.area_of_seismic_risk ? `<br/>Area of seismic risk: ${p.area_of_seismic_risk}` : ''}
+      `;
+      for (const layerId of [EPB_UNREMEDIATED_LAYER, EPB_REMEDIATED_LAYER]) {
+        map.on('click', layerId, (e) => {
+          const f = e.features?.[0];
+          if (!f) return;
+          popupRef.current?.remove();
+          popupRef.current = new maplibregl.Popup({ offset: 8 })
+            .setLngLat(e.lngLat)
+            .setHTML(epbPopupHtml(f.properties))
+            .addTo(map);
+        });
+        map.on('mouseenter', layerId, () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', layerId, () => { map.getCanvas().style.cursor = ''; });
+      }
+
+      // GeoJSON sources load in one shot (unlike vector tiles), so the first
+      // 'sourcedata' event where isSourceLoaded is true has every feature -
+      // querySourceFeatures then gives a real national total, not a
+      // viewport-dependent count the way EraLegend's counts are.
+      const onEpbSourceData = (e) => {
+        if (e.sourceId !== EPB_SOURCE_ID || !e.isSourceLoaded) return;
+        const features = map.querySourceFeatures(EPB_SOURCE_ID);
+        let remediated = 0;
+        let unremediated = 0;
+        for (const f of features) {
+          if (f.properties.remediated) remediated++; else unremediated++;
+        }
+        setEpbCounts({ remediated, unremediated });
+        map.off('sourcedata', onEpbSourceData);
+      };
+      map.on('sourcedata', onEpbSourceData);
+
       const updateStats = () => {
         setZoom(map.getZoom());
         const layerId = map.getZoom() >= TITLE_MIN_ZOOM ? 'titles-fill' : 'areas-fill';
@@ -282,6 +522,21 @@ export default function BuildingStockMapLfe({ country }) {
     map.setFilter('titles-fill', filter);
     map.setFilter('titles-outline', filter);
   }, [activeBucketsArray]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer(EPB_UNREMEDIATED_LAYER)) return;
+    map.setLayoutProperty(EPB_UNREMEDIATED_LAYER, 'visibility', epbVisible.unremediated ? 'visible' : 'none');
+    map.setLayoutProperty(EPB_REMEDIATED_LAYER, 'visibility', epbVisible.remediated ? 'visible' : 'none');
+  }, [epbVisible]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer(LIQUEFACTION_FILL_LAYER)) return;
+    const filter = ['in', ['get', 'liq_bucket'], ['literal', activeLiqBucketsArray]];
+    map.setFilter(LIQUEFACTION_FILL_LAYER, filter);
+    map.setFilter(LIQUEFACTION_OUTLINE_LAYER, filter);
+  }, [activeLiqBucketsArray]);
 
   if (!country.tilesetUrl) {
     return (
@@ -323,6 +578,8 @@ export default function BuildingStockMapLfe({ country }) {
             viewCounts={viewCounts} viewTotal={viewTotal}
           />
         )}
+        <EpbLegend visible={epbVisible} onToggle={toggleEpb} counts={epbCounts} />
+        <LiquefactionLegend activeBuckets={activeLiqBuckets} onToggle={toggleLiq} counts={liqCounts} />
         <MethodologyNote />
       </div>
       {viewMode === 'areas' && (

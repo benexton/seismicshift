@@ -14,7 +14,7 @@ function Workspace({ reviewer, signOut, updateName }) {
       <div className="tabs">
         <LfeNavGroup />
         <span style={{ fontWeight: 600, alignSelf: 'center', marginRight: 6, color: '#cdd6e4' }}>
-          Building stock age
+          Building stock information
         </span>
         <span className="tab-spacer" />
         <AccountMenu reviewer={reviewer} signOut={signOut} updateName={updateName} />
@@ -39,9 +39,10 @@ function Workspace({ reviewer, signOut, updateName }) {
         ) : (
           <div className="panel-scroll">
             <div className="panel-inner">
-              <h1>Building stock age</h1>
+              <h1>Building stock information</h1>
               <p className="muted">
-                National coverage of property titles, colour-coded by seismic design era.
+                National coverage of property titles, colour-coded by seismic design era,
+                plus the MBIE earthquake-prone building register.
               </p>
 
               <div className="field" style={{ maxWidth: 280 }}>

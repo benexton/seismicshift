@@ -211,6 +211,7 @@ body {
 .bsa-legend-row:hover { background: #f2f4f7; }
 .bsa-legend-row.off { opacity: 0.4; }
 .bsa-swatch { width: 14px; height: 14px; border-radius: 3px; flex: 0 0 auto; border: 1px solid rgba(0,0,0,0.15); }
+.bsa-swatch-dot { border-radius: 50%; }
 .bsa-legend-label { flex: 1 1 auto; }
 .bsa-legend-count { flex: 0 0 auto; white-space: nowrap; }
 .bsa-methodology { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e5e7eb; font-size: 12px; }
