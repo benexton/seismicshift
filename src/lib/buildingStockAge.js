@@ -159,6 +159,14 @@ export const EPB_COLOR = {
   remediated: '#16a34a',
 };
 
+// Amber warning ring for markers geocode_epb_addresses.mjs flagged
+// `approximate` - Nominatim couldn't find the exact street number and fell
+// back to a nearest-street guess (see that script's header comment for the
+// real "1 Lincoln Road" mismatch that prompted this). A distinct stroke
+// colour, not a different fill, so it reads as "this dot, but uncertain"
+// rather than a third EPB status alongside unremediated/remediated.
+export const EPB_APPROXIMATE_STROKE = '#f59e0b';
+
 // Christchurch liquefaction vulnerability overlay (Tonkin & Taylor study for
 // CCC, 2019, following MBIE/MfE 2017 guidance) - toggleable independently of
 // the EPB and era-bucket layers, per 2026-09-14 user decision. Source data

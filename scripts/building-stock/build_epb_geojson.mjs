@@ -129,6 +129,9 @@ for (const [key, { rows }] of byAddr) {
       area_of_seismic_risk: rep['Area of seismic risk'] || null,
       notice_count: rows.length,
       remediated: !unremAddrKeys.has(key),
+      // true when the geocoder couldn't find this exact street number and
+      // fell back to a nearest-street guess - see geocode_epb_addresses.mjs.
+      approximate: !!geo.approximate,
     },
   });
 }

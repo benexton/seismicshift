@@ -5,7 +5,7 @@ import { Protocol } from 'pmtiles';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
 import {
   ERA_BUCKETS, ALL_BUCKETS, BUCKET_COLOR, COVERAGE_COLOR, TITLE_MIN_ZOOM,
-  EPB_GEOJSON_URL, EPB_SOURCE_ID, EPB_COLOR,
+  EPB_GEOJSON_URL, EPB_SOURCE_ID, EPB_COLOR, EPB_APPROXIMATE_STROKE,
   LIQUEFACTION_BUCKETS, LIQUEFACTION_COLOR, LIQUEFACTION_GEOJSON_URL, LIQUEFACTION_SOURCE_ID,
 } from '../../lib/buildingStockAge.js';
 
@@ -240,9 +240,12 @@ function MethodologyNote() {
         <strong>EPB markers</strong> come from MBIE&apos;s national earthquake-prone
         building register (a 2026-09-14 export), one point per notified street address.
         A point is geocoded from that street address (not a legal title or footprint) via
-        OpenStreetMap, so placement can be off by a building or two on a long block; a
-        small number of addresses (about 1 in 10) couldn&apos;t be matched and are missing
-        from the map entirely. &quot;Remediated&quot; is inferred by diffing the full
+        OpenStreetMap; a small number of addresses couldn&apos;t be matched at all and are
+        missing from the map entirely. Markers with an amber ring are
+        &quot;approximate&quot; - OpenStreetMap didn&apos;t have that exact street number,
+        so the pin is the nearest match on the same street and could be off by some
+        distance (click a marker to check); a plain white ring means the exact street
+        number was matched. &quot;Remediated&quot; is inferred by diffing the full
         register against the current unremediated list - it means the address is no
         longer notified, not that specific seismic work has been verified.
       </p>
@@ -419,14 +422,21 @@ export default function BuildingStockMapLfe({ country }) {
       // Two layers, not one filtered layer, so each can be shown/hidden
       // independently via the legend toggles below without touching the
       // other's filter.
+      // 'approximate' markers get an amber ring + slightly lower opacity
+      // instead of a different fill colour - see EPB_APPROXIMATE_STROKE's
+      // comment. Applied identically to both layers via the same expressions.
+      const epbStrokeExpr = ['case', ['get', 'approximate'], EPB_APPROXIMATE_STROKE, '#ffffff'];
+      const epbStrokeWidthExpr = ['case', ['get', 'approximate'], 2, 1];
+      const epbOpacityExpr = ['case', ['get', 'approximate'], 0.65, 1];
+
       map.addSource(EPB_SOURCE_ID, { type: 'geojson', data: EPB_GEOJSON_URL });
       map.addLayer({
         id: EPB_UNREMEDIATED_LAYER, type: 'circle', source: EPB_SOURCE_ID,
         filter: ['==', ['get', 'remediated'], false],
         layout: { visibility: epbVisible.unremediated ? 'visible' : 'none' },
         paint: {
-          'circle-color': EPB_COLOR.unremediated, 'circle-radius': 5,
-          'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1,
+          'circle-color': EPB_COLOR.unremediated, 'circle-radius': 5, 'circle-opacity': epbOpacityExpr,
+          'circle-stroke-color': epbStrokeExpr, 'circle-stroke-width': epbStrokeWidthExpr,
         },
       });
       map.addLayer({
@@ -434,8 +444,8 @@ export default function BuildingStockMapLfe({ country }) {
         filter: ['==', ['get', 'remediated'], true],
         layout: { visibility: epbVisible.remediated ? 'visible' : 'none' },
         paint: {
-          'circle-color': EPB_COLOR.remediated, 'circle-radius': 5,
-          'circle-stroke-color': '#ffffff', 'circle-stroke-width': 1,
+          'circle-color': EPB_COLOR.remediated, 'circle-radius': 5, 'circle-opacity': epbOpacityExpr,
+          'circle-stroke-color': epbStrokeExpr, 'circle-stroke-width': epbStrokeWidthExpr,
         },
       });
 
@@ -451,6 +461,7 @@ export default function BuildingStockMapLfe({ country }) {
         Notice issued by: ${p.notice_issued_by ?? 'unknown'}
         ${p.heritage_status ? `<br/>Heritage status: ${p.heritage_status}` : ''}
         ${p.area_of_seismic_risk ? `<br/>Area of seismic risk: ${p.area_of_seismic_risk}` : ''}
+        ${p.approximate ? '<br/><strong>Approximate location</strong> - the exact street number wasn\'t found, this pin is the nearest match on the street and may be off by some distance.' : ''}
       `;
       for (const layerId of [EPB_UNREMEDIATED_LAYER, EPB_REMEDIATED_LAYER]) {
         map.on('click', layerId, (e) => {

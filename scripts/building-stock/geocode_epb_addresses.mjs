@@ -5,9 +5,18 @@
 // by its usage policy, so a full run against ~7,300 addresses takes a
 // couple of hours). Resumable: results are cached to
 // scripts/building-stock/epb-geocode-cache.json keyed by address, and
-// re-running only geocodes addresses missing from that cache (including
-// ones that failed last time - see the README-less note below on retrying
-// failures by deleting their cache entries first).
+// re-running only geocodes addresses missing from that cache.
+//
+// House-number validation (2026-09-14, added after a real mismatch was
+// spotted on the live map - "1 Lincoln Road" pinned to a "1/317 Lincoln
+// Road" townhouse complex ~1.5km away): Nominatim will happily return a
+// "best guess" node when the exact street number isn't in OSM at all (common
+// for institutional/campus buildings), with no signal in the plain
+// lat/lon response that it did so. Requesting addressdetails=1 exposes the
+// address it actually matched, so the result's house_number can be checked
+// against the number we asked for - an exact match is trustworthy, anything
+// else is a fuzzy nearest-street guess and gets flagged `approximate: true`
+// rather than presented with the same confidence as a real match.
 //
 // Usage: node scripts/building-stock/geocode_epb_addresses.mjs
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -74,7 +83,16 @@ for (const r of allRows) {
   const key = addrKey(r);
   if (!key.replace(/\|/g, '')) continue;
   if (!uniqueAddrs.has(key)) {
-    uniqueAddrs.set(key, { addrKey: key, addressLine: addressLine(r), city: r['Town/City '] || null, suburb: r['Suburb '] || null });
+    uniqueAddrs.set(key, {
+      addrKey: key,
+      addressLine: addressLine(r),
+      city: r['Town/City '] || null,
+      suburb: r['Suburb '] || null,
+      // Street number + alpha only (no unit) - what a correct geocode's
+      // house_number should equal. "217 to 223" ranges are normalised to
+      // their first number, matching the cleanup applied before querying.
+      streetNumber: `${(r['Street number '] || '').replace(/^(\d+)\s+to\s+\d+$/i, '$1')}${r['Street alpha '] || ''}`.toLowerCase(),
+    });
   }
 }
 const buildings = [...uniqueAddrs.values()];
@@ -92,57 +110,77 @@ async function nominatimSearch(params) {
   const res = await fetch(url, { headers: { 'User-Agent': UA } });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const data = await res.json();
-  return data && data[0]
-    ? { lat: Number(data[0].lat), lon: Number(data[0].lon), display_name: data[0].display_name }
-    : null;
+  if (!data || !data[0]) return null;
+  return {
+    lat: Number(data[0].lat), lon: Number(data[0].lon), display_name: data[0].display_name,
+    house_number: data[0].address?.house_number ?? null,
+  };
 }
 
-function geocodeOne(b) {
+function geocodeStructured(b) {
   return nominatimSearch(new URLSearchParams({
-    format: 'jsonv2', countrycodes: 'nz', limit: '1',
+    format: 'jsonv2', countrycodes: 'nz', limit: '1', addressdetails: '1',
     street: b.addressLine.split(',')[0], city: b.city || b.suburb || '', country: 'New Zealand',
   }));
 }
 
-function geocodeFallback(b) {
+function geocodeFreeText(b) {
   // "217 to 223 Knights Road" -> "217 Knights Road" - Nominatim doesn't
-  // understand street-number ranges, so retry free-text on just the first one.
+  // understand street-number ranges, so query on just the first one.
   const cleanedLine = b.addressLine.replace(/^(\d+)\s+to\s+\d+\s+/i, '$1 ');
   return nominatimSearch(new URLSearchParams({
-    format: 'jsonv2', countrycodes: 'nz', limit: '1', q: `${cleanedLine}, New Zealand`,
+    format: 'jsonv2', countrycodes: 'nz', limit: '1', addressdetails: '1', q: `${cleanedLine}, New Zealand`,
   }));
 }
 
+function houseNumberMatches(b, result) {
+  return !!result?.house_number && result.house_number.toLowerCase() === b.streetNumber;
+}
+
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+async function geocodeOne(b) {
+  const structured = await geocodeStructured(b);
+  await sleep(1100);
+  if (houseNumberMatches(b, structured)) {
+    return { lat: structured.lat, lon: structured.lon, display_name: structured.display_name, approximate: false };
+  }
+  const freeText = await geocodeFreeText(b);
+  await sleep(1100);
+  if (houseNumberMatches(b, freeText)) {
+    return { lat: freeText.lat, lon: freeText.lon, display_name: freeText.display_name, approximate: false };
+  }
+  // Neither matched the exact street number - free text (it had suburb to
+  // work with) is the better of two unconfirmed guesses if we have to pick.
+  const best = freeText || structured;
+  return best ? { lat: best.lat, lon: best.lon, display_name: best.display_name, approximate: true } : null;
+}
 
 async function main() {
   const todo = buildings.filter((b) => !(b.addrKey in cache));
   console.log(`${new Date().toISOString()} Starting geocode: ${todo.length} remaining of ${buildings.length} total addresses`);
   let done = 0;
   let failed = 0;
+  let approximate = 0;
   for (const b of todo) {
     let result = null;
     try {
       result = await geocodeOne(b);
-      await sleep(1100);
-      if (!result) {
-        result = await geocodeFallback(b);
-        await sleep(1100);
-      }
     } catch (e) {
       console.error(`Error geocoding ${b.addrKey}: ${e.message}`);
       await sleep(2000);
     }
     cache[b.addrKey] = result;
     if (!result) failed++;
+    else if (result.approximate) approximate++;
     done++;
     if (done % 25 === 0) {
       saveCache();
-      console.log(`${new Date().toISOString()} progress: ${done}/${todo.length} (failed so far: ${failed})`);
+      console.log(`${new Date().toISOString()} progress: ${done}/${todo.length} (failed: ${failed}, approximate: ${approximate})`);
     }
   }
   saveCache();
-  console.log(`${new Date().toISOString()} DONE. geocoded this run: ${done}, failed: ${failed}`);
+  console.log(`${new Date().toISOString()} DONE. geocoded this run: ${done}, failed: ${failed}, approximate: ${approximate}`);
 }
 
 main().catch((e) => { console.error('FATAL', e); process.exitCode = 1; });
