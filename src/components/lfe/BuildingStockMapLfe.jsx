@@ -7,6 +7,7 @@ import {
   ERA_BUCKETS, ALL_BUCKETS, BUCKET_COLOR, COVERAGE_COLOR, TITLE_MIN_ZOOM,
   EPB_GEOJSON_URL, EPB_SOURCE_ID, EPB_COLOR, EPB_APPROXIMATE_STROKE,
   LIQUEFACTION_BUCKETS, LIQUEFACTION_COLOR, LIQUEFACTION_GEOJSON_URL, LIQUEFACTION_SOURCE_ID,
+  FLOOD_BUCKETS, FLOOD_COLOR, FLOOD_GEOJSON_URL, FLOOD_SOURCE_ID,
 } from '../../lib/buildingStockAge.js';
 
 const MAPTILER_KEY = import.meta.env.PUBLIC_MAPTILER_KEY;
@@ -15,6 +16,9 @@ const EPB_UNREMEDIATED_LAYER = 'epb-unremediated';
 const EPB_REMEDIATED_LAYER = 'epb-remediated';
 const LIQUEFACTION_FILL_LAYER = 'liquefaction-fill';
 const LIQUEFACTION_OUTLINE_LAYER = 'liquefaction-outline';
+// One fill+outline layer pair per FLOOD_BUCKETS key, e.g. 'flood-fill-200yr'.
+const floodFillLayer = (key) => `flood-fill-${key}`;
+const floodOutlineLayer = (key) => `flood-outline-${key}`;
 
 const LIQUEFACTION_COLOR_EXPR = [
   'match', ['get', 'liq_bucket'],
@@ -196,6 +200,32 @@ function LiquefactionLegend({ activeBuckets, onToggle, counts }) {
   );
 }
 
+// Flood extent overlay - like EpbLegend/LiquefactionLegend, its own always-
+// visible legend section. All three off by default, same reasoning as
+// LiquefactionLegend: this can be on screen alongside era/EPB/liquefaction
+// and three-plus simultaneous overlays on first load is unreadable.
+function FloodLegend({ visible, onToggle, counts }) {
+  return (
+    <div className="bsa-legend">
+      <div className="bsa-legend-title">Flood extent (Christchurch)</div>
+      {FLOOD_BUCKETS.map((b) => {
+        const on = visible.has(b.key);
+        return (
+          <button
+            key={b.key} type="button" className={`bsa-legend-row${on ? '' : ' off'}`}
+            onClick={() => onToggle(b.key)}
+            title={on ? 'Click to hide' : 'Click to show'}
+          >
+            <span className="bsa-swatch" style={{ background: FLOOD_COLOR[b.key] }} />
+            <span className="bsa-legend-label">{b.label}</span>
+            <span className="muted small bsa-legend-count">{counts ? counts[b.key] ?? 0 : '...'}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // The LINZ "National District Valuation Roll" is open-licence data only
 // for Territorial Authorities that specifically opted in to public sharing
 // - "National" describes the table's schema, not its geographic coverage.
@@ -262,6 +292,17 @@ function MethodologyNote() {
         dataset&apos;s single largest category. Polygon boundaries follow assessed land
         zones, not property or building footprints.
       </p>
+      <p>
+        <strong>Flood extent</strong> covers Christchurch City only - Christchurch City
+        Council&apos;s Flood Hazard modelling (MIKE Powered by DHI hydraulic models, run
+        per catchment). The three layers are return periods, not severity levels: a
+        &quot;10-year&quot; extent is modelled to flood on average once a decade, &quot;50-year&quot;
+        once in fifty years, and &quot;200-year&quot; once in two hundred - each rarer event
+        typically covers a larger area than the ones more frequent than it. Extent
+        polygons have been simplified from CCC&apos;s source geometry for map performance
+        (see scripts/building-stock/build_flood_geojson.mjs); boundaries may be a few
+        metres coarser than the source model as a result.
+      </p>
     </details>
   );
 }
@@ -282,6 +323,9 @@ export default function BuildingStockMapLfe({ country }) {
   // All off by default - see LiquefactionLegend's comment.
   const [activeLiqBuckets, setActiveLiqBuckets] = useState(() => new Set());
   const [liqCounts, setLiqCounts] = useState(null);
+  // All off by default - same reasoning as activeLiqBuckets above.
+  const [activeFloodBuckets, setActiveFloodBuckets] = useState(() => new Set());
+  const [floodCounts, setFloodCounts] = useState(null);
   const { standards, loading: standardsLoading } = useEraStandards(country.label);
 
   const activeBucketsArray = useMemo(() => [...activeBuckets], [activeBuckets]);
@@ -301,6 +345,14 @@ export default function BuildingStockMapLfe({ country }) {
 
   function toggleLiq(key) {
     setActiveLiqBuckets((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  }
+
+  function toggleFlood(key) {
+    setActiveFloodBuckets((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
@@ -418,6 +470,56 @@ export default function BuildingStockMapLfe({ country }) {
         map.off('sourcedata', onLiqSourceData);
       };
       map.on('sourcedata', onLiqSourceData);
+
+      // Flood extent overlay - one source, three fill+outline layer pairs
+      // (not a single filtered layer like liquefaction) so each return
+      // period's z-order is fixed and independent of toggle order: added
+      // rarest/largest-extent first so it always renders underneath the
+      // more-frequent/smaller extents - see FLOOD_BUCKETS' comment for why
+      // that matters here. All layers start hidden (visibility 'none') -
+      // activeFloodBuckets starts empty, same reasoning as the liquefaction
+      // layer starting fully filtered out.
+      map.addSource(FLOOD_SOURCE_ID, { type: 'geojson', data: FLOOD_GEOJSON_URL });
+      for (const b of FLOOD_BUCKETS) {
+        map.addLayer({
+          id: floodFillLayer(b.key), type: 'fill', source: FLOOD_SOURCE_ID,
+          filter: ['==', ['get', 'flood_year'], b.key],
+          layout: { visibility: 'none' },
+          paint: { 'fill-color': FLOOD_COLOR[b.key], 'fill-opacity': 0.55 },
+        });
+        map.addLayer({
+          id: floodOutlineLayer(b.key), type: 'line', source: FLOOD_SOURCE_ID,
+          filter: ['==', ['get', 'flood_year'], b.key],
+          layout: { visibility: 'none' },
+          paint: { 'line-color': '#08306b', 'line-width': 0.5, 'line-opacity': 0.4 },
+        });
+        map.on('click', floodFillLayer(b.key), (e) => {
+          const f = e.features?.[0];
+          if (!f) return;
+          popupRef.current?.remove();
+          popupRef.current = new maplibregl.Popup({ offset: 8 })
+            .setLngLat(e.lngLat)
+            .setHTML(`
+              <strong>${b.label}</strong><br/>
+              Catchment: ${f.properties.catchment ?? 'unknown'}
+            `)
+            .addTo(map);
+        });
+        map.on('mouseenter', floodFillLayer(b.key), () => { map.getCanvas().style.cursor = 'pointer'; });
+        map.on('mouseleave', floodFillLayer(b.key), () => { map.getCanvas().style.cursor = ''; });
+      }
+
+      const onFloodSourceData = (e) => {
+        if (e.sourceId !== FLOOD_SOURCE_ID || !e.isSourceLoaded) return;
+        const features = map.querySourceFeatures(FLOOD_SOURCE_ID);
+        const counts = Object.fromEntries(FLOOD_BUCKETS.map((b) => [b.key, 0]));
+        for (const f of features) {
+          if (f.properties.flood_year in counts) counts[f.properties.flood_year] += 1;
+        }
+        setFloodCounts(counts);
+        map.off('sourcedata', onFloodSourceData);
+      };
+      map.on('sourcedata', onFloodSourceData);
 
       // National MBIE EPB register overlay - a plain GeoJSON source (not
       // PMTiles) since it's a one-off static file rather than a build
@@ -552,6 +654,16 @@ export default function BuildingStockMapLfe({ country }) {
     map.setFilter(LIQUEFACTION_OUTLINE_LAYER, filter);
   }, [activeLiqBucketsArray]);
 
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.getLayer(floodFillLayer(FLOOD_BUCKETS[0].key))) return;
+    for (const b of FLOOD_BUCKETS) {
+      const visibility = activeFloodBuckets.has(b.key) ? 'visible' : 'none';
+      map.setLayoutProperty(floodFillLayer(b.key), 'visibility', visibility);
+      map.setLayoutProperty(floodOutlineLayer(b.key), 'visibility', visibility);
+    }
+  }, [activeFloodBuckets]);
+
   if (!country.tilesetUrl) {
     return (
       <div className="bsa-pending">
@@ -594,6 +706,7 @@ export default function BuildingStockMapLfe({ country }) {
         )}
         <EpbLegend visible={epbVisible} onToggle={toggleEpb} counts={epbCounts} />
         <LiquefactionLegend activeBuckets={activeLiqBuckets} onToggle={toggleLiq} counts={liqCounts} />
+        <FloodLegend visible={activeFloodBuckets} onToggle={toggleFlood} counts={floodCounts} />
         <MethodologyNote />
       </div>
       {viewMode === 'areas' && (

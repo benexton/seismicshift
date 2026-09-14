@@ -16,6 +16,12 @@ __pycache__/
 # Supabase CLI local state (project links, etc.) - machine-specific, not secrets
 supabase/.temp/
 
+# CCC flood-extent open-data exports (70-94MB each, ~254MB total) - too large
+# for this public repo's git history. scripts/building-stock/build_flood_geojson.mjs
+# turns these into the ~25MB public/data/flood-extent.geojson the map actually
+# serves, which IS committed. Re-download from CCC's open-data portal to rebuild.
+docs/Flood_Extent_*.geojson
+
 # Astro CLI's local lastUpdateCheck timestamp - machine/session-specific, no functional content
 .astro/settings.json
 

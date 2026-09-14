@@ -206,3 +206,39 @@ export const LIQUEFACTION_COLOR = {
 
 export const LIQUEFACTION_GEOJSON_URL = '/data/liquefaction-vulnerability.geojson';
 export const LIQUEFACTION_SOURCE_ID = 'liquefaction-vulnerability';
+
+// Christchurch flood extent overlay (CCC open-data Flood Hazard modelling,
+// MIKE Powered by DHI hydraulic models per catchment) - three independently
+// toggleable return-period extents, not a single filtered layer like
+// liquefaction, because the extents genuinely overlap (a 10-year extent is,
+// in practice, mostly contained within the 50-year one, which is mostly
+// contained within the 200-year one) and z-order matters: the rarer/larger
+// extents need to render underneath the more-frequent/smaller ones or a
+// "floods every ~10 years" polygon would get visually buried under the much
+// larger "floods roughly once a century" one. Ordered rarest-first to match
+// that bottom-to-top render order in BuildingStockMapLfe.
+// Source: docs/Flood_Extent_{10,50,200}_Year_(OpenData).geojson ->
+// scripts/building-stock/build_flood_geojson.mjs, which also simplifies the
+// hydraulic-model mesh geometry - see that script's header for why.
+export const FLOOD_BUCKETS = [
+  { key: '200yr', label: '200-year flood extent' },
+  { key: '50yr', label: '50-year flood extent' },
+  { key: '10yr', label: '10-year flood extent' },
+];
+
+// ColorBrewer "Blues" 3-class sequential ramp - darker/more saturated for the
+// more-frequent (and usually smaller) extents, matching the "this floods
+// often" reading a viewer expects from a bolder colour; the rare/large
+// 200-year extent gets the palest fill so it reads as background context
+// rather than competing with the 10/50-year polygons on top of it. Distinct
+// from every other overlay's palette here (BUCKET_COLOR's reds/oranges,
+// LIQUEFACTION_COLOR's purples, EPB_COLOR's red/green) since this can be on
+// screen alongside any of them.
+export const FLOOD_COLOR = {
+  '200yr': '#c6dbef',
+  '50yr': '#6baed6',
+  '10yr': '#08519c',
+};
+
+export const FLOOD_GEOJSON_URL = '/data/flood-extent.geojson';
+export const FLOOD_SOURCE_ID = 'flood-extent';
