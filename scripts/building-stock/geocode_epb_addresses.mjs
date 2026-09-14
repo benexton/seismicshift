@@ -14,88 +14,41 @@
 // for institutional/campus buildings), with no signal in the plain
 // lat/lon response that it did so. Requesting addressdetails=1 exposes the
 // address it actually matched, so the result's house_number can be checked
-// against the number we asked for - an exact match is trustworthy, anything
-// else is a fuzzy nearest-street guess and gets flagged `approximate: true`
-// rather than presented with the same confidence as a real match.
+// against the number we asked for.
+//
+// Three things get tried, in order, before a result is accepted as
+// `approximate: true` (2026-09-14, after the user asked to drive the
+// approximate count down rather than just flag it):
+//   1. Structured search (street + city), then free-text search (full
+//      address incl. suburb) if that didn't match exactly.
+//   2. Range tolerance: a returned house_number like "231-235" for a query
+//      of "231" is treated as a real match, not approximate - Nominatim/OSM
+//      genuinely addresses some properties as a number range, and the
+//      queried number falling inside it is a different, safe case from the
+//      Lincoln Road bug (a UNIT-style "1/317" is never range-tolerant - see
+//      isRangeMatch's own comment for why the two must stay distinct).
+//   3. Alternate address slots: ~120 rows in the source CSV list a second
+//      (occasionally third+) distinct street address under the same notice
+//      (e.g. "195 Jackson Street" and "197 Jackson Street" together) - if
+//      the primary address doesn't get an exact/range match, an alternate's
+//      *exact* geocode is a real, verified point for a building covered by
+//      this same legal notice, and is preferred over a fuzzy guess at the
+//      primary address itself.
+// Only if none of that produces an exact/range/alternate match does the best
+// available guess get kept with `approximate: true`.
 //
 // Usage: node scripts/building-stock/geocode_epb_addresses.mjs
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { loadCsv, buildUniqueAddresses } from './lib_epb_csv.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
 const ALL_CSV = join(ROOT, 'docs', 'ALL Buildings.csv');
-const UNREM_CSV = join(ROOT, 'docs', 'Unremediated.csv');
 const CACHE_PATH = join(__dirname, 'epb-geocode-cache.json');
 
-function parseCsv(text) {
-  const rows = [];
-  let row = [];
-  let field = '';
-  let inQuotes = false;
-  let i = 0;
-  const n = text.length;
-  while (i < n) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
-        inQuotes = false; i++; continue;
-      }
-      field += c; i++; continue;
-    }
-    if (c === '"') { inQuotes = true; i++; continue; }
-    if (c === ',') { row.push(field); field = ''; i++; continue; }
-    if (c === '\r') { i++; continue; }
-    if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; i++; continue; }
-    field += c; i++;
-  }
-  if (field.length || row.length) { row.push(field); rows.push(row); }
-  return rows;
-}
-
-function loadCsv(path) {
-  const text = readFileSync(path, 'utf8').replace(/^﻿/, '');
-  const rows = parseCsv(text).filter((r) => r.length > 1 || (r.length === 1 && r[0] !== ''));
-  const header = rows[0];
-  return rows.slice(1).map((r) => {
-    const obj = {};
-    header.forEach((h, idx) => { obj[h] = (r[idx] ?? '').trim(); });
-    return obj;
-  });
-}
-
-function addrKey(r) {
-  return [r['Street number '], r['Street alpha '], r['Street name '], r['Street type '], r['Street direction '], r['Suburb '], r['Town/City ']]
-    .map((s) => (s ?? '').toLowerCase()).join('|');
-}
-
-function addressLine(r) {
-  const streetBits = [r['Street number '], r['Street alpha '], r['Street name '], r['Street type '], r['Street direction ']]
-    .filter(Boolean).join(' ');
-  return [streetBits, r['Suburb '], r['Town/City ']].filter(Boolean).join(', ');
-}
-
-const allRows = loadCsv(ALL_CSV);
-const uniqueAddrs = new Map();
-for (const r of allRows) {
-  const key = addrKey(r);
-  if (!key.replace(/\|/g, '')) continue;
-  if (!uniqueAddrs.has(key)) {
-    uniqueAddrs.set(key, {
-      addrKey: key,
-      addressLine: addressLine(r),
-      city: r['Town/City '] || null,
-      suburb: r['Suburb '] || null,
-      // Street number + alpha only (no unit) - what a correct geocode's
-      // house_number should equal. "217 to 223" ranges are normalised to
-      // their first number, matching the cleanup applied before querying.
-      streetNumber: `${(r['Street number '] || '').replace(/^(\d+)\s+to\s+\d+$/i, '$1')}${r['Street alpha '] || ''}`.toLowerCase(),
-    });
-  }
-}
-const buildings = [...uniqueAddrs.values()];
+const buildings = buildUniqueAddresses(loadCsv(ALL_CSV));
 
 let cache = existsSync(CACHE_PATH) ? JSON.parse(readFileSync(CACHE_PATH, 'utf8')) : {};
 
@@ -117,43 +70,78 @@ async function nominatimSearch(params) {
   };
 }
 
-function geocodeStructured(b) {
+function geocodeStructured(addr) {
   return nominatimSearch(new URLSearchParams({
     format: 'jsonv2', countrycodes: 'nz', limit: '1', addressdetails: '1',
-    street: b.addressLine.split(',')[0], city: b.city || b.suburb || '', country: 'New Zealand',
+    street: addr.addressLine.split(',')[0], city: addr.city || addr.suburb || '', country: 'New Zealand',
   }));
 }
 
-function geocodeFreeText(b) {
+function geocodeFreeText(addr) {
   // "217 to 223 Knights Road" -> "217 Knights Road" - Nominatim doesn't
   // understand street-number ranges, so query on just the first one.
-  const cleanedLine = b.addressLine.replace(/^(\d+)\s+to\s+\d+\s+/i, '$1 ');
+  const cleanedLine = addr.addressLine.replace(/^(\d+)\s+to\s+\d+\s+/i, '$1 ');
   return nominatimSearch(new URLSearchParams({
     format: 'jsonv2', countrycodes: 'nz', limit: '1', addressdetails: '1', q: `${cleanedLine}, New Zealand`,
   }));
 }
 
-function houseNumberMatches(b, result) {
-  return !!result?.house_number && result.house_number.toLowerCase() === b.streetNumber;
+// A dash means OSM has this as a number range on one property ("231-235") -
+// the queried number falling inside it is a real match. A slash means a
+// unit/street-number pair ("1/317" = unit 1 of number 317) - never treated
+// as a match here, since the actual street number there is 317, not 1; this
+// is exactly the Lincoln Road case the whole approximate-flagging exists
+// for, so the two formats must never be conflated.
+function isRangeMatch(streetNumber, houseNumber) {
+  const m = /^(\d+)\s*-\s*(\d+)$/.exec(houseNumber || '');
+  const n = parseInt(streetNumber, 10);
+  if (!m || Number.isNaN(n)) return false;
+  const lo = Math.min(Number(m[1]), Number(m[2]));
+  const hi = Math.max(Number(m[1]), Number(m[2]));
+  return n >= lo && n <= hi;
+}
+
+function houseNumberMatches(addr, result) {
+  if (!result?.house_number) return false;
+  const hn = result.house_number.toLowerCase();
+  return hn === addr.streetNumber || isRangeMatch(addr.streetNumber, hn);
 }
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
-async function geocodeOne(b) {
-  const structured = await geocodeStructured(b);
+// Structured then free-text for one address candidate. Returns an exact/
+// range match if either succeeds, else the better of the two unconfirmed
+// results (free-text had suburb to work with, so it's preferred), else null.
+async function geocodeCandidate(addr) {
+  const structured = await geocodeStructured(addr);
   await sleep(1100);
-  if (houseNumberMatches(b, structured)) {
+  if (houseNumberMatches(addr, structured)) {
     return { lat: structured.lat, lon: structured.lon, display_name: structured.display_name, approximate: false };
   }
-  const freeText = await geocodeFreeText(b);
+  const freeText = await geocodeFreeText(addr);
   await sleep(1100);
-  if (houseNumberMatches(b, freeText)) {
+  if (houseNumberMatches(addr, freeText)) {
     return { lat: freeText.lat, lon: freeText.lon, display_name: freeText.display_name, approximate: false };
   }
-  // Neither matched the exact street number - free text (it had suburb to
-  // work with) is the better of two unconfirmed guesses if we have to pick.
   const best = freeText || structured;
   return best ? { lat: best.lat, lon: best.lon, display_name: best.display_name, approximate: true } : null;
+}
+
+async function geocodeOne(b) {
+  const primaryResult = await geocodeCandidate(b);
+  if (primaryResult && !primaryResult.approximate) return primaryResult;
+
+  for (const alt of b.alternates) {
+    const altResult = await geocodeCandidate(alt);
+    if (altResult && !altResult.approximate) {
+      // A confirmed point for a different address on the same notice beats
+      // an unconfirmed guess at the requested one - still worth knowing it
+      // came from a substitution, hence the note in display_name.
+      return { ...altResult, display_name: `${altResult.display_name} (matched via alternate address on same notice: ${alt.addressLine})` };
+    }
+  }
+
+  return primaryResult; // null, or the best unconfirmed guess - approximate: true either way
 }
 
 async function main() {

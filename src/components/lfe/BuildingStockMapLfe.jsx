@@ -239,13 +239,16 @@ function MethodologyNote() {
       <p>
         <strong>EPB markers</strong> come from MBIE&apos;s national earthquake-prone
         building register (a 2026-09-14 export), one point per notified street address.
-        A point is geocoded from that street address (not a legal title or footprint) via
-        OpenStreetMap; a small number of addresses couldn&apos;t be matched at all and are
-        missing from the map entirely. Markers with an amber ring are
-        &quot;approximate&quot; - OpenStreetMap didn&apos;t have that exact street number,
-        so the pin is the nearest match on the same street and could be off by some
-        distance (click a marker to check); a plain white ring means the exact street
-        number was matched. &quot;Remediated&quot; is inferred by diffing the full
+        A point is geocoded from that street address (not a legal title or footprint) -
+        first via OpenStreetMap, with a second pass against LINZ&apos;s authoritative NZ
+        Addresses dataset for anything OpenStreetMap could only guess at. Of 7,351
+        addresses, about 92% matched an exact street number from one of the two sources;
+        a plain white ring means that. Markers with an amber ring (about 7%) are
+        &quot;approximate&quot; - neither source had that exact street number, so the pin
+        is the nearest match on the same street and could be off by some distance (click
+        a marker to check). A small remainder (under 1%) couldn&apos;t be matched at all
+        and are missing from the map entirely - almost always addresses newer than both
+        sources&apos; data. &quot;Remediated&quot; is inferred by diffing the full
         register against the current unremediated list - it means the address is no
         longer notified, not that specific seismic work has been verified.
       </p>
