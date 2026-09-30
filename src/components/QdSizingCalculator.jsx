@@ -7,13 +7,14 @@ import {
   D_SLIP,
   D_STOP,
   D_ULS,
-  ch,
   eta,
   sd,
   spFactor,
   SP_SLS,
   DB_FU,
   DRIFT_LIMIT,
+  hazardC,
+  hazardCs,
 } from '../lib/qdSizing'
 
 const BRAND = '#17638f'
@@ -45,7 +46,7 @@ const NUMERIC = {
   h: { label: 'Storey height h (m)', min: 0.5, help: 'For drift and P-delta.' },
   Z: { label: 'Hazard factor Z', min: 0.05 },
   R: { label: 'Return period factor R,u', min: 0.1 },
-  N: { label: 'Near-fault factor N', min: 1, help: '1.0 if not near-fault.' },
+  faultD: { label: 'Distance to nearest major fault D (km)', min: 0, help: 'Shortest distance to a fault in NZS 1170.5 Table 3.6 (Alpine, Wellington, Wairarapa and others). Over 20 km means not near-fault. N(T,D) only raises the spectrum above 1.5 s, and is not applied at SLS.' },
   wind: { label: 'ULS wind force in the critical brace (kN)', min: 0 },
   Sp: { label: 'S,p at ULS', min: 0.5, max: 1, help: 'NZS 3404 Cl 12.2.2.1' },
   Rs: { label: 'SLS return period factor R,s', min: 0.1 },
@@ -324,7 +325,7 @@ function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
         {numberField('Z')}
         <SelectField name="soil" text="Site subsoil class" value={form.soil} options={SOIL_OPTIONS} onChange={onChange} />
         {numberField('R')}
-        {numberField('N')}
+        {numberField('faultD')}
         {numberField('wind')}
       </Group>
 
@@ -501,7 +502,7 @@ function AdrsChart({ s, input }) {
   const X = (d) => L + (d / xmax) * pw
   const Y = (a) => T + ph - (a / ymax) * ph
   const path = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${X(p[0]).toFixed(1)} ${Y(p[1]).toFixed(1)}`).join('')
-  const C = (t) => ch(t, input.soil) * input.Z * input.R * input.N
+  const C = hazardC(input)
   const spec = (lam, xi) => {
     const pts = []
     for (let i = 0; i <= 500; i++) {
@@ -523,7 +524,7 @@ function AdrsChart({ s, input }) {
       <text x={X(D) - 5} y={T + 14 + dy} textAnchor="end" {...TICK} fill="#475569">{text}</text>
     </g>
   )
-  const Cs = (t) => ch(t, input.soil) * input.Z * input.Rs * input.N
+  const Cs = hazardCs(input)
   const slsSpec = []
   for (let i = 0; i <= 500; i++) {
     const t = 0.02 + i * 0.01
@@ -611,7 +612,7 @@ function calcSheet(r) {
   L.push(`Brace ${inp.braceModel}; angle to direction of loading ${f(inp.angle, 1)} deg; elastic period T,e = ${f(inp.Te, 3)} s`)
   L.push(`0.1g equivalent static case: critical brace force ${f(inp.Fe)} kN; axial elongation ${f(inp.ee, 2)} mm; roof displacement ${f(inp.De, 2)} mm`)
   L.push(`Storey shear taken by other elements ${pct(inp.pShare, 0)}; h = ${f(inp.h, 2)} m`)
-  L.push(`Hazard Z = ${inp.Z}; soil ${inp.soil === 'AB' ? 'A/B' : inp.soil}; R,u = ${inp.R}; N = ${inp.N}; wind brace force ${f(inp.wind)} kN; S,p = ${inp.Sp}; spectrum x ${spText(inp)} (${SP_METHOD_LABEL[inp.spMethod ?? 'marriott']}); R,s = ${inp.Rs}; lambda = ${inp.lamC}; k,dm = ${inp.kdm}`)
+  L.push(`Hazard Z = ${inp.Z}; soil ${inp.soil === 'AB' ? 'A/B' : inp.soil}; R,u = ${inp.R}; fault distance ${inp.faultD} km; wind brace force ${f(inp.wind)} kN; S,p = ${inp.Sp}; spectrum x ${spText(inp)} (${SP_METHOD_LABEL[inp.spMethod ?? 'marriott']}); R,s = ${inp.Rs}; lambda = ${inp.lamC}; k,dm = ${inp.kdm}`)
   L.push(`Model check: load case V/W from T,e and roof displacement = ${f(B.SaM, 3)} g vs 0.1 g applied (ratio ${f(B.loadRatio, 2)}); brace share of roof displacement ${pct(B.phi, 0)}`)
   L.push('')
   L.push('SIZE COMPARISON (locking, ULS, CALS as demand / limit; mu actual)')
