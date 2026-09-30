@@ -413,6 +413,8 @@ function LoopChart({ s }) {
   const ymax = Math.ceil((s.dU.Fult * 1.12) / ys) * ys
   const X = (d) => L + (d / xmax) * pw
   const Y = (F) => T + ph - (F / ymax) * ph
+  // SLS dot: the Step 3 locking-check brace force on the nominal loading branch.
+  const lockDqd = s.FbSLS <= s.dev.Fslip ? s.FbSLS / s.dev.k0 : D_SLIP + (s.FbSLS - s.dev.Fslip) / s.dev.kL
   const loop = (d) => [[0, 0], [D_SLIP, d.Fslip], [D_STOP, d.Fult], [d.dRest, d.Frest], [d.dres, d.Fres], [0, 0]]
   const path = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${X(p[0]).toFixed(1)} ${Y(p[1]).toFixed(1)}`).join('') + 'Z'
   const yTicks = []
@@ -452,7 +454,7 @@ function LoopChart({ s }) {
         <path d={path(loop(s.dU))} fill="none" stroke="#64748b" strokeWidth="1.4" strokeDasharray="2 3" />
         <path d={path(loop(s.dev))} fill="none" stroke={BRAND} strokeWidth="2.6" strokeLinejoin="round" />
 
-        <circle cx={X(s.sls.dqd)} cy={Y(s.sls.F)} r="6" fill={MARGIN} stroke="#fff" strokeWidth="2" />
+        <circle cx={X(lockDqd)} cy={Y(s.FbSLS)} r="6" fill={MARGIN} stroke="#fff" strokeWidth="2" />
         {u && !u.elastic && <circle cx={X(u.dqd)} cy={Y(u.F)} r="6" fill={BRAND} stroke="#fff" strokeWidth="2" />}
         {c && !c.elastic && <circle cx={X(c.dqd)} cy={Y(c.F)} r="6" fill="#fff" stroke={EQ} strokeWidth="2.4" />}
       </svg>
@@ -461,7 +463,7 @@ function LoopChart({ s }) {
           { label: 'Nominal', color: BRAND },
           { label: 'LBH', color: '#64748b', dash: '7 3' },
           { label: 'UBH', color: '#64748b', dash: '2 3' },
-          { label: s.sls.locked ? 'SLS point (QD locked)' : 'SLS point (QD slipping)', color: MARGIN, dot: true },
+          { label: 'SLS locking-check force', color: MARGIN, dot: true },
           { label: 'ULS point', color: BRAND, dot: true },
           { label: 'CALS point', color: EQ, dot: true, open: true },
         ]}
@@ -809,7 +811,7 @@ function DeviceSection({ s, B }) {
     <section>
       <StepHead eyebrow="Device" title={`${s.size} hysteresis, full loop to the hard stop`} />
       <p className="text-base text-slate-500 leading-relaxed mb-4">
-        The dots show where the SLS, ULS and CALS points sit on the loop, the same points as on the ADRS below. At SLS the QD should stay locked; the locking check itself uses the larger SLS force from T,e and the full-bar-area period ({f(s.FbSLS)} kN). ULS travel is limited to 33 mm; at CALS the QD may travel to its hard stop at 50 mm.
+        The dots show where the SLS, ULS and CALS points sit on the loop, the same points as on the ADRS below. The green dot is the Step 3 SLS locking-check force, {f(s.FbSLS)} kN: the larger of the SLS brace forces at T,e and at the full-bar-area period, which should stay below the LBH slip force. The SLS point on the ADRS below is the displacement demand at T,e. ULS travel is limited to 33 mm; at CALS the QD may travel to its hard stop at 50 mm.
       </p>
       <div className="grid gap-5">
         <div className="max-w-2xl"><LoopChart s={s} /></div>
@@ -845,8 +847,12 @@ function ChecksSection({ s, input }) {
     </tr>
   )
   return (
-    <section>
-      <StepHead eyebrow="Steps 3 and 4" title={`Locking and one-point checks for ${label(s.size)}`} />
+    <>
+      <section>
+        <StepHead eyebrow="Step 3" title={`Locking checks for ${label(s.size)}`} />
+        <p className="text-base text-slate-500 leading-relaxed mb-4">
+          The QD must stay locked for SLS earthquake and ULS wind: each brace force is compared with the lower-bound slip force.
+        </p>
       <Table head={[`Locking (LBH F,slip = ${f(s.dL.Fslip)} kN)`, 'Brace force kN', 'Ratio', '']}>
         <tr>
           <Td>SLS earthquake, Fb,SLS</Td>
@@ -861,7 +867,10 @@ function ChecksSection({ s, input }) {
           <Td className="text-right"><Chip ok={s.lockWind.ratio <= 1} /></Td>
         </tr>
       </Table>
-      <p className="text-base text-slate-500 leading-relaxed my-4">
+      </section>
+      <section>
+        <StepHead eyebrow="Step 4" title={`One-point checks and performance points for ${label(s.size)}`} />
+      <p className="text-base text-slate-500 leading-relaxed mb-4">
         Governing ULS limit: {s.limGov.label}, Δ,lim = {f(s.Dlim)} mm. Activation at Δ,y = {f(s.Dy)} mm; hard stop at Δ,stop = {f(s.Dstop)} mm.
       </p>
       <Table head={['Check', 'λ', 'Δ mm', 'T s', 'ξ', 'S,d mm', 'Limit', '']}>
@@ -873,7 +882,9 @@ function ChecksSection({ s, input }) {
       <Note>
         The ductility check confirms μ above 1.25 from one spectrum reading. The actual ductility at the ULS performance point is {u ? `μ = ${f(u.mu, 2)}` : 'not available'}.
       </Note>
-    </section>
+        <PerformancePoints s={s} input={input} />
+      </section>
+    </>
   )
 }
 
@@ -902,12 +913,20 @@ function ComparisonSection({ s, db4, db3 }) {
   return (
     <section>
       <StepHead eyebrow="Comparison" title="The same line with DonoBrace alone" />
-      <p className="text-base text-slate-500 leading-relaxed mb-4">
-        Two DonoBrace-only designs to NZS 3404, both with the period from the full bar area and displacements from the SRF stiffness. Category 4 (elastic, μ = 1.0, S,p = 0.9) is the DonoBrace method. Category 3 (nominally ductile, μ = 1.25, S,p = 0.9, NZS 3404 Table 12.2.4) reduces the design action by k,μ = {f(db3.kmu, 2)} (NZS 1170.5 cl 5.2.1.1) and multiplies the elastic displacement by μ (cl 7.2.1.1).
- Category 3 strength also carries the tension-braced factor C,s = 1.1 (NZS 3404 cl 12.12.6.3.2, 1 to 2 storeys; 1.0 for Category 4), on strength only. Each takes the smallest bar with N* ≤ φN,t at ULS, drift × k,dm within {DRIFT_LIMIT}% (NZS 1170.5 cl 7.5.1), and a brace stress at the CALS displacement of no more than the bar's {DB_FU} MPa ultimate strength.
-        {fails(db4)}
-        {fails(db3)}
-      </p>
+      <p className="text-base text-slate-500 leading-relaxed mb-2">Two DonoBrace-only designs of the same line to NZS 3404:</p>
+      <ul className="list-disc pl-5 space-y-1.5 text-base text-slate-500 leading-relaxed mb-4">
+        <li><strong className="text-slate-700">Both:</strong> S,p = 0.9, period from the full bar area, displacements from the SRF stiffness.</li>
+        <li><strong className="text-slate-700">Category 4</strong> (elastic, μ = 1.0): the DonoBrace method. C,s = 1.0.</li>
+        <li>
+          <strong className="text-slate-700">Category 3</strong> (nominally ductile, μ = 1.25, NZS 3404 Table 12.2.4): design action ÷ k,μ = {f(db3.kmu, 2)} (NZS 1170.5 cl 5.2.1.1), elastic displacement × μ (cl 7.2.1.1), and strength × C,s = 1.1 for a 1 to 2 storey tension-braced frame (NZS 3404 cl 12.12.6.3.2).
+        </li>
+        <li>
+          <strong className="text-slate-700">Bar size:</strong> the smallest bar with N* ≤ φN,t, drift × k,dm ≤ {DRIFT_LIMIT}% (NZS 1170.5 cl 7.5.1), and brace stress at the CALS displacement ≤ {DB_FU} MPa, the bar&rsquo;s ultimate strength.
+        </li>
+      </ul>
+      {(!db4.ok || !db3.ok) && (
+        <p className="text-sm font-bold text-red-600 mb-4">{fails(db4)}{fails(db3)}</p>
+      )}
       <Table
         head={['', label(s.size), `${db4.brace} alone, Cat 4`, `${db3.brace} alone, Cat 3`]}
         cols={['31%', '23%', '23%', '23%']}
@@ -972,7 +991,7 @@ V/W = F ÷ F-per-g of the braced line + (other elements' stiffness) × Δ
 T = 2π √(Δ / (g V/W))      ξ = 0.05 + A(δ) / (π F cos θ Δ) × braced-line share of V
 S,d = λ × S,p factor × η(ξ) × C(T) × g (T/2π)²   (S,p factor per the S,p option chosen)`
 
-function PerformanceSection({ s, input }) {
+function PerformancePoints({ s, input }) {
   const u = s.uls
   const c = s.cals
   const pp = (x, name) =>
@@ -994,8 +1013,8 @@ function PerformanceSection({ s, input }) {
     )
 
   return (
-    <section>
-      <StepHead eyebrow="Step 4" title={`SLS, ULS and CALS performance points for ${label(s.size)}`} />
+    <div className="mt-8">
+      <h3 className="text-lg font-black tracking-tight text-slate-900 mb-2">SLS, ULS and CALS performance points</h3>
       <p className="text-base text-slate-500 leading-relaxed mb-4">
         The estimated capacity curve against the damped demand spectra, with the spectrum reduced by {spText(input)} ({SP_METHOD_LABEL[input.spMethod ?? 'marriott']}). Each performance point is where the capacity curve meets the spectrum for its own effective damping.
       </p>
@@ -1012,7 +1031,7 @@ function PerformanceSection({ s, input }) {
           ULS drift × k,dm = {pct(u.driftKdm / 100, 2)} (limit {DRIFT_LIMIT}%); stability coefficient θ = {f(u.theta, 3)}, so P-delta analysis is {s.pdelta?.exempt ? `not required (NZS 1170.5 cl 6.5.2(${s.pdelta.exempt}))` : 'required (NZS 1170.5 cl 6.5.2)'}; {s.brace} utilisation {f(u.util, 2)}.
         </Note>
       )}
-    </section>
+    </div>
   )
 }
 
@@ -1176,7 +1195,6 @@ export default function QdSizingCalculator() {
           <ModelBasis B={result.basis} />
           <DeviceSection s={s} B={result.basis} />
           <ChecksSection s={s} input={result.input} />
-          <PerformanceSection s={s} input={result.input} />
           <ComparisonSection s={s} db4={result.donoBrace} db3={result.donoBraceCat3} />
           <Working s={s} />
         </div>
