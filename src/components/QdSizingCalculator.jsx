@@ -37,9 +37,8 @@ const BUTTON_FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring
 const NUMERIC = {
   angle: { label: 'Brace angle to the direction of loading, θ (°)', min: 5, max: 85, help: 'Direction of loading means the horizontal loading axis parallel to the braced frame.' },
   Te: { label: 'Elastic period T,e (s)', min: 0.02, help: 'From your model, in this direction.' },
-  SpLoad: { label: 'S,p applied in the load case', min: 0.5, max: 1, help: '0.9 for the DonoBrace method (Category 4). Only used to back-check the load case against the hazard; the results do not depend on it.' },
   Fe: { label: 'Critical brace force (kN)', min: 0.1 },
-  ee: { label: 'Critical brace elongation (mm)', min: 0.01 },
+  ee: { label: 'Critical brace axial elongation (mm)', min: 0.01 },
   De: { label: 'Roof displacement (mm)', min: 0.01, help: 'At the deformation-control point.' },
   pShare: { label: 'Storey shear taken by other elements (%)', min: 0, max: 90, help: 'Portal frame weak-axis bending, out-of-plane walls or other elements acting in parallel with the braces in this direction. Usually taken as 0.' },
   h: { label: 'Storey height h (m)', min: 0.5, help: 'For drift and P-delta.' },
@@ -307,10 +306,9 @@ function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
       </Group>
 
       <Group
-        title="Parameters from the elastic model"
-        intro="Brace force, elongation and roof displacement all from the same ULS earthquake load case, typically at S,p = 0.9 as for the DonoBrace method (Category 4). The calculator scales linearly, so any linear case gives the same result."
+        title="Elastic 0.1g equivalent static case"
+        intro="Apply a static lateral load of 0.1 × the seismic weight in this direction (the same seismic weight as the mass behind T,e), with the braces tension-only and the DonoBrace SRF applied. Read all three results from that case."
       >
-        {numberField('SpLoad')}
         {numberField('Fe')}
         {numberField('ee')}
         {numberField('De')}
@@ -607,10 +605,10 @@ function calcSheet(r) {
   L.push('')
   L.push('INITIAL MODEL (DonoBrace only)')
   L.push(`Brace ${inp.braceModel}; angle to direction of loading ${f(inp.angle, 1)} deg; elastic period T,e = ${f(inp.Te, 3)} s`)
-  L.push(`Load case (S,p = ${inp.SpLoad}): critical brace force ${f(inp.Fe)} kN; elongation ${f(inp.ee, 2)} mm; roof displacement ${f(inp.De, 2)} mm`)
+  L.push(`0.1g equivalent static case: critical brace force ${f(inp.Fe)} kN; axial elongation ${f(inp.ee, 2)} mm; roof displacement ${f(inp.De, 2)} mm`)
   L.push(`Storey shear taken by other elements ${pct(inp.pShare, 0)}; h = ${f(inp.h, 2)} m`)
   L.push(`Hazard Z = ${inp.Z}; soil ${inp.soil === 'AB' ? 'A/B' : inp.soil}; R,u = ${inp.R}; N = ${inp.N}; wind brace force ${f(inp.wind)} kN; S,p = ${inp.Sp}; spectrum x ${spText(inp)} (${SP_METHOD_LABEL[inp.spMethod ?? 'marriott']}); R,s = ${inp.Rs}; lambda = ${inp.lamC}; k,dm = ${inp.kdm}`)
-  L.push(`Model check: load case S,a = ${f(B.SaM, 3)} g vs S,p x C(T,e) = ${f(B.SpLoad * B.Ce, 3)} g (ratio ${f(B.loadRatio, 2)}); brace share of roof displacement ${pct(B.phi, 0)}`)
+  L.push(`Model check: load case V/W from T,e and roof displacement = ${f(B.SaM, 3)} g vs 0.1 g applied (ratio ${f(B.loadRatio, 2)}); brace share of roof displacement ${pct(B.phi, 0)}`)
   L.push('')
   L.push('SIZE COMPARISON (locking, ULS, CALS as demand / limit; mu actual)')
   for (const s of QD_SIZES) {
@@ -789,11 +787,9 @@ function ModelBasis({ B }) {
     <section>
       <StepHead eyebrow="Your model" title="What the calculator reads from it" />
       <Table>
-        <tr><Td>Load case base shear coefficient, from T,e and the roof displacement</Td><Num>{f(B.SaM, 3)} g</Num></tr>
-        <tr><Td>Elastic ULS spectrum at T,e from the hazard entered, C(T,e)</Td><Num>{f(B.Ce, 3)} g</Num></tr>
-        <tr><Td>Scaled by the S,p entered for the load case, S,p × C(T,e)</Td><Num>{f(B.SpLoad * B.Ce, 3)} g</Num></tr>
-        <tr><Td>Load case ÷ (S,p × C(T,e)), 1.00 when your model matches the hazard entered</Td><Num>{f(B.loadRatio, 2)}</Num></tr>
-        <tr><Td>Share of roof displacement from brace elongation, (elongation ÷ cos θ) ÷ roof displacement</Td><Num>{pct(B.phi, 0)}</Num></tr>
+        <tr><Td>Load case V/W, from T,e and the roof displacement</Td><Num>{f(B.SaM, 3)} g</Num></tr>
+        <tr><Td>÷ the 0.1 g applied, 1.00 when the period, seismic weight and displacement are consistent</Td><Num>{f(B.loadRatio, 2)}</Num></tr>
+        <tr><Td>Share of roof displacement from brace axial elongation, (axial elongation ÷ cos θ) ÷ roof displacement</Td><Num>{pct(B.phi, 0)}</Num></tr>
         <tr><Td>Storey shear taken by the braces</Td><Num>{pct(1 - B.p, 0)}</Num></tr>
       </Table>
     </section>
@@ -950,7 +946,7 @@ function ComparisonSection({ s, db4, db3 }) {
 }
 
 const EQUATIONS = `K/W = (2π/T,e)² / g            load case S,a = K/W × Δ,e
-F(δ) from the QD loop           brace flexibility f = elongation ÷ force, scaled by (SRF·A) for other bars
+F(δ) from the QD loop           brace flexibility f = axial elongation ÷ force, scaled by (SRF·A) for other bars
 Δ(δ) = F (f/cos θ + other) + δ/cos θ,  other = (Δ,e − e/cos θ) ÷ F,e
 V/W = F ÷ F-per-g of the braced line + (other elements' stiffness) × Δ
 T = 2π √(Δ / (g V/W))      ξ = 0.05 + A(δ) / (π F cos θ Δ) × braced-line share of V
