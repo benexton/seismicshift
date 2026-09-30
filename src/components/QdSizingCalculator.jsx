@@ -10,6 +10,7 @@ import {
   ch,
   eta,
   sd,
+  spFactor,
 } from '../lib/qdSizing'
 
 const BRAND = '#17638f'
@@ -49,6 +50,24 @@ const NUMERIC = {
   kdm: { label: 'Drift modification k,dm', min: 1 },
 }
 
+// How S,p is applied to the demand spectrum. The engine's spFactor() is the one
+// source of truth for the multiplier; these are only the labels.
+const SP_METHOD_OPTIONS = [
+  { key: 'marriott', label: 'Marriott 2018', help: 'Spectrum × S,p,DDBD = (1 + S,p) / 2 (Marriott 2018, BNZSEE 51(3)). The methodology basis.' },
+  { key: 'unity', label: 'S,p = 1.0', help: 'No S,p reduction on the spectrum. The μ > 1.25 ductility check still applies.' },
+  { key: 'c3', label: 'Assessment guidelines C3', help: 'Spectrum × S,p in full, as for equivalent static analysis (Seismic Assessment Guidelines C3.10.2, 2025).' },
+]
+const SP_METHOD_LABEL = Object.fromEntries(SP_METHOD_OPTIONS.map((o) => [o.key, o.label]))
+
+// Legend / calc-sheet text for the spectrum multiplier actually applied.
+function spText(input) {
+  const m = input.spMethod ?? 'marriott'
+  const k = f(spFactor(input), 2)
+  if (m === 'unity') return 'S,p = 1.0'
+  if (m === 'c3') return `S,p = ${k}`
+  return `S,p,DDBD = (1 + S,p)/2 = ${k}`
+}
+
 const SOIL_OPTIONS = [
   ['AB', 'A or B'],
   ['C', 'C'],
@@ -82,7 +101,9 @@ function parseForm(form) {
   const errors = {}
   const input = { ...form }
   for (const key of Object.keys(NUMERIC)) {
-    const err = fieldError(key, form[key])
+    // S,p is hidden (and unused) with the S,p = 1.0 option, so don't let a stale
+    // invalid value there block the result.
+    const err = key === 'Sp' && form.spMethod === 'unity' ? null : fieldError(key, form[key])
     if (err) errors[key] = err
     input[key] = Number(form[key])
   }
@@ -261,7 +282,7 @@ function Group({ title, intro, children }) {
   )
 }
 
-function Inputs({ form, errors, onChange, onSize }) {
+function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
   const numberField = (name) => <NumberField name={name} value={form[name]} error={errors[name]} onChange={onChange} />
   return (
     <div className="space-y-6">
@@ -302,6 +323,31 @@ function Inputs({ form, errors, onChange, onSize }) {
         {numberField('wind')}
       </Group>
 
+      <Group
+        title="S,p on the demand spectrum"
+        intro="How the structural performance factor reduces the ULS and CALS spectra in the displacement-based checks."
+      >
+        <div className="flex flex-wrap gap-2" role="group" aria-label="S,p on the demand spectrum">
+          {SP_METHOD_OPTIONS.map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              aria-pressed={form.spMethod === o.key}
+              onClick={() => onSpMethod(o.key)}
+              className={`font-bold text-xs tracking-wide px-4 py-2 rounded-full border-2 transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17638f]/40 ${
+                form.spMethod === o.key
+                  ? 'border-[#17638f] bg-[#eef1f3] text-[#17638f]'
+                  : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-slate-400 -mt-1">{SP_METHOD_OPTIONS.find((o) => o.key === form.spMethod)?.help}</p>
+        {form.spMethod !== 'unity' && numberField('Sp')}
+      </Group>
+
       <Group title="Show results for">
         <div className="flex flex-wrap gap-2" role="group" aria-label="Show results for">
           {SIZE_OPTIONS.map(([v, l]) => (
@@ -330,7 +376,6 @@ function Inputs({ form, errors, onChange, onSize }) {
           </svg>
         </summary>
         <div className="grid gap-4 mt-4">
-          {numberField('Sp')}
           {numberField('Rs')}
           {numberField('lamC')}
           {numberField('kdm')}
@@ -514,7 +559,7 @@ function AdrsChart({ s, input }) {
       <Legend
         items={[
           { label: `Capacity, ${label(s.size)} (estimated)`, color: BRAND },
-          { label: 'ULS spectrum, 5%, × S,p,DDBD', color: '#94a3b8' },
+          { label: `ULS spectrum, 5%, × ${spText(input)}`, color: '#94a3b8' },
           ...(ulsDamped ? [{ label: `ULS damped, ξ = ${pct(u.xi)}`, color: '#334155', dash: '6 3' }] : []),
           ...(calsDamped ? [{ label: `CALS damped, ξ = ${pct(c.xi)}`, color: EQ, dash: '9 3 2 3' }] : []),
           { label: 'ULS point', color: BRAND, dot: true },
@@ -543,7 +588,7 @@ function calcSheet(r) {
   L.push(`Brace ${inp.braceModel}; angle to direction of loading ${f(inp.angle, 1)} deg; elastic period T,e = ${f(inp.Te, 3)} s`)
   L.push(`Load case: critical brace force ${f(inp.Fe)} kN; elongation ${f(inp.ee, 2)} mm; roof displacement ${f(inp.De, 2)} mm`)
   L.push(`Storey shear taken by other elements ${pct(inp.pShare, 0)}; h = ${f(inp.h, 2)} m`)
-  L.push(`Hazard Z = ${inp.Z}; soil ${inp.soil === 'AB' ? 'A/B' : inp.soil}; R,u = ${inp.R}; N = ${inp.N}; wind brace force ${f(inp.wind)} kN; S,p = ${inp.Sp}; R,s = ${inp.Rs}; lambda = ${inp.lamC}; k,dm = ${inp.kdm}`)
+  L.push(`Hazard Z = ${inp.Z}; soil ${inp.soil === 'AB' ? 'A/B' : inp.soil}; R,u = ${inp.R}; N = ${inp.N}; wind brace force ${f(inp.wind)} kN; S,p = ${inp.Sp}; spectrum x ${spText(inp)} (${SP_METHOD_LABEL[inp.spMethod ?? 'marriott']}); R,s = ${inp.Rs}; lambda = ${inp.lamC}; k,dm = ${inp.kdm}`)
   L.push(`Model check: load case S,a = ${f(B.SaM, 3)} g vs C(T,e) = ${f(B.Ce, 3)} g (ratio ${f(B.loadRatio, 2)}); brace share of roof displacement ${pct(B.phi, 0)}`)
   L.push('')
   L.push('SIZE COMPARISON (locking, ULS, CALS as demand / limit; mu actual)')
@@ -815,20 +860,11 @@ F(δ) from the QD loop           brace flexibility f = elongation ÷ force, scal
 Δ(δ) = F (f/cos θ + other) + δ/cos θ,  other = (Δ,e − e/cos θ) ÷ F,e
 V/W = F ÷ F-per-g of the braced line + (other elements' stiffness) × Δ
 T = 2π √(Δ / (g V/W))      ξ = 0.05 + A(δ) / (π F cos θ Δ) × braced-line share of V
-S,d = λ × S,p,DDBD × η(ξ) × C(T) × g (T/2π)²`
+S,d = λ × S,p factor × η(ξ) × C(T) × g (T/2π)²   (S,p factor per the S,p option chosen)`
 
-function Working({ s, input }) {
+function PerformanceSection({ s, input }) {
   const u = s.uls
   const c = s.cals
-  const bb = (name, st) => (
-    <tr key={name}>
-      <Td>{name}</Td>
-      <Num>{f(st.dqd)}</Num>
-      <Num>{f(st.F)}</Num>
-      <Num>{f(st.D)}</Num>
-      <Num>{f(st.Sa, 3)}</Num>
-    </tr>
-  )
   const pp = (x, name) =>
     x ? (
       <tr key={name}>
@@ -848,6 +884,39 @@ function Working({ s, input }) {
     )
 
   return (
+    <section>
+      <StepHead eyebrow="Step 4" title={`ULS and CALS performance points for ${label(s.size)}`} />
+      <p className="text-base text-slate-500 leading-relaxed mb-4">
+        The estimated capacity curve against the damped demand spectra, with the spectrum reduced by {spText(input)} ({SP_METHOD_LABEL[input.spMethod ?? 'marriott']}). Each performance point is where the capacity curve meets the spectrum for its own effective damping.
+      </p>
+      <div className="max-w-3xl">
+        <AdrsChart s={s} input={input} />
+      </div>
+      <Table className="mt-5" head={['Performance point', 'Δ mm', 'δ mm', 'Brace kN', 'V/W', 'T,eff s', 'ξ,eff']}>
+        {pp(u, 'ULS')}
+        {pp(c, `CALS (λ = ${f(input.lamC, 2)})`)}
+      </Table>
+      {u && (
+        <Note>
+          ULS drift × k,dm = {pct(u.driftKdm / 100, 2)}; stability coefficient θ = {f(u.theta, 3)}; {s.brace} utilisation {f(u.util, 2)}.
+        </Note>
+      )}
+    </section>
+  )
+}
+
+function Working({ s }) {
+  const bb = (name, st) => (
+    <tr key={name}>
+      <Td>{name}</Td>
+      <Num>{f(st.dqd)}</Num>
+      <Num>{f(st.F)}</Num>
+      <Num>{f(st.D)}</Num>
+      <Num>{f(st.Sa, 3)}</Num>
+    </tr>
+  )
+
+  return (
     <details className="pt-8 border-t border-slate-100 group">
       <summary className={`inline-flex items-center gap-2 cursor-pointer select-none text-sm font-black tracking-wide uppercase text-[#17638f] hover:text-[#0f4c6e] transition motion-reduce:transition-none list-none [&::-webkit-details-marker]:hidden rounded ${BUTTON_FOCUS}`}>
         <span>Show working</span>
@@ -858,7 +927,7 @@ function Working({ s, input }) {
 
       <div className="mt-4 pl-4 md:pl-5 border-l-2 border-slate-200 space-y-5">
         <p className="text-base text-slate-500 leading-relaxed">
-          Estimated backbone and performance points for {label(s.size)}. The capacity curve is built from your model: its elastic part scales with brace force, QD travel adds δ ÷ cos θ, and the base shear coefficient follows the brace force.
+          Estimated backbone for {label(s.size)}. The capacity curve is built from your model: its elastic part scales with brace force, QD travel adds δ ÷ cos θ, and the base shear coefficient follows the brace force.
         </p>
         <Table head={['Backbone point', 'δ mm', 'F kN', 'Δ mm', 'V/W']}>
           {bb('Activation, Δ,y', s.pts.y)}
@@ -867,16 +936,6 @@ function Working({ s, input }) {
           {bb('Device limit, δ = 33 mm', s.pts.d33)}
           {bb('Hard stop, Δ,stop', s.pts.stop)}
         </Table>
-        <Table head={['Performance point', 'Δ mm', 'δ mm', 'Brace kN', 'V/W', 'T,eff s', 'ξ,eff']}>
-          {pp(u, 'ULS')}
-          {pp(c, `CALS (λ = ${f(input.lamC, 2)})`)}
-        </Table>
-        {u && (
-          <p className="text-sm text-slate-500 leading-relaxed">
-            ULS drift × k,dm = {pct(u.driftKdm / 100, 2)}; stability coefficient θ = {f(u.theta, 3)}; {s.brace} utilisation {f(u.util, 2)}.
-          </p>
-        )}
-        <AdrsChart s={s} input={input} />
         <pre className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-4 overflow-x-auto leading-relaxed">{EQUATIONS}</pre>
       </div>
     </details>
@@ -918,6 +977,12 @@ export default function QdSizingCalculator() {
     track('qd_sizing_size_change', { size })
   }
 
+  function onSpMethod(spMethod) {
+    if (spMethod === form.spMethod) return
+    recalc({ ...form, spMethod })
+    track('qd_sizing_sp_method_change', { sp_method: spMethod })
+  }
+
   function loadExample() {
     recalc(exampleForm())
     setFallbackText(null)
@@ -949,7 +1014,7 @@ export default function QdSizingCalculator() {
     <div className="rounded-3xl border border-slate-100 shadow-sm bg-white overflow-hidden p-6 md:p-9">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]">
         <form onSubmit={(e) => e.preventDefault()} noValidate aria-label="Inputs">
-          <Inputs form={form} errors={errors} onChange={onChange} onSize={onSize} />
+          <Inputs form={form} errors={errors} onChange={onChange} onSize={onSize} onSpMethod={onSpMethod} />
 
           <div className="flex flex-wrap gap-3 mt-8">
             <button
@@ -1000,8 +1065,9 @@ export default function QdSizingCalculator() {
           <ModelBasis B={result.basis} />
           <DeviceSection s={s} B={result.basis} />
           <ChecksSection s={s} input={result.input} />
+          <PerformanceSection s={s} input={result.input} />
           <ComparisonSection s={s} db={result.donoBrace} />
-          <Working s={s} input={result.input} />
+          <Working s={s} />
         </div>
       </div>
     </div>
