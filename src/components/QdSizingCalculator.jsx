@@ -11,6 +11,7 @@ import {
   eta,
   sd,
   spFactor,
+  SP_SLS,
 } from '../lib/qdSizing'
 
 const BRAND = '#17638f'
@@ -33,12 +34,12 @@ const BUTTON_FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring
 // Numeric fields, with the same bounds as the reference prototype. pShare is
 // entered as a percentage and divided by 100 before it reaches the engine.
 const NUMERIC = {
-  angle: { label: 'Brace angle to the direction of loading, θ (°)', min: 5, max: 85, help: 'Wall bracing: angle to the horizontal. Roof bracing: angle in plan to the earthquake direction.' },
+  angle: { label: 'Brace angle to the direction of loading, θ (°)', min: 5, max: 85, help: 'Direction of loading means the horizontal loading axis parallel to the braced frame.' },
   Te: { label: 'Elastic period T,e (s)', min: 0.02, help: 'From your model, in this direction.' },
   Fe: { label: 'Critical brace force (kN)', min: 0.1 },
   ee: { label: 'Critical brace elongation (mm)', min: 0.01 },
   De: { label: 'Roof displacement (mm)', min: 0.01, help: 'At the deformation-control point.' },
-  pShare: { label: 'Storey shear taken by other elements (%)', min: 0, max: 90, help: 'Portal frames, out-of-plane walls or other elements acting in parallel with the braces in this direction. Usually 0.' },
+  pShare: { label: 'Storey shear taken by other elements (%)', min: 0, max: 90, help: 'Portal frame weak-axis bending, out-of-plane walls or other elements acting in parallel with the braces in this direction. Usually taken as 0.' },
   h: { label: 'Storey height h (m)', min: 0.5, help: 'For drift and P-delta.' },
   Z: { label: 'Hazard factor Z', min: 0.05 },
   R: { label: 'Return period factor R,u', min: 0.1 },
@@ -275,7 +276,7 @@ function SelectField({ name, text, value, options, onChange }) {
 function Group({ title, intro, children }) {
   return (
     <fieldset className="pt-6 first:pt-0 border-t border-slate-100 first:border-t-0">
-      <legend className="float-left w-full text-sm font-black uppercase tracking-widest text-slate-900 mb-1">{title}</legend>
+      <legend className="float-left w-full text-base font-black tracking-tight text-slate-900 mb-1">{title}</legend>
       {intro && <p className="clear-left text-sm text-slate-400 leading-relaxed mb-3">{intro}</p>}
       <div className="clear-left grid gap-4 pt-2">{children}</div>
     </fieldset>
@@ -287,12 +288,12 @@ function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
   return (
     <div className="space-y-6">
       <Group
-        title="Your initial DonoBrace model"
+        title="Your initial elastic model"
         intro="A model of the building with DonoBrace only (no QD), DonoBrace stiffness reduction factor applied."
       >
         <SelectField
           name="braceModel"
-          text="DonoBrace size used in the model"
+          text="DonoBrace size used in the initial elastic model"
           value={form.braceModel}
           options={[['DB15', 'DB15'], ['DB20', 'DB20'], ['DB25', 'DB25']]}
           onChange={onChange}
@@ -302,8 +303,8 @@ function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
       </Group>
 
       <Group
-        title="One lateral earthquake load case"
-        intro="All three from the same load case. Any linear case works; the elastic ULS case at T,e is simplest."
+        title="Parameters from the elastic model with S,p = 0.9"
+        intro="All three from the same ULS earthquake load case, S,p = 0.9 as for the DonoBrace method (Category 4). The calculator scales linearly, so any linear case gives the same result."
       >
         {numberField('Fe')}
         {numberField('ee')}
@@ -418,7 +419,7 @@ function LoopChart({ s }) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`${s.size} force against QD deformation: nominal loop with lower and upper bound loops, and the ULS and CALS performance points`}
+        aria-label={`${s.size} force against QD deformation: nominal loop with lower and upper bound loops, and the SLS, ULS and CALS points`}
         className="w-full h-auto block"
       >
         {[0, 10, 20, 30, 40, 50].map((x) => (
@@ -447,6 +448,9 @@ function LoopChart({ s }) {
         <path d={path(loop(s.dU))} fill="none" stroke="#64748b" strokeWidth="1.4" strokeDasharray="2 3" />
         <path d={path(loop(s.dev))} fill="none" stroke={BRAND} strokeWidth="2.6" strokeLinejoin="round" />
 
+        <line x1={L} x2={L + pw} y1={Y(s.FbSLS)} y2={Y(s.FbSLS)} stroke={MARGIN} strokeWidth="1.2" strokeDasharray="2 3" />
+        <text x={X(3)} y={Y(s.FbSLS) - 6} {...TICK} fill={MARGIN} stroke="#f8fafc" strokeWidth="4" paintOrder="stroke">F,b,SLS {f(s.FbSLS)} (locking check)</text>
+        <circle cx={X(s.sls.dqd)} cy={Y(s.sls.F)} r="6" fill={MARGIN} stroke="#fff" strokeWidth="2" />
         {u && !u.elastic && <circle cx={X(u.dqd)} cy={Y(u.F)} r="6" fill={BRAND} stroke="#fff" strokeWidth="2" />}
         {c && !c.elastic && <circle cx={X(c.dqd)} cy={Y(c.F)} r="6" fill="#fff" stroke={EQ} strokeWidth="2.4" />}
       </svg>
@@ -455,6 +459,7 @@ function LoopChart({ s }) {
           { label: 'Nominal', color: BRAND },
           { label: 'LBH', color: '#64748b', dash: '7 3' },
           { label: 'UBH', color: '#64748b', dash: '2 3' },
+          { label: s.sls.locked ? 'SLS point (QD locked)' : 'SLS point (QD slipping)', color: MARGIN, dot: true },
           { label: 'ULS point', color: BRAND, dot: true },
           { label: 'CALS point', color: EQ, dot: true, open: true },
         ]}
@@ -514,6 +519,15 @@ function AdrsChart({ s, input }) {
       <text x={X(D) - 5} y={T + 14 + dy} textAnchor="end" {...TICK} fill="#475569">{text}</text>
     </g>
   )
+  const Cs = (t) => ch(t, input.soil) * input.Z * input.Rs * input.N
+  const slsSpec = []
+  for (let i = 0; i <= 500; i++) {
+    const t = 0.02 + i * 0.01
+    const Sa = SP_SLS * Cs(t)
+    const d = sd(t, Sa)
+    if (d > xmax * 1.05) break
+    slsSpec.push([d, Sa])
+  }
   const ulsDamped = u && !u.elastic
   const calsDamped = c && !c.elastic
 
@@ -522,7 +536,7 @@ function AdrsChart({ s, input }) {
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
-        aria-label={`Acceleration-displacement response spectrum with the estimated capacity curve for ${label(s.size)} and the ULS and CALS performance points`}
+        aria-label={`Acceleration-displacement response spectrum with the estimated capacity curve for ${label(s.size)} and the SLS, ULS and CALS points`}
         className="w-full h-auto block"
       >
         <defs>
@@ -546,12 +560,14 @@ function AdrsChart({ s, input }) {
         <text x={L + pw / 2} y={H - 6} textAnchor="middle" {...AXIS_LABEL}>Roof displacement Δ, spectral displacement S,d (mm)</text>
         <text transform={`translate(15 ${T + ph / 2}) rotate(-90)`} textAnchor="middle" {...AXIS_LABEL}>V/W, S,a (g)</text>
         <g clipPath={`url(#${clipId})`}>
+          <path d={path(slsSpec)} fill="none" stroke={MARGIN} strokeWidth="1.4" strokeDasharray="2 3" />
           <path d={path(spec(1, 0.05))} fill="none" stroke="#94a3b8" strokeWidth="1.4" />
           {ulsDamped && <path d={path(spec(1, u.xi))} fill="none" stroke="#334155" strokeWidth="1.8" strokeDasharray="6 3" />}
           {calsDamped && <path d={path(spec(input.lamC, c.xi))} fill="none" stroke={EQ} strokeWidth="1.8" strokeDasharray="9 3 2 3" />}
           {limLine(s.Dlim, `Δ,lim ${f(s.Dlim, 0)}`, 0)}
           {limLine(s.Dstop, `Δ,stop ${f(s.Dstop, 0)}`, 16)}
           <path d={path(cap)} fill="none" stroke={BRAND} strokeWidth="2.6" strokeLinejoin="round" />
+          <circle cx={X(s.sls.D)} cy={Y(s.sls.Sa)} r="6" fill={MARGIN} stroke="#fff" strokeWidth="2" />
           {u && <circle cx={X(u.D)} cy={Y(u.Sa)} r="6" fill={BRAND} stroke="#fff" strokeWidth="2" />}
           {c && <circle cx={X(c.D)} cy={Y(c.Sa)} r="6" fill="#fff" stroke={EQ} strokeWidth="2.4" />}
         </g>
@@ -559,9 +575,11 @@ function AdrsChart({ s, input }) {
       <Legend
         items={[
           { label: `Capacity, ${label(s.size)} (estimated)`, color: BRAND },
+          { label: `SLS spectrum, 5%, R,s = ${f(input.Rs, 2)}, × S,p = ${f(SP_SLS, 2)}`, color: MARGIN, dash: '2 3' },
           { label: `ULS spectrum, 5%, × ${spText(input)}`, color: '#94a3b8' },
           ...(ulsDamped ? [{ label: `ULS damped, ξ = ${pct(u.xi)}`, color: '#334155', dash: '6 3' }] : []),
           ...(calsDamped ? [{ label: `CALS damped, ξ = ${pct(c.xi)}`, color: EQ, dash: '9 3 2 3' }] : []),
+          { label: 'SLS point', color: MARGIN, dot: true },
           { label: 'ULS point', color: BRAND, dot: true },
           { label: 'CALS point', color: EQ, dot: true, open: true },
         ]}
@@ -606,6 +624,7 @@ function calcSheet(r) {
   L.push(oc('CALS at stop', R.op.cals, '<='))
   L.push(oc('Ductility (mu > 1.25) at 1.25 Delta,y', R.op.duct, '>='))
   if (u) L.push(`ULS point: Delta ${f(u.D)} mm; delta ${f(u.dqd)} mm; brace ${f(u.F)} kN; V/W ${f(u.Sa, 3)}; mu ${f(u.mu, 2)}; drift x k,dm ${pct(u.driftKdm / 100, 2)}`)
+  L.push(`SLS point: Delta ${f(R.sls.D)} mm; delta ${f(R.sls.dqd, 2)} mm; brace ${f(R.sls.F)} kN; ${R.sls.locked ? 'QD locked' : 'QD slipping'}`)
   if (c) L.push(`CALS point: Delta ${f(c.D)} mm; delta ${f(c.dqd)} mm; brace ${f(c.F)} kN`)
   L.push(`F,max = ${f(R.cap.Fmax)} kN (optional DonoBrace overstrength ${f(R.cap.os)} kN)`)
   L.push('')
@@ -762,7 +781,7 @@ function DeviceSection({ s, B }) {
     <section>
       <StepHead eyebrow="Device" title={`${s.size} hysteresis, full loop to the hard stop`} />
       <p className="text-base text-slate-500 leading-relaxed mb-4">
-        The dots show where the ULS and CALS performance points sit on the loop. ULS travel is limited to 33 mm; at CALS the QD may travel to its hard stop at 50 mm.
+        The dots show where the SLS, ULS and CALS points sit on the loop. At SLS the QD should stay locked: the dotted line is the SLS brace force used in the locking check, the larger of the values at T,e and at the full-bar-area period, so it can sit a little above the SLS point. ULS travel is limited to 33 mm; at CALS the QD may travel to its hard stop at 50 mm.
       </p>
       <div className="grid gap-5">
         <div className="max-w-2xl"><LoopChart s={s} /></div>
@@ -885,7 +904,7 @@ function PerformanceSection({ s, input }) {
 
   return (
     <section>
-      <StepHead eyebrow="Step 4" title={`ULS and CALS performance points for ${label(s.size)}`} />
+      <StepHead eyebrow="Step 4" title={`SLS, ULS and CALS performance points for ${label(s.size)}`} />
       <p className="text-base text-slate-500 leading-relaxed mb-4">
         The estimated capacity curve against the damped demand spectra, with the spectrum reduced by {spText(input)} ({SP_METHOD_LABEL[input.spMethod ?? 'marriott']}). Each performance point is where the capacity curve meets the spectrum for its own effective damping.
       </p>
@@ -893,6 +912,7 @@ function PerformanceSection({ s, input }) {
         <AdrsChart s={s} input={input} />
       </div>
       <Table className="mt-5" head={['Performance point', 'Δ mm', 'δ mm', 'Brace kN', 'V/W', 'T,eff s', 'ξ,eff']}>
+        {pp(s.sls, s.sls.locked ? 'SLS (QD locked)' : 'SLS (QD slipping)')}
         {pp(u, 'ULS')}
         {pp(c, `CALS (λ = ${f(input.lamC, 2)})`)}
       </Table>
