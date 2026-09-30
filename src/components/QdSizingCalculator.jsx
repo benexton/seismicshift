@@ -630,7 +630,7 @@ function calcSheet(r) {
   if (c) L.push(`CALS point: Delta ${f(c.D)} mm; delta ${f(c.dqd)} mm; brace ${f(c.F)} kN`)
   L.push(`F,max = ${f(R.cap.Fmax)} kN (optional DonoBrace overstrength ${f(R.cap.os)} kN)`)
   L.push('')
-  L.push(`DONOBRACE ALONE: ${db.brace}; brace force ${f(db.Nstar)} kN; V/W ${f(db.V, 3)}; connection ${f(db.Nconn)} kN; drift x k,dm ${pct(db.driftKdm / 100, 2)}`)
+  for (const d of [db, r.donoBraceCat3]) L.push(`DONOBRACE ALONE, CATEGORY ${d.category} (mu ${f(d.mu, 2)}, S,p 0.9, k,mu ${f(d.kmu, 2)}): ${d.brace}; brace force ${f(d.Nstar)} kN; V/W ${f(d.V, 3)}; connection ${f(d.Nconn)} kN (overstrength capped ${f(d.osCapped)} kN); drift x k,dm ${pct(d.driftKdm / 100, 2)}; CALS ${f(d.Dcals)} mm, ${pct(d.calsYield, 0)} of yield`)
   if (r.messages.length) {
     L.push('')
     L.push('MESSAGES')
@@ -739,7 +739,7 @@ function Summary({ r }) {
     { k: 'QD travel at CALS', v: c ? f(c.dqd) : 'past stop', unit: c ? 'of 50 mm' : '' },
     { k: 'Ductility μ at ULS', v: u ? f(u.mu, 2) : '-', unit: '' },
     { k: 'Brace force at ULS', v: u ? f(u.F) : '-', unit: 'kN' },
-    { k: 'DonoBrace alone', v: db.brace, unit: `${f(db.Nstar)} kN` },
+    { k: 'DonoBrace alone, Cat 4 / Cat 3', v: `${db.brace} / ${r.donoBraceCat3.brace}`, unit: '' },
   ]
 
   return (
@@ -879,27 +879,60 @@ function ChecksSection({ s, input }) {
   )
 }
 
-function ComparisonSection({ s, db }) {
+// A number with its basis in small type underneath, so three columns stay narrow.
+function Basis({ value, basis }) {
+  return (
+    <>
+      {value}
+      {basis && <span className="block text-[0.7rem] font-medium text-slate-400 whitespace-nowrap">{basis}</span>}
+    </>
+  )
+}
+
+function ComparisonSection({ s, db4, db3 }) {
   const u = s.uls
   const c = s.cals
+  const dbCals = (d) => <Basis value={`${f(d.Dcals)} mm`} basis={`${pct(d.calsYield, 0)} of brace yield`} />
+  const capBasis = (d) => (d.os <= d.elasticCap ? '1.3 N,t' : `elastic cap, S,p = ${d.category === 3 ? '0.9' : '1.0'}`)
   return (
     <section>
       <StepHead eyebrow="Comparison" title="The same line with DonoBrace alone" />
       <p className="text-base text-slate-500 leading-relaxed mb-4">
-        DonoBrace method: Category 4, S,p = 0.9, elastic, period from the full bar area, displacements from the SRF stiffness.{db.ok ? '' : ' Even DB25 is overstressed.'}
+        Two DonoBrace-only designs to NZS 3404, both with the period from the full bar area and displacements from the SRF stiffness. Category 4 (elastic, μ = 1.0, S,p = 0.9) is the DonoBrace method. Category 3 (nominally ductile, μ = 1.25, S,p = 0.9, NZS 3404 Table 12.2.4) reduces the design action by k,μ = {f(db3.kmu, 2)} (NZS 1170.5 cl 5.2.1.1) and multiplies the elastic displacement by μ (cl 7.2.1.1).
+        {db4.ok ? '' : ' Even DB25 is overstressed as Category 4.'}
+        {db3.ok ? '' : ' Even DB25 is overstressed as Category 3.'}
       </p>
-      <Table head={['', label(s.size), `${db.brace} alone`]}>
-        <tr><Td>ULS brace force</Td><Num>{u ? `${f(u.F)} kN` : '-'}</Num><Num>{f(db.Nstar)} kN</Num></tr>
-        <tr><Td>ULS base shear coefficient V/W</Td><Num>{u ? f(u.Sa, 3) : '-'}</Num><Num>{f(db.V, 3)}</Num></tr>
-        <tr><Td>Connection force, method basis</Td><Num>{f(s.cap.Fmax)} kN (F,max)</Num><Num>{f(db.Nconn)} kN (S,p = 1.0)</Num></tr>
-        <tr><Td>Connection force, overstrength basis</Td><Num>{f(s.cap.os)} kN</Num><Num>{f(db.os)} kN</Num></tr>
-        <tr><Td>ULS drift with k,dm</Td><Num>{u ? pct(u.driftKdm / 100, 2) : '-'}</Num><Num>{pct(db.driftKdm / 100, 2)}</Num></tr>
+      <Table head={['', label(s.size), `${db4.brace} alone, Cat 4`, `${db3.brace} alone, Cat 3`]}>
+        <tr>
+          <Td>ULS brace force</Td>
+          <Num>{u ? `${f(u.F)} kN` : '-'}</Num>
+          <Num><Basis value={`${f(db4.Nstar)} kN`} basis={`of φN,t ${f(db4.phiNt)}`} /></Num>
+          <Num><Basis value={`${f(db3.Nstar)} kN`} basis={`of φN,t ${f(db3.phiNt)}`} /></Num>
+        </tr>
+        <tr><Td>ULS base shear coefficient V/W</Td><Num>{u ? f(u.Sa, 3) : '-'}</Num><Num>{f(db4.V, 3)}</Num><Num>{f(db3.V, 3)}</Num></tr>
+        <tr>
+          <Td>Connection force, method basis</Td>
+          <Num><Basis value={`${f(s.cap.Fmax)} kN`} basis="F,max" /></Num>
+          <Num><Basis value={`${f(db4.Nconn)} kN`} basis="elastic, S,p = 1.0" /></Num>
+          <Num><Basis value={`${f(db3.Nconn)} kN`} basis={`capacity design, ${capBasis(db3)}`} /></Num>
+        </tr>
+        <tr>
+          <Td>Connection force, overstrength basis</Td>
+          <Num>{f(s.cap.os)} kN</Num>
+          <Num><Basis value={`${f(db4.osCapped)} kN`} basis={capBasis(db4)} /></Num>
+          <Num><Basis value={`${f(db3.osCapped)} kN`} basis={capBasis(db3)} /></Num>
+        </tr>
+        <tr><Td>ULS drift with k,dm</Td><Num>{u ? pct(u.driftKdm / 100, 2) : '-'}</Num><Num>{pct(db4.driftKdm / 100, 2)}</Num><Num>{pct(db3.driftKdm / 100, 2)}</Num></tr>
         <tr>
           <Td>CALS</Td>
-          <Num>{c ? `${f(c.D)} mm, δ ${f(c.dqd)} of 50` : 'past stop'}</Num>
-          <Num>{f(db.Dcals)} mm, {pct(db.calsYield, 0)} of yield</Num>
+          <Num>{c ? <Basis value={`${f(c.D)} mm`} basis={`δ ${f(c.dqd)} of 50 mm`} /> : 'past stop'}</Num>
+          <Num>{dbCals(db4)}</Num>
+          <Num>{dbCals(db3)}</Num>
         </tr>
       </Table>
+      <Note>
+        DonoBrace overstrength actions are 1.3 N,t, capped at the elastic response (NZS 3404 cl 12.9.1.2.2(4)(b); for Category 4 the S,p = 1.0 elastic actions of cl 12.9.1.2.2(2) are the upper limit). Where a capped Category 3 connection uses fillet welds, bolts or pins, check cl 12.9.1.2.2(4)(c) as well.
+      </Note>
     </section>
   )
 }
@@ -1116,7 +1149,7 @@ export default function QdSizingCalculator() {
           <DeviceSection s={s} B={result.basis} />
           <ChecksSection s={s} input={result.input} />
           <PerformanceSection s={s} input={result.input} />
-          <ComparisonSection s={s} db={result.donoBrace} />
+          <ComparisonSection s={s} db4={result.donoBrace} db3={result.donoBraceCat3} />
           <Working s={s} />
         </div>
       </div>
