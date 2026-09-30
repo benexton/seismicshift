@@ -447,7 +447,7 @@ function LoopChart({ s }) {
         <line x1={X(D_ULS)} x2={X(D_ULS)} y1={T} y2={T + ph} stroke="#475569" strokeDasharray="3 3" />
         <text x={X(D_ULS) - 5} y={T + 14} textAnchor="end" {...TICK} fill="#475569">δ,ULS 33</text>
         <line x1={X(D_STOP)} x2={X(D_STOP)} y1={T} y2={T + ph} stroke="#475569" strokeDasharray="3 3" />
-        <text x={X(D_STOP) - 5} y={T + 30} textAnchor="end" {...TICK} fill="#475569">δ,stop 50</text>
+        <text x={X(D_STOP) - 5} y={T + 14} textAnchor="end" {...TICK} fill="#475569">δ,stop 50</text>
 
         <path d={path(loop(s.dev))} fill={BRAND} fillOpacity="0.08" stroke="none" />
         <path d={path(loop(s.dL))} fill="none" stroke="#64748b" strokeWidth="1.4" strokeDasharray="7 3" />
@@ -569,7 +569,8 @@ function AdrsChart({ s, input }) {
           {ulsDamped && <path d={path(spec(1, u.xi))} fill="none" stroke="#334155" strokeWidth="1.8" strokeDasharray="6 3" />}
           {calsDamped && <path d={path(spec(input.lamC, c.xi))} fill="none" stroke={EQ} strokeWidth="1.8" strokeDasharray="9 3 2 3" />}
           {limLine(s.Dlim, `Δ,lim ${f(s.Dlim, 0)}`, 0)}
-          {limLine(s.Dstop, `Δ,stop ${f(s.Dstop, 0)}`, 16)}
+          {/* Same height as the Δ,lim label unless the two lines are too close for both labels to fit. */}
+          {limLine(s.Dstop, `Δ,stop ${f(s.Dstop, 0)}`, X(s.Dstop) - X(s.Dlim) < 80 ? 16 : 0)}
           <path d={path(cap)} fill="none" stroke={BRAND} strokeWidth="2.6" strokeLinejoin="round" />
           <circle cx={X(s.sls.D)} cy={Y(s.sls.Sa)} r="6" fill={MARGIN} stroke="#fff" strokeWidth="2" />
           {u && <circle cx={X(u.D)} cy={Y(u.Sa)} r="6" fill={BRAND} stroke="#fff" strokeWidth="2" />}
@@ -824,7 +825,7 @@ function DeviceSection({ s, B }) {
             {row('F at 33 mm', (d) => d.fLoad(D_ULS))}
           </Table>
           <Note>
-            F,max for capacity design is the UBH force at 50 mm: {f(s.cap.Fmax)} kN ({f(s.cap.Fmax * B.c)} kN along the direction of loading).
+            F,max for capacity design is the UBH force at 50 mm: {f(s.cap.Fmax)} kN ({f(s.cap.Fmax * B.c)} kN along the direction of loading). Against the {s.brace} design capacity φN,t = {f(s.cap.phiNt)} kN that is a ratio of {f(s.cap.ratio, 2)}{s.cap.protects ? ', so the brace protects the QD' : <strong className="text-red-600">, so the brace is not capacity-protected (NZS 3404 cl 12.2.7.4)</strong>}.
           </Note>
         </div>
       </div>
@@ -861,7 +862,7 @@ function ChecksSection({ s, input }) {
           <Td className="text-right"><Chip ok={s.lockSLS.ratio <= 1} /></Td>
         </tr>
         <tr>
-          <Td>ULS wind, 1.3 Fb,wind</Td>
+          <Td>1.3 × ULS wind, 1.3 Fb,wind</Td>
           <Num>{f(s.lockWind.F)}</Num>
           <Num>{f(s.lockWind.ratio, 2)}</Num>
           <Td className="text-right"><Chip ok={s.lockWind.ratio <= 1} /></Td>
