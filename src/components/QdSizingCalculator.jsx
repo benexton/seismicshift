@@ -13,6 +13,7 @@ import {
   spFactor,
   SP_SLS,
   DB_FU,
+  DRIFT_LIMIT,
 } from '../lib/qdSizing'
 
 const BRAND = '#17638f'
@@ -629,7 +630,7 @@ function calcSheet(r) {
   if (c) L.push(`CALS point: Delta ${f(c.D)} mm; delta ${f(c.dqd)} mm; brace ${f(c.F)} kN`)
   L.push(`F,max = ${f(R.cap.Fmax)} kN (optional DonoBrace overstrength ${f(R.cap.os)} kN)`)
   L.push('')
-  for (const d of [db, r.donoBraceCat3]) L.push(`DONOBRACE ALONE, CATEGORY ${d.category} (mu ${f(d.mu, 2)}, S,p 0.9, k,mu ${f(d.kmu, 2)}): ${d.brace}; brace force ${f(d.Nstar)} kN; V/W ${f(d.V, 3)}; connection ${f(d.Nconn)} kN (overstrength capped ${f(d.osCapped)} kN); drift x k,dm ${pct(d.driftKdm / 100, 2)}; CALS ${f(d.Dcals)} mm, brace stress ${f(d.calsStress, 0)} of ${DB_FU} MPa${d.ok ? "" : " (FAILS)"}`)
+  for (const d of [db, r.donoBraceCat3]) L.push(`DONOBRACE ALONE, CATEGORY ${d.category} (mu ${f(d.mu, 2)}, S,p 0.9, k,mu ${f(d.kmu, 2)}, C,s ${f(d.Cs, 1)}): ${d.brace}; brace force ${f(d.Nstar)} kN; V/W ${f(d.Vs, 3)} (C,d ${f(d.V, 3)}); connection ${f(d.Nconn)} kN (overstrength capped ${f(d.osCapped)} kN); drift x k,dm ${pct(d.driftKdm / 100, 2)} (limit ${DRIFT_LIMIT}%); P-delta ${d.pdelta.exempt ? 'not required, cl 6.5.2(' + d.pdelta.exempt + ')' : 'required'}; CALS ${f(d.Dcals)} mm, brace stress ${f(d.calsStress, 0)} of ${DB_FU} MPa${d.ok ? "" : " (FAILS)"}`)
   if (r.messages.length) {
     L.push('')
     L.push('MESSAGES')
@@ -894,7 +895,8 @@ function ComparisonSection({ s, db4, db3 }) {
       <Basis value={`${f(d.Dcals)} mm`} basis={`${f(d.calsStress, 0)} of ${DB_FU} MPa`} />
     </span>
   )
-  const fails = (d) => (d.ok ? '' : ` Even DB25 fails as Category ${d.category} (${[!d.okUls && 'ULS strength', !d.okCals && 'CALS stress'].filter(Boolean).join(' and ')}).`)
+  const fails = (d) => (d.ok ? '' : ` Even DB25 fails as Category ${d.category} (${[!d.okUls && 'ULS strength', !d.okCals && 'CALS stress', !d.okDrift && 'drift'].filter(Boolean).join(', ')}).`)
+  const pdText = (pd) => (pd.exempt ? `not required, cl 6.5.2(${pd.exempt})` : 'required, cl 6.5.2')
   const capBasis = (d) =>
     d.cappedC ? '1.25 φN,t, (4)(c)' : d.os <= d.elasticCap ? '1.3 N,t' : `elastic cap, S,p = ${d.category === 3 ? '0.9' : '1.0'}`
   return (
@@ -902,7 +904,7 @@ function ComparisonSection({ s, db4, db3 }) {
       <StepHead eyebrow="Comparison" title="The same line with DonoBrace alone" />
       <p className="text-base text-slate-500 leading-relaxed mb-4">
         Two DonoBrace-only designs to NZS 3404, both with the period from the full bar area and displacements from the SRF stiffness. Category 4 (elastic, μ = 1.0, S,p = 0.9) is the DonoBrace method. Category 3 (nominally ductile, μ = 1.25, S,p = 0.9, NZS 3404 Table 12.2.4) reduces the design action by k,μ = {f(db3.kmu, 2)} (NZS 1170.5 cl 5.2.1.1) and multiplies the elastic displacement by μ (cl 7.2.1.1).
- Each takes the smallest bar with N* ≤ φN,t at ULS and a brace stress at the CALS displacement of no more than the bar's {DB_FU} MPa ultimate strength.
+ Category 3 strength also carries the tension-braced factor C,s = 1.1 (NZS 3404 cl 12.12.6.3.2, 1 to 2 storeys; 1.0 for Category 4), on strength only. Each takes the smallest bar with N* ≤ φN,t at ULS, drift × k,dm within {DRIFT_LIMIT}% (NZS 1170.5 cl 7.5.1), and a brace stress at the CALS displacement of no more than the bar's {DB_FU} MPa ultimate strength.
         {fails(db4)}
         {fails(db3)}
       </p>
@@ -917,7 +919,12 @@ function ComparisonSection({ s, db4, db3 }) {
           <Num><Basis value={`${f(db4.Nstar)} kN`} basis={`of φN,t ${f(db4.phiNt)}`} /></Num>
           <Num><Basis value={`${f(db3.Nstar)} kN`} basis={`of φN,t ${f(db3.phiNt)}`} /></Num>
         </tr>
-        <tr><Td>ULS base shear coefficient V/W</Td><Num>{u ? f(u.Sa, 3) : '-'}</Num><Num>{f(db4.V, 3)}</Num><Num>{f(db3.V, 3)}</Num></tr>
+        <tr>
+          <Td>ULS base shear coefficient V/W</Td>
+          <Num>{u ? f(u.Sa, 3) : '-'}</Num>
+          <Num><Basis value={f(db4.Vs, 3)} basis={`C,s ${f(db4.Cs, 1)} × C,d ${f(db4.V, 3)}`} /></Num>
+          <Num><Basis value={f(db3.Vs, 3)} basis={`C,s ${f(db3.Cs, 1)} × C,d ${f(db3.V, 3)}`} /></Num>
+        </tr>
         <tr>
           <Td>Connection force, method basis</Td>
           <Num><Basis value={`${f(s.cap.Fmax)} kN`} basis="F,max" /></Num>
@@ -930,7 +937,20 @@ function ComparisonSection({ s, db4, db3 }) {
           <Num><Basis value={`${f(db4.osCapped)} kN`} basis={capBasis(db4)} /></Num>
           <Num><Basis value={`${f(db3.osCapped)} kN`} basis={capBasis(db3)} /></Num>
         </tr>
-        <tr><Td>ULS drift with k,dm</Td><Num>{u ? pct(u.driftKdm / 100, 2) : '-'}</Num><Num>{pct(db4.driftKdm / 100, 2)}</Num><Num>{pct(db3.driftKdm / 100, 2)}</Num></tr>
+        <tr>
+          <Td>ULS drift with k,dm</Td>
+          <Num><Basis value={u ? pct(u.driftKdm / 100, 2) : '-'} basis={`limit ${DRIFT_LIMIT}%`} /></Num>
+          {[db4, db3].map((d) => (
+            <Num key={d.category} className={d.okDrift ? '' : 'text-red-600'}><Basis value={pct(d.driftKdm / 100, 2)} basis={`limit ${DRIFT_LIMIT}%`} /></Num>
+          ))}
+        </tr>
+        <tr>
+          <Td>P-delta analysis (NZS 1170.5)</Td>
+          <Num>{s.pdelta ? <Basis value={`θ ${f(s.pdelta.theta, 3)}`} basis={pdText(s.pdelta)} /> : '-'}</Num>
+          {[db4, db3].map((d) => (
+            <Num key={d.category}><Basis value={`θ ${f(d.pdelta.theta, 3)}`} basis={pdText(d.pdelta)} /></Num>
+          ))}
+        </tr>
         <tr>
           <Td>CALS</Td>
           <Num>{c ? <Basis value={`${f(c.D)} mm`} basis={`δ ${f(c.dqd)} of 50 mm`} /> : 'past stop'}</Num>
@@ -989,7 +1009,7 @@ function PerformanceSection({ s, input }) {
       </Table>
       {u && (
         <Note>
-          ULS drift × k,dm = {pct(u.driftKdm / 100, 2)}; stability coefficient θ = {f(u.theta, 3)}; {s.brace} utilisation {f(u.util, 2)}.
+          ULS drift × k,dm = {pct(u.driftKdm / 100, 2)} (limit {DRIFT_LIMIT}%); stability coefficient θ = {f(u.theta, 3)}, so P-delta analysis is {s.pdelta?.exempt ? `not required (NZS 1170.5 cl 6.5.2(${s.pdelta.exempt}))` : 'required (NZS 1170.5 cl 6.5.2)'}; {s.brace} utilisation {f(u.util, 2)}.
         </Note>
       )}
     </section>
