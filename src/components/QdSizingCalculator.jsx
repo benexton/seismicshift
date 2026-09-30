@@ -893,7 +893,8 @@ function ComparisonSection({ s, db4, db3 }) {
   const u = s.uls
   const c = s.cals
   const dbCals = (d) => <Basis value={`${f(d.Dcals)} mm`} basis={`${pct(d.calsYield, 0)} of brace yield`} />
-  const capBasis = (d) => (d.os <= d.elasticCap ? '1.3 N,t' : `elastic cap, S,p = ${d.category === 3 ? '0.9' : '1.0'}`)
+  const capBasis = (d) =>
+    d.cappedC ? '1.25 φN,t, cl 12.9.1.2.2(4)(c)' : d.os <= d.elasticCap ? '1.3 N,t' : `elastic cap, S,p = ${d.category === 3 ? '0.9' : '1.0'}`
   return (
     <section>
       <StepHead eyebrow="Comparison" title="The same line with DonoBrace alone" />
@@ -931,7 +932,7 @@ function ComparisonSection({ s, db4, db3 }) {
         </tr>
       </Table>
       <Note>
-        DonoBrace overstrength actions are 1.3 N,t, capped at the elastic response (NZS 3404 cl 12.9.1.2.2(4)(b); for Category 4 the S,p = 1.0 elastic actions of cl 12.9.1.2.2(2) are the upper limit). Where a capped Category 3 connection uses fillet welds, bolts or pins, check cl 12.9.1.2.2(4)(c) as well.
+        DonoBrace overstrength actions are 1.3 N,t, capped at the elastic response (NZS 3404 cl 12.9.1.2.2(4)(b); for Category 4 the S,p = 1.0 elastic actions of cl 12.9.1.2.2(2) are the upper limit). Where the cap governs a Category 3 connection, cl 12.9.1.2.2(4)(c) then sets it at 1.25 × the brace design capacity, 1.25 φN,t, which assumes bolted, pinned or fillet-welded connections.
       </Note>
     </section>
   )
