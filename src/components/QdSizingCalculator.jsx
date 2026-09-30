@@ -825,7 +825,7 @@ function DeviceSection({ s, B }) {
             {row('F at 33 mm', (d) => d.fLoad(D_ULS))}
           </Table>
           <Note>
-            F,max for capacity design is the UBH force at 50 mm: {f(s.cap.Fmax)} kN ({f(s.cap.Fmax * B.c)} kN along the direction of loading). Against the {s.brace} design capacity φN,t = {f(s.cap.phiNt)} kN that is a ratio of {f(s.cap.ratio, 2)}{s.cap.protects ? ', so the brace protects the QD' : <strong className="text-red-600">, so the brace is not capacity-protected (NZS 3404 cl 12.2.7.4)</strong>}.
+            F,max for capacity design is the UBH force at 50 mm: {f(s.cap.Fmax)} kN ({f(s.cap.Fmax * B.c)} kN along the direction of loading).
           </Note>
         </div>
       </div>
