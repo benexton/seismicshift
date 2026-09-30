@@ -12,6 +12,7 @@ import {
   sd,
   spFactor,
   SP_SLS,
+  DB_FU,
 } from '../lib/qdSizing'
 
 const BRAND = '#17638f'
@@ -156,10 +157,12 @@ function Chip({ ok, pass = 'Pass', fail = 'Fail' }) {
   )
 }
 
-function Table({ head, children, className = '' }) {
+// cols: optional column widths (e.g. ['34%', '22%', ...]) for a fixed layout with even columns.
+function Table({ head, children, className = '', cols, minWidth }) {
   return (
     <div className={`overflow-x-auto rounded-xl border border-slate-200 ${className}`}>
-      <table className="w-full text-sm text-left border-collapse">
+      <table className={`w-full text-sm text-left border-collapse ${cols ? 'table-fixed' : ''}`} style={minWidth ? { minWidth } : undefined}>
+        {cols && <colgroup>{cols.map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>}
         {head && (
           <thead>
             <tr className="bg-[#17638f] text-white">
@@ -450,8 +453,6 @@ function LoopChart({ s }) {
         <path d={path(loop(s.dU))} fill="none" stroke="#64748b" strokeWidth="1.4" strokeDasharray="2 3" />
         <path d={path(loop(s.dev))} fill="none" stroke={BRAND} strokeWidth="2.6" strokeLinejoin="round" />
 
-        <line x1={L} x2={L + pw} y1={Y(s.FbSLS)} y2={Y(s.FbSLS)} stroke={MARGIN} strokeWidth="1.2" strokeDasharray="2 3" />
-        <text x={X(3)} y={Y(s.FbSLS) - 6} {...TICK} fill={MARGIN} stroke="#f8fafc" strokeWidth="4" paintOrder="stroke">F,b,SLS {f(s.FbSLS)} (locking check)</text>
         <circle cx={X(s.sls.dqd)} cy={Y(s.sls.F)} r="6" fill={MARGIN} stroke="#fff" strokeWidth="2" />
         {u && !u.elastic && <circle cx={X(u.dqd)} cy={Y(u.F)} r="6" fill={BRAND} stroke="#fff" strokeWidth="2" />}
         {c && !c.elastic && <circle cx={X(c.dqd)} cy={Y(c.F)} r="6" fill="#fff" stroke={EQ} strokeWidth="2.4" />}
@@ -630,7 +631,7 @@ function calcSheet(r) {
   if (c) L.push(`CALS point: Delta ${f(c.D)} mm; delta ${f(c.dqd)} mm; brace ${f(c.F)} kN`)
   L.push(`F,max = ${f(R.cap.Fmax)} kN (optional DonoBrace overstrength ${f(R.cap.os)} kN)`)
   L.push('')
-  for (const d of [db, r.donoBraceCat3]) L.push(`DONOBRACE ALONE, CATEGORY ${d.category} (mu ${f(d.mu, 2)}, S,p 0.9, k,mu ${f(d.kmu, 2)}): ${d.brace}; brace force ${f(d.Nstar)} kN; V/W ${f(d.V, 3)}; connection ${f(d.Nconn)} kN (overstrength capped ${f(d.osCapped)} kN); drift x k,dm ${pct(d.driftKdm / 100, 2)}; CALS ${f(d.Dcals)} mm, ${pct(d.calsYield, 0)} of yield`)
+  for (const d of [db, r.donoBraceCat3]) L.push(`DONOBRACE ALONE, CATEGORY ${d.category} (mu ${f(d.mu, 2)}, S,p 0.9, k,mu ${f(d.kmu, 2)}): ${d.brace}; brace force ${f(d.Nstar)} kN; V/W ${f(d.V, 3)}; connection ${f(d.Nconn)} kN (overstrength capped ${f(d.osCapped)} kN); drift x k,dm ${pct(d.driftKdm / 100, 2)}; CALS ${f(d.Dcals)} mm, brace stress ${f(d.calsStress, 0)} of ${DB_FU} MPa${d.ok ? "" : " (FAILS)"}`)
   if (r.messages.length) {
     L.push('')
     L.push('MESSAGES')
@@ -811,7 +812,7 @@ function DeviceSection({ s, B }) {
     <section>
       <StepHead eyebrow="Device" title={`${s.size} hysteresis, full loop to the hard stop`} />
       <p className="text-base text-slate-500 leading-relaxed mb-4">
-        The dots show where the SLS, ULS and CALS points sit on the loop. At SLS the QD should stay locked: the dotted line is the SLS brace force used in the locking check, the larger of the values at T,e and at the full-bar-area period, so it can sit a little above the SLS point. ULS travel is limited to 33 mm; at CALS the QD may travel to its hard stop at 50 mm.
+        The dots show where the SLS, ULS and CALS points sit on the loop, the same points as on the ADRS below. At SLS the QD should stay locked; the locking check itself uses the larger SLS force from T,e and the full-bar-area period ({f(s.FbSLS)} kN). ULS travel is limited to 33 mm; at CALS the QD may travel to its hard stop at 50 mm.
       </p>
       <div className="grid gap-5">
         <div className="max-w-2xl"><LoopChart s={s} /></div>
@@ -884,7 +885,7 @@ function Basis({ value, basis }) {
   return (
     <>
       {value}
-      {basis && <span className="block text-[0.7rem] font-medium text-slate-400 whitespace-nowrap">{basis}</span>}
+      {basis && <span className="block text-[0.7rem] font-medium text-slate-400 whitespace-normal leading-snug mt-0.5">{basis}</span>}
     </>
   )
 }
@@ -892,18 +893,28 @@ function Basis({ value, basis }) {
 function ComparisonSection({ s, db4, db3 }) {
   const u = s.uls
   const c = s.cals
-  const dbCals = (d) => <Basis value={`${f(d.Dcals)} mm`} basis={`${pct(d.calsYield, 0)} of brace yield`} />
+  const dbCals = (d) => (
+    <span className={d.okCals ? '' : 'text-red-600'}>
+      <Basis value={`${f(d.Dcals)} mm`} basis={`${f(d.calsStress, 0)} of ${DB_FU} MPa`} />
+    </span>
+  )
+  const fails = (d) => (d.ok ? '' : ` Even DB25 fails as Category ${d.category} (${[!d.okUls && 'ULS strength', !d.okCals && 'CALS stress'].filter(Boolean).join(' and ')}).`)
   const capBasis = (d) =>
-    d.cappedC ? '1.25 φN,t, cl 12.9.1.2.2(4)(c)' : d.os <= d.elasticCap ? '1.3 N,t' : `elastic cap, S,p = ${d.category === 3 ? '0.9' : '1.0'}`
+    d.cappedC ? '1.25 φN,t, (4)(c)' : d.os <= d.elasticCap ? '1.3 N,t' : `elastic cap, S,p = ${d.category === 3 ? '0.9' : '1.0'}`
   return (
     <section>
       <StepHead eyebrow="Comparison" title="The same line with DonoBrace alone" />
       <p className="text-base text-slate-500 leading-relaxed mb-4">
         Two DonoBrace-only designs to NZS 3404, both with the period from the full bar area and displacements from the SRF stiffness. Category 4 (elastic, μ = 1.0, S,p = 0.9) is the DonoBrace method. Category 3 (nominally ductile, μ = 1.25, S,p = 0.9, NZS 3404 Table 12.2.4) reduces the design action by k,μ = {f(db3.kmu, 2)} (NZS 1170.5 cl 5.2.1.1) and multiplies the elastic displacement by μ (cl 7.2.1.1).
-        {db4.ok ? '' : ' Even DB25 is overstressed as Category 4.'}
-        {db3.ok ? '' : ' Even DB25 is overstressed as Category 3.'}
+ Each takes the smallest bar with N* ≤ φN,t at ULS and a brace stress at the CALS displacement of no more than the bar's {DB_FU} MPa ultimate strength.
+        {fails(db4)}
+        {fails(db3)}
       </p>
-      <Table head={['', label(s.size), `${db4.brace} alone, Cat 4`, `${db3.brace} alone, Cat 3`]}>
+      <Table
+        head={['', label(s.size), `${db4.brace} alone, Cat 4`, `${db3.brace} alone, Cat 3`]}
+        cols={['31%', '23%', '23%', '23%']}
+        minWidth="34rem"
+      >
         <tr>
           <Td>ULS brace force</Td>
           <Num>{u ? `${f(u.F)} kN` : '-'}</Num>
