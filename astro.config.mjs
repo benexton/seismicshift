@@ -18,7 +18,8 @@ export default defineConfig({
         !page.includes('/erp/public-preview/') &&
         !page.includes('/erp/codes/') &&
         !page.endsWith('/erp/') &&
-        !page.endsWith('/walk/'), // unlinked - reachable by direct URL only, like public/build-to-thrive
+        !page.endsWith('/walk/') && // unlinked - reachable by direct URL only, like public/build-to-thrive
+        !page.includes('/quake-defender/sizing-calculator/'), // unlinked + noindex until methodology V26.10 is published
     }),
   ],
   vite: {

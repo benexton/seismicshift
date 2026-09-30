@@ -4,10 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "npm run sync:qd && astro dev",
+    "sync:qd": "node scripts/sync-qd-engine.mjs",
     "build:data": "node scripts/build-buildings.mjs",
     "build:matrix": "node scripts/build-matrix.mjs",
-    "build": "npm run build:data && npm run build:matrix && astro build",
+    "build": "npm run sync:qd && npm run build:data && npm run build:matrix && astro build",
     "preview": "astro preview",
     "lint": "eslint ."
   },

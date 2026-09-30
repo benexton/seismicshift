@@ -22,9 +22,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      # The Quake Defender sizing engine's source lives in the private
+      # seismicshift-pipeline repo; check out just that file with a read-only
+      # deploy key so scripts/sync-qd-engine.mjs can copy it in before the build.
+      - uses: actions/checkout@v4
+        with:
+          repository: benexton/seismicshift-pipeline
+          ssh-key: ${{ secrets.PIPELINE_DEPLOY_KEY }}
+          path: _pipeline
+          sparse-checkout: qd-sizing/qdSizing.ts
+          sparse-checkout-cone-mode: false
       - run: npm install
       - run: npm run build
         env:
+          QD_ENGINE_SRC: _pipeline/qd-sizing/qdSizing.ts
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
           PUBLIC_LFE_SUPABASE_URL: ${{ secrets.PUBLIC_LFE_SUPABASE_URL }}

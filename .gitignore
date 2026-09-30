@@ -22,6 +22,11 @@ supabase/.temp/
 # serves, which IS committed. Re-download from CCC's open-data portal to rebuild.
 docs/Flood_Extent_*.geojson
 
+# Quake Defender sizing engine - source lives in the private seismicshift-pipeline
+# repo (qd-sizing/qdSizing.ts); scripts/sync-qd-engine.mjs copies it in before
+# dev/build, so it never gets committed here.
+src/lib/qdSizing.ts
+
 # Astro CLI's local lastUpdateCheck timestamp - machine/session-specific, no functional content
 .astro/settings.json
 
