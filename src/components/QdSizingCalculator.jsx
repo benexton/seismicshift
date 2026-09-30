@@ -36,6 +36,7 @@ const BUTTON_FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring
 const NUMERIC = {
   angle: { label: 'Brace angle to the direction of loading, θ (°)', min: 5, max: 85, help: 'Direction of loading means the horizontal loading axis parallel to the braced frame.' },
   Te: { label: 'Elastic period T,e (s)', min: 0.02, help: 'From your model, in this direction.' },
+  SpLoad: { label: 'S,p applied in the load case', min: 0.5, max: 1, help: '0.9 for the DonoBrace method (Category 4). Only used to back-check the load case against the hazard; the results do not depend on it.' },
   Fe: { label: 'Critical brace force (kN)', min: 0.1 },
   ee: { label: 'Critical brace elongation (mm)', min: 0.01 },
   De: { label: 'Roof displacement (mm)', min: 0.01, help: 'At the deformation-control point.' },
@@ -303,9 +304,10 @@ function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
       </Group>
 
       <Group
-        title="Parameters from the elastic model with S,p = 0.9"
-        intro="All three from the same ULS earthquake load case, S,p = 0.9 as for the DonoBrace method (Category 4). The calculator scales linearly, so any linear case gives the same result."
+        title="Parameters from the elastic model"
+        intro="Brace force, elongation and roof displacement all from the same ULS earthquake load case, typically at S,p = 0.9 as for the DonoBrace method (Category 4). The calculator scales linearly, so any linear case gives the same result."
       >
+        {numberField('SpLoad')}
         {numberField('Fe')}
         {numberField('ee')}
         {numberField('De')}
@@ -604,10 +606,10 @@ function calcSheet(r) {
   L.push('')
   L.push('INITIAL MODEL (DonoBrace only)')
   L.push(`Brace ${inp.braceModel}; angle to direction of loading ${f(inp.angle, 1)} deg; elastic period T,e = ${f(inp.Te, 3)} s`)
-  L.push(`Load case: critical brace force ${f(inp.Fe)} kN; elongation ${f(inp.ee, 2)} mm; roof displacement ${f(inp.De, 2)} mm`)
+  L.push(`Load case (S,p = ${inp.SpLoad}): critical brace force ${f(inp.Fe)} kN; elongation ${f(inp.ee, 2)} mm; roof displacement ${f(inp.De, 2)} mm`)
   L.push(`Storey shear taken by other elements ${pct(inp.pShare, 0)}; h = ${f(inp.h, 2)} m`)
   L.push(`Hazard Z = ${inp.Z}; soil ${inp.soil === 'AB' ? 'A/B' : inp.soil}; R,u = ${inp.R}; N = ${inp.N}; wind brace force ${f(inp.wind)} kN; S,p = ${inp.Sp}; spectrum x ${spText(inp)} (${SP_METHOD_LABEL[inp.spMethod ?? 'marriott']}); R,s = ${inp.Rs}; lambda = ${inp.lamC}; k,dm = ${inp.kdm}`)
-  L.push(`Model check: load case S,a = ${f(B.SaM, 3)} g vs C(T,e) = ${f(B.Ce, 3)} g (ratio ${f(B.loadRatio, 2)}); brace share of roof displacement ${pct(B.phi, 0)}`)
+  L.push(`Model check: load case S,a = ${f(B.SaM, 3)} g vs S,p x C(T,e) = ${f(B.SpLoad * B.Ce, 3)} g (ratio ${f(B.loadRatio, 2)}); brace share of roof displacement ${pct(B.phi, 0)}`)
   L.push('')
   L.push('SIZE COMPARISON (locking, ULS, CALS as demand / limit; mu actual)')
   for (const s of QD_SIZES) {
@@ -645,6 +647,61 @@ const MESSAGE_CLASS = {
   bad: 'bg-red-50 border-red-200 text-red-700',
   warn: 'bg-[#fdf6ec] border-[#c07c1c]/40 text-[#7a4a10]',
   info: 'bg-[#eef1f3] border-slate-200 text-slate-700',
+}
+
+// One column per size (only three), so the table fits without scrolling even on
+// a phone. The size shown in the rest of the results is tinted.
+function SizeTable({ r }) {
+  const sel = r.selected.size
+  const rows = [
+    ['T,e (s)', (x) => f(x.Te, 3)],
+    ['Locking', (x) => f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)],
+    ['ULS', (x) => f(x.op.uls.ratio, 2)],
+    ['CALS', (x) => f(x.op.cals.ratio, 2)],
+    ['μ at ULS', (x) => (x.uls ? f(x.uls.mu, 2) : `> ${f(x.muStop, 2)}`)],
+    ['δ at ULS (mm)', (x) => (x.uls ? f(x.uls.dqd) : '-')],
+    ['δ at CALS (mm)', (x) => (x.cals ? f(x.cals.dqd) : 'past stop')],
+  ]
+  const tint = (size) => (size === sel ? 'bg-[#eef1f3]' : '')
+  return (
+    <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
+      <table className="w-full text-xs sm:text-sm text-left border-collapse">
+        <thead>
+          <tr className="bg-[#17638f] text-white">
+            <th className="px-2 sm:px-3 py-2 font-black text-xs align-bottom">Size</th>
+            {QD_SIZES.map((size) => (
+              <th key={size} className={`px-2 sm:px-3 py-2 text-right align-bottom ${size === sel ? 'bg-[#0f4c6e]' : ''}`}>
+                <span className="block font-black text-xs whitespace-nowrap">
+                  {size}<span className="hidden sm:inline"> + </span><br className="sm:hidden" />{QD[size].brace}
+                </span>
+                <span className="block text-[0.6rem] sm:text-[0.68rem] font-bold uppercase tracking-wide opacity-80 whitespace-nowrap">
+                  {size === r.modelSize ? (
+                    <><span className="sm:hidden">model</span><span className="hidden sm:inline">your model</span></>
+                  ) : (
+                    <><span className="sm:hidden">est.</span><span className="hidden sm:inline">estimated</span></>
+                  )}
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-200 bg-white">
+          {rows.map(([name, get]) => (
+            <tr key={name}>
+              <Td className="!px-2 sm:!px-3">{name}</Td>
+              {QD_SIZES.map((size) => <Num key={size} className={`!px-2 sm:!px-3 ${tint(size)}`}>{get(r.all[size])}</Num>)}
+            </tr>
+          ))}
+          <tr>
+            <Td className="!px-2 sm:!px-3">Result</Td>
+            {QD_SIZES.map((size) => (
+              <Td key={size} className={`!px-2 sm:!px-3 text-right ${tint(size)}`}><Chip ok={r.all[size].pass} /></Td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
 }
 
 function Summary({ r }) {
@@ -686,7 +743,7 @@ function Summary({ r }) {
   ]
 
   return (
-    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 md:p-6">
+    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 sm:p-5 md:p-6">
       <div className="flex flex-wrap items-center gap-3">
         <Chip ok={pass} />
         <p className="text-2xl md:text-3xl font-black tracking-tighter text-slate-900">{big}</p>
@@ -705,35 +762,7 @@ function Summary({ r }) {
         ))}
       </div>
 
-      <Table
-        className="mt-5"
-        head={['Size', 'T,e s', 'Locking', 'ULS', 'CALS', 'μ at ULS', 'δ ULS mm', 'δ CALS mm', 'Result']}
-      >
-        {QD_SIZES.map((size) => {
-          const x = r.all[size]
-          const selected = size === s.size
-          return (
-            <tr key={size} className={selected ? 'bg-[#eef1f3]' : undefined}>
-              <Td className="whitespace-nowrap">
-                <span className={selected ? 'font-black text-slate-900' : 'font-semibold'}>{label(size)}</span>
-                {size === r.modelSize ? (
-                  <span className="ml-2 text-[0.68rem] font-black uppercase tracking-wider" style={{ color: BRAND }}>your model</span>
-                ) : (
-                  <span className="ml-2 text-[0.68rem] font-bold uppercase tracking-wider text-slate-400">estimated</span>
-                )}
-              </Td>
-              <Num>{f(x.Te, 3)}</Num>
-              <Num>{f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)}</Num>
-              <Num>{f(x.op.uls.ratio, 2)}</Num>
-              <Num>{f(x.op.cals.ratio, 2)}</Num>
-              <Num>{x.uls ? f(x.uls.mu, 2) : `> ${f(x.muStop, 2)}`}</Num>
-              <Num>{x.uls ? f(x.uls.dqd) : '-'}</Num>
-              <Num>{x.cals ? f(x.cals.dqd) : 'past stop'}</Num>
-              <Td className="text-right"><Chip ok={x.pass} /></Td>
-            </tr>
-          )
-        })}
-      </Table>
+      <SizeTable r={r} />
       <Note>
         Locking, ULS and CALS are demand ÷ limit, passing at 1.00 or less. μ is the actual displacement ductility at the ULS performance point, Δ,PP ÷ Δ,y; Category 2 (S,p = 0.7) needs μ above 1.25. Sizes other than your model&rsquo;s are estimated by scaling the brace stiffness; re-run your model with the size you choose.
       </Note>
@@ -761,7 +790,8 @@ function ModelBasis({ B }) {
       <Table>
         <tr><Td>Load case base shear coefficient, from T,e and the roof displacement</Td><Num>{f(B.SaM, 3)} g</Num></tr>
         <tr><Td>Elastic ULS spectrum at T,e from the hazard entered, C(T,e)</Td><Num>{f(B.Ce, 3)} g</Num></tr>
-        <tr><Td>Load case ÷ elastic ULS spectrum</Td><Num>{f(B.loadRatio, 2)}</Num></tr>
+        <tr><Td>Scaled by the S,p entered for the load case, S,p × C(T,e)</Td><Num>{f(B.SpLoad * B.Ce, 3)} g</Num></tr>
+        <tr><Td>Load case ÷ (S,p × C(T,e)), 1.00 when your model matches the hazard entered</Td><Num>{f(B.loadRatio, 2)}</Num></tr>
         <tr><Td>Share of roof displacement from brace elongation, (elongation ÷ cos θ) ÷ roof displacement</Td><Num>{pct(B.phi, 0)}</Num></tr>
         <tr><Td>Storey shear taken by the braces</Td><Num>{pct(1 - B.p, 0)}</Num></tr>
       </Table>
@@ -1031,7 +1061,7 @@ export default function QdSizingCalculator() {
   const s = result.selected
 
   return (
-    <div className="rounded-3xl border border-slate-100 shadow-sm bg-white overflow-hidden p-6 md:p-9">
+    <div className="rounded-3xl border border-slate-100 shadow-sm bg-white overflow-hidden p-4 sm:p-6 md:p-9">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]">
         <form onSubmit={(e) => e.preventDefault()} noValidate aria-label="Inputs">
           <Inputs form={form} errors={errors} onChange={onChange} onSize={onSize} onSpMethod={onSpMethod} />
