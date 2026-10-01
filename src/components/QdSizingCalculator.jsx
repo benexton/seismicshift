@@ -46,7 +46,7 @@ const NUMERIC = {
   h: { label: 'Storey height h (m)', min: 0.5, help: 'For drift and P-delta.' },
   Z: { label: 'Hazard factor Z', min: 0.05 },
   R: { label: 'Return period factor R,u', min: 0.1 },
-  faultD: { label: 'Distance to nearest major fault D (km)', min: 0, help: 'Shortest distance to a fault in NZS 1170.5 Table 3.6 (Alpine, Wellington, Wairarapa and others). Over 20 km means not near-fault. N(T,D) only raises the spectrum above 1.5 s, and is not applied at SLS.' },
+  faultD: { label: 'Distance to nearest major fault D (km)', min: 0, help: 'Shortest distance to a fault in NZS 1170.5 Table 3.6 (Alpine, Wellington, Wairarapa and others). Over 20 km means not near-fault. Within 20 km is outside the Quake Defender methodology; contact Seismic Shift.' },
   wind: { label: 'ULS wind force in the critical brace (kN)', min: 0 },
   Sp: { label: 'S,p at ULS', min: 0.5, max: 1, help: 'NZS 3404 Cl 12.2.2.1' },
   Rs: { label: 'SLS return period factor R,s', min: 0.1 },
@@ -57,9 +57,9 @@ const NUMERIC = {
 // How S,p is applied to the demand spectrum. The engine's spFactor() is the one
 // source of truth for the multiplier; these are only the labels.
 const SP_METHOD_OPTIONS = [
-  { key: 'marriott', label: 'Marriott 2018', help: 'Spectrum × S,p,DDBD = (1 + S,p) / 2 (Marriott 2018, BNZSEE 51(3)). The methodology basis.' },
-  { key: 'unity', label: 'S,p = 1.0', help: 'No S,p reduction on the spectrum. The μ > 1.25 ductility check still applies.' },
-  { key: 'c3', label: 'Assessment guidelines C3', help: 'Spectrum × S,p in full, as for equivalent static analysis (Seismic Assessment Guidelines C3.10.2, 2025).' },
+  { key: 'marriott', label: 'Marriott 2018', help: 'Spectrum × S,p,DDBD = (1 + S,p) / 2 (Marriott 2018, BNZSEE 51(3)). The methodology basis (Step 2).' },
+  { key: 'unity', label: 'S,p = 1.0', help: 'Comparison only, outside the methodology. No S,p reduction on the spectrum; the μ > 1.25 ductility check still applies.' },
+  { key: 'c3', label: 'Assessment guidelines C3', help: 'Comparison only, outside the methodology. Spectrum × S,p in full, as for equivalent static analysis (Seismic Assessment Guidelines C3.10.2, 2025).' },
 ]
 const SP_METHOD_LABEL = Object.fromEntries(SP_METHOD_OPTIONS.map((o) => [o.key, o.label]))
 
@@ -331,7 +331,7 @@ function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
 
       <Group
         title="S,p on the demand spectrum"
-        intro="How the structural performance factor reduces the ULS and CALS spectra in the displacement-based checks."
+        intro="How the structural performance factor reduces the ULS and CALS spectra. The methodology uses Marriott 2018; the other two are for comparison only."
       >
         <div className="flex flex-wrap gap-2" role="group" aria-label="S,p on the demand spectrum">
           {SP_METHOD_OPTIONS.map((o) => (
@@ -605,7 +605,7 @@ function calcSheet(r) {
   const L = []
   L.push('QUAKE DEFENDER SIZING CALCULATOR - STEP 4 SIZING ONLY')
   L.push('seismicshift.nz/quake-defender/sizing-calculator/')
-  L.push('Methodology draft V26.10; proposed 50 mm product table; NZS 1170.5:2004')
+  L.push('Quake Defender Indicative NZ Single-Storey Design Methodology V26.10; NZS 1170.5:2004')
   L.push('Re-run your model with the selected size and complete the full design in your own calculations.')
   L.push('')
   L.push('INITIAL MODEL (DonoBrace only)')
@@ -871,7 +871,7 @@ function ChecksSection({ s, input }) {
       </Table>
       </section>
       <section>
-        <StepHead eyebrow="Step 4" title={`One-point checks and performance points for ${label(s.size)}`} />
+        <StepHead eyebrow="Step 4" title={`One-point checks for ${label(s.size)}`} />
       <p className="text-base text-slate-500 leading-relaxed mb-4">
         Governing ULS limit: {s.limGov.label}, Δ,lim = {f(s.Dlim)} mm. Activation at Δ,y = {f(s.Dy)} mm; hard stop at Δ,stop = {f(s.Dstop)} mm.
       </p>
@@ -884,6 +884,9 @@ function ChecksSection({ s, input }) {
       <Note>
         The ductility check confirms μ above 1.25 from one spectrum reading. The actual ductility at the ULS performance point is {u ? `μ = ${f(u.mu, 2)}` : 'not available'}.
       </Note>
+      </section>
+      <section>
+        <StepHead eyebrow="Preliminary Step 7" title={`SLS, ULS and CALS performance points for ${label(s.size)}`} />
         <PerformancePoints s={s} input={input} />
       </section>
     </>
@@ -900,7 +903,7 @@ function Basis({ value, basis }) {
   )
 }
 
-function ComparisonSection({ s, db4, db3 }) {
+function ComparisonSection({ s, db4, db3, h }) {
   const u = s.uls
   const c = s.cals
   const dbCals = (d) => (
@@ -947,13 +950,13 @@ function ComparisonSection({ s, db4, db3 }) {
           <Num><Basis value={f(db3.Vs, 3)} basis={`C,s ${f(db3.Cs, 1)} × C,d ${f(db3.V, 3)}`} /></Num>
         </tr>
         <tr>
-          <Td>Connection force, method basis</Td>
+          <Td>Load path (method basis)</Td>
           <Num><Basis value={`${f(s.cap.Fmax)} kN`} basis="F,max" /></Num>
           <Num><Basis value={`${f(db4.Nconn)} kN`} basis="elastic, S,p = 1.0" /></Num>
-          <Num><Basis value={`${f(db3.Nconn)} kN`} basis={`capacity design, ${capBasis(db3)}`} /></Num>
+          <Num><Basis value={`${f(db3.Nconn)} kN`} basis={capBasis(db3)} /></Num>
         </tr>
         <tr>
-          <Td>Connection force, overstrength basis</Td>
+          <Td>End connections (overstrength)</Td>
           <Num>{f(s.cap.os)} kN</Num>
           <Num><Basis value={`${f(db4.osCapped)} kN`} basis={capBasis(db4)} /></Num>
           <Num><Basis value={`${f(db3.osCapped)} kN`} basis={capBasis(db3)} /></Num>
@@ -964,6 +967,12 @@ function ComparisonSection({ s, db4, db3 }) {
           {[db4, db3].map((d) => (
             <Num key={d.category} className={d.okDrift ? '' : 'text-red-600'}><Basis value={pct(d.driftKdm / 100, 2)} basis={`limit ${DRIFT_LIMIT}%`} /></Num>
           ))}
+        </tr>
+        <tr>
+          <Td>SLS drift</Td>
+          <Num>{pct(s.sls.D / (h * 1000), 2)}</Num>
+          <Num>{pct(db4.driftSls / 100, 2)}</Num>
+          <Num>{pct(db3.driftSls / 100, 2)}</Num>
         </tr>
         <tr>
           <Td>P-delta analysis (NZS 1170.5)</Td>
@@ -1015,10 +1024,9 @@ function PerformancePoints({ s, input }) {
     )
 
   return (
-    <div className="mt-8">
-      <h3 className="text-lg font-black tracking-tight text-slate-900 mb-2">SLS, ULS and CALS performance points</h3>
+    <div>
       <p className="text-base text-slate-500 leading-relaxed mb-4">
-        The estimated capacity curve against the damped demand spectra, with the spectrum reduced by {spText(input)} ({SP_METHOD_LABEL[input.spMethod ?? 'marriott']}). Each performance point is where the capacity curve meets the spectrum for its own effective damping.
+        A preliminary version of methodology Step 7, from the estimated backbone; confirm it with the cyclic pushover of your model (Steps 5 to 7). The estimated capacity curve against the damped demand spectra, with the spectrum reduced by {spText(input)} ({SP_METHOD_LABEL[input.spMethod ?? 'marriott']}). Each performance point is where the capacity curve meets the spectrum for its own effective damping.
       </p>
       <div className="max-w-3xl">
         <AdrsChart s={s} input={input} />
@@ -1030,7 +1038,7 @@ function PerformancePoints({ s, input }) {
       </Table>
       {u && (
         <Note>
-          ULS drift × k,dm = {pct(u.driftKdm / 100, 2)} (limit {DRIFT_LIMIT}%); stability coefficient θ = {f(u.theta, 3)}, so P-delta analysis is {s.pdelta?.exempt ? `not required (NZS 1170.5 cl 6.5.2(${s.pdelta.exempt}))` : 'required (NZS 1170.5 cl 6.5.2)'}; {s.brace} utilisation {f(u.util, 2)}.
+          ULS drift × k,dm = {pct(u.driftKdm / 100, 2)} (limit {DRIFT_LIMIT}%); stability coefficient θ = {f(u.theta, 3)}, so P-delta analysis is {s.pdelta?.exempt ? `not required (NZS 1170.5 cl 6.5.2(${s.pdelta.exempt}))` : 'required (NZS 1170.5 cl 6.5.2)'}; {s.brace} utilisation {f(u.util, 2)}. Recentring (preliminary Step 9): the UBH residual force gives a restoring V/W of {f(s.recentre.restoring, 4)} against the P-delta demand Δ,y,UBH ÷ h = {f(s.recentre.pdelta, 4)}, a ratio of {f(s.recentre.ratio, 2)}{s.recentre.ratio >= 1 ? ', so the line recentres' : <strong className="text-red-600">, so the line may not recentre</strong>}.
         </Note>
       )}
     </div>
@@ -1197,7 +1205,7 @@ export default function QdSizingCalculator() {
           <ModelBasis B={result.basis} />
           <DeviceSection s={s} B={result.basis} />
           <ChecksSection s={s} input={result.input} />
-          <ComparisonSection s={s} db4={result.donoBrace} db3={result.donoBraceCat3} />
+          <ComparisonSection s={s} db4={result.donoBrace} db3={result.donoBraceCat3} h={result.input.h} />
           <Working s={s} />
         </div>
       </div>
