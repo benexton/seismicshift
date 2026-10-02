@@ -16,6 +16,7 @@ Seismic Shift is a New Zealand earthquake protection technology company founded 
 - How it works: Connects into a building's bracing system; absorbs energy and recenters the structure after an earthquake
 - Target market: Structural engineers, commercial building owners in seismic regions
 - URL: https://www.seismicshift.nz/quake-defender/
+- Sizing calculator: https://www.seismicshift.nz/quake-defender/sizing-calculator/ (selects a Quake Defender and DonoBrace size for single-storey NZ structures from an initial DonoBrace-only model, per the Quake Defender Indicative New Zealand Single-Storey Design Methodology V26.10; sizing only)
 
 ### FrontFoot®
 - Type: Seismic isolation system for residential homes
@@ -42,6 +43,7 @@ Seismic Shift is a New Zealand earthquake protection technology company founded 
 
 - Homepage: https://www.seismicshift.nz/
 - Quake Defender: https://www.seismicshift.nz/quake-defender/
+- Quake Defender Sizing Calculator: https://www.seismicshift.nz/quake-defender/sizing-calculator/
 - FrontFoot Residential: https://www.seismicshift.nz/frontfoot/
 - FrontFoot Plinth: https://www.seismicshift.nz/frontfoot-plinth/
 - About: https://www.seismicshift.nz/about/
