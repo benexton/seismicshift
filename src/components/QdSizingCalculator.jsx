@@ -618,12 +618,12 @@ function calcSheet(r) {
   L.push('SIZE COMPARISON (locking, ULS, CALS as demand / limit; mu actual)')
   for (const s of QD_SIZES) {
     const x = r.all[s]
-    L.push(`${label(s)}${s === r.modelSize ? ' (model)' : ' (estimated)'}: T,e ${f(x.Te, 3)} s; locking ${f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)}; ULS ${f(x.op.uls.ratio, 2)}; CALS ${f(x.op.cals.ratio, 2)}; mu ${x.uls ? f(x.uls.mu, 2) : '> ' + f(x.muStop, 2)}; ${x.pass ? 'PASS' : 'FAIL'}`)
+    L.push(`${label(s)}${s === r.modelSize ? ' (model)' : ' (estimated)'}: T,e,QD ${f(x.Te, 3)} s; locking ${f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)}; ULS ${f(x.op.uls.ratio, 2)}; CALS ${f(x.op.cals.ratio, 2)}; mu ${x.uls ? f(x.uls.mu, 2) : '> ' + f(x.muStop, 2)}; ${x.pass ? 'PASS' : 'FAIL'}`)
   }
   L.push('')
   L.push(`SELECTED: ${label(R.size)}`)
   const oc = (n, op, cmp) => `${n}: Delta = ${f(op.D)} mm, T = ${f(op.T, 3)} s, xi = ${pct(op.xi)}, S,d = ${f(op.Sd)} mm ${cmp} ${f(op.D)} mm -> ${op.pass ? 'PASS' : 'FAIL'}`
-  L.push(`Locking: SLS ${f(R.lockSLS.F)} kN, wind 1.3 x ${f(R.windF)} kN vs F,slip,LBH ${f(R.dL.Fslip)} kN`)
+  L.push(`Locking: SLS ${f(R.lockSLS.F)} kN vs F,slip,LBH ${f(R.lockSLS.cap)} kN; wind 1.3 x ${f(R.windF)} kN vs F,slip,nominal ${f(R.lockWind.cap)} kN`)
   L.push(`Delta,y = ${f(R.Dy)} mm; Delta,stop = ${f(R.Dstop)} mm; Delta,lim = ${f(R.Dlim)} mm (${R.limGov.label})`)
   L.push(oc('ULS at Delta,lim', R.op.uls, '<='))
   L.push(oc('ULS device 33 mm', R.op.dev33, '<='))
@@ -658,7 +658,7 @@ const MESSAGE_CLASS = {
 function SizeTable({ r }) {
   const sel = r.selected.size
   const rows = [
-    ['T,e (s)', (x) => f(x.Te, 3)],
+    ['T,e,QD (s)', (x) => f(x.Te, 3)],
     ['Locking', (x) => f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)],
     ['ULS', (x) => f(x.op.uls.ratio, 2)],
     ['CALS', (x) => f(x.op.cals.ratio, 2)],
@@ -813,7 +813,7 @@ function DeviceSection({ s, B }) {
     <section>
       <StepHead eyebrow="Device" title={`${s.size} hysteresis, full loop to the hard stop`} />
       <p className="text-base text-slate-500 leading-relaxed mb-4">
-        The dots show where the SLS, ULS and CALS points sit on the loop, the same points as on the ADRS below. The green dot is the Step 3 SLS locking-check force, {f(s.FbSLS)} kN: the larger of the SLS brace forces at T,e and at the full-bar-area period, which should stay below the LBH slip force. The SLS point on the ADRS below is the displacement demand at T,e. ULS travel is limited to 33 mm; at CALS the QD may travel to its hard stop at 50 mm.
+        The dots show where the SLS, ULS and CALS points sit on the loop, the same points as on the ADRS below. The green dot is the Step 3 SLS locking-check force, {f(s.FbSLS)} kN: the larger of the SLS brace forces at T,e,QD and at the full-bar-area period, which should stay below the LBH slip force. The SLS point on the ADRS below is the displacement demand at T,e,QD. ULS travel is limited to 33 mm; at CALS the QD may travel to its hard stop at 50 mm.
       </p>
       <div className="grid gap-5">
         <div className="max-w-2xl"><LoopChart s={s} /></div>
@@ -853,18 +853,20 @@ function ChecksSection({ s, input }) {
       <section>
         <StepHead eyebrow="Step 3" title={`Locking checks for ${label(s.size)}`} />
         <p className="text-base text-slate-500 leading-relaxed mb-4">
-          The QD must stay locked for SLS earthquake and ULS wind: each brace force is compared with the lower-bound slip force.
+          The QD must stay locked for SLS earthquake and ULS wind: the SLS brace force is compared with the lower-bound (LBH) slip force, and 1.3 × the wind brace force with the nominal slip force.
         </p>
-      <Table head={[`Locking (LBH F,slip = ${f(s.dL.Fslip)} kN)`, 'Brace force kN', 'Ratio', '']}>
+      <Table head={['Locking', 'Brace force kN', 'F,slip kN', 'Ratio', '']}>
         <tr>
           <Td>SLS earthquake, Fb,SLS</Td>
           <Num>{f(s.lockSLS.F)}</Num>
+          <Num>{f(s.lockSLS.cap)} LBH</Num>
           <Num>{f(s.lockSLS.ratio, 2)}</Num>
           <Td className="text-right"><Chip ok={s.lockSLS.ratio <= 1} /></Td>
         </tr>
         <tr>
           <Td>1.3 × ULS wind, 1.3 Fb,wind</Td>
           <Num>{f(s.lockWind.F)}</Num>
+          <Num>{f(s.lockWind.cap)} nominal</Num>
           <Num>{f(s.lockWind.ratio, 2)}</Num>
           <Td className="text-right"><Chip ok={s.lockWind.ratio <= 1} /></Td>
         </tr>
