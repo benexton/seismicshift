@@ -1,4 +1,4 @@
-import React, { useId, useState } from 'react'
+import React, { useId, useRef, useState } from 'react'
 import {
   runQdSizing,
   WORKED_EXAMPLE,
@@ -29,6 +29,108 @@ const FIELD_INVALID_CLASS =
 // δ into Δ, μ into Μ and T,e into T,E, which changes what the symbols mean.
 const LABEL_CLASS = 'block text-sm font-black tracking-tight text-slate-700 mb-1.5'
 const BUTTON_FOCUS = 'focus:outline-none focus-visible:ring-2 focus-visible:ring-[#17638f]/40 focus-visible:ring-offset-2'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Terms
+// ─────────────────────────────────────────────────────────────────────────────
+
+// The methodology's notation, trimmed to the terms this page uses.
+const TERMS = [
+  ['Limit states and hazard', [
+    ['SLS', 'Serviceability limit state, NZS 1170.5 (R,s = 0.25 here).'],
+    ['ULS', 'Ultimate limit state, NZS 1170.5.'],
+    ['CALS', 'Collapse avoidance limit state: 1.5 × the ULS hazard (λ = 1.5).'],
+    ['Z, R,u, R,s', 'NZS 1170.5 hazard factor and the ULS and SLS return period factors.'],
+    ['λ', 'Hazard scale: 1.0 at ULS and 1.5 at CALS.'],
+    ['S,p', 'Structural performance factor, NZS 3404 Cl 12.2.2.1.'],
+    ['S,p,DDBD', 'Factor on the demand spectrum for the displacement-based checks, (1 + S,p) / 2 (Marriott 2018).'],
+    ['k,dm', 'NZS 1170.5 Cl 7.3 drift modification factor.'],
+    ['ADRS', 'Acceleration-displacement response spectrum: V/W against Δ, with the demand spectra and the capacity curve on the same axes.'],
+  ]],
+  ['DonoBrace', [
+    ['SRF', "DonoBrace stiffness reduction factor, from DonoBrace's design guidance. It reduces the bar's axial stiffness in the model: k,rod = SRF × A × E/L. This page uses DB15 0.8, DB20 0.6 and DB25 0.5. Displacements use the SRF stiffness; the DonoBrace-alone comparison takes its period from the full bar area."],
+    ['k,rod', 'DonoBrace axial stiffness, SRF × A × E/L.'],
+    ['N,t, φN,t', 'DonoBrace nominal section capacity in tension, A × f,y (NZS 3404 Cl 7.2), and design capacity, φ = 0.9.'],
+  ]],
+  ['Quake Defender (QD)', [
+    ['F,slip', 'Nominal activation (slip) force, reached at δ,slip = 1 mm.'],
+    ['F,ult', 'Nominal loading force at the hard stop, δ,stop.'],
+    ['F,restoring', 'Nominal force at the start of the return curve from δ,stop.'],
+    ['F,residual', 'Nominal force at the end of the return curve, where the QD relocks.'],
+    ['F,max', 'Upper-bound QD force (UBH at δ,stop), for capacity design of the load path.'],
+    ['Nominal, LBH, UBH', 'The nominal loop, and the upper- and lower-bound loops with the friction increased or reduced by 0.1 F,slip.'],
+    ['δ', 'QD axial deformation.'],
+    ['δ,ULS', 'Maximum QD deformation at ULS: 33 mm = δ,stop / 1.5.'],
+    ['δ,stop', 'QD deformation at the hard stop (50 mm); may be reached at CALS, not at ULS.'],
+    ['k,0', 'QD activation stiffness, F,slip / δ,slip.'],
+  ]],
+  ['Forces, displacements and periods', [
+    ['θ', 'Brace angle to the direction of loading.'],
+    ['F,b,E, F,b,SLS, F,b,wind', 'Critical brace forces: elastic ULS, SLS and ULS wind.'],
+    ['Δ', 'Displacement of the deformation-control coordinate (the roof).'],
+    ['Δ,y', 'Δ at QD activation on the nominal backbone.'],
+    ['Δ,stop', 'Δ at which the governing QD reaches δ,stop.'],
+    ['Δ,lim', 'Governing ULS displacement limit (Step 2).'],
+    ['μ', 'Displacement ductility, Δ at the performance point ÷ Δ,y.'],
+    ['T,e', 'Elastic period of the DonoBrace-only model (no QD).'],
+    ['T,eff, ξ,eff', 'Effective (secant) period and equivalent viscous damping at a performance point: 5% inherent plus hysteretic.'],
+    ['V/W', 'Base shear coefficient: storey shear ÷ seismic weight.'],
+  ]],
+]
+
+function TermsButton({ onOpen }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`font-bold underline decoration-dotted underline-offset-2 hover:decoration-solid ${BUTTON_FOCUS}`}
+      style={{ color: BRAND }}
+    >
+      Terms and abbreviations
+    </button>
+  )
+}
+
+// Native modal dialog: Escape closes it, focus is trapped and returned. A click on
+// the backdrop (the dialog element itself, outside the panel) also closes it.
+function TermsDialog({ dialogRef }) {
+  const titleId = useId()
+  const close = () => dialogRef.current?.close()
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby={titleId}
+      onClick={(e) => { if (e.target === e.currentTarget) close() }}
+      className="m-auto w-[calc(100%-2rem)] max-w-2xl max-h-[85vh] rounded-2xl p-0 shadow-xl backdrop:bg-slate-900/40"
+    >
+      <div className="sticky top-0 bg-white border-b border-slate-100 px-5 sm:px-6 py-4 flex items-center justify-between gap-4">
+        <h2 id={titleId} className="text-xl font-black tracking-tighter text-slate-900">Terms and abbreviations</h2>
+        <button
+          type="button"
+          onClick={close}
+          className={`font-bold text-sm px-4 py-1.5 rounded-full border-2 border-slate-300 text-slate-600 bg-white hover:border-slate-400 ${BUTTON_FOCUS}`}
+        >
+          Close
+        </button>
+      </div>
+      <div className="px-5 sm:px-6 py-5 space-y-6">
+        {TERMS.map(([group, rows]) => (
+          <section key={group}>
+            <h3 className="text-sm font-black text-slate-400 mb-2">{group}</h3>
+            <dl className="grid grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm leading-relaxed">
+              {rows.map(([term, def]) => (
+                <React.Fragment key={term}>
+                  <dt className="font-black text-slate-900">{term}</dt>
+                  <dd className="text-slate-600">{def}</dd>
+                </React.Fragment>
+              ))}
+            </dl>
+          </section>
+        ))}
+      </div>
+    </dialog>
+  )
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Inputs
@@ -309,7 +411,7 @@ function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
 
       <Group
         title="Elastic 0.1g equivalent static case"
-        intro="Apply a static lateral load of 0.1 × the seismic weight in this direction (the same seismic weight as the mass behind T,e), with the braces tension-only and the DonoBrace SRF applied. Read all three results from that case."
+        intro="Apply a static lateral load of 0.1 × the seismic weight in this direction (the same seismic weight as the mass behind T,e), with the braces tension-only and the DonoBrace SRF applied. Read all three results from that case. Enter the force and axial elongation of one brace only, the critical one, however many braces are on the line: the roof displacement accounts for the rest. Where a braced line has more than one bay, QD is assumed in every bay of that line, all the same size."
       >
         {numberField('Fe')}
         {numberField('ee')}
@@ -606,7 +708,7 @@ function calcSheet(r) {
   L.push('QUAKE DEFENDER SIZING CALCULATOR - STEP 4 SIZING ONLY')
   L.push('seismicshift.nz/quake-defender/sizing-calculator/')
   L.push('Quake Defender Indicative NZ Single-Storey Design Methodology V26.10; NZS 1170.5:2004')
-  L.push('Re-run your model with the selected size and complete the full design in your own calculations.')
+  L.push('For sizing only. The real configuration is checked in your full structural model: re-run it with the selected size and complete the full design in your own calculations.')
   L.push('')
   L.push('INITIAL MODEL (DonoBrace only)')
   L.push(`Brace ${inp.braceModel}; angle to direction of loading ${f(inp.angle, 1)} deg; elastic period T,e = ${f(inp.Te, 3)} s`)
@@ -618,7 +720,7 @@ function calcSheet(r) {
   L.push('SIZE COMPARISON (locking, ULS, CALS as demand / limit; mu actual)')
   for (const s of QD_SIZES) {
     const x = r.all[s]
-    L.push(`${label(s)}${s === r.modelSize ? ' (model)' : ' (estimated)'}: T,e,QD ${f(x.Te, 3)} s; locking ${f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)}; ULS ${f(x.op.uls.ratio, 2)}; CALS ${f(x.op.cals.ratio, 2)}; mu ${x.uls ? f(x.uls.mu, 2) : '> ' + f(x.muStop, 2)}; ${x.pass ? 'PASS' : 'FAIL'}`)
+    L.push(`${label(s)}${s === r.modelSize ? ' (model)' : ' (estimated)'}: T,e ${f(x.Te, 3)} s; locking ${f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)}; ULS ${f(x.op.uls.ratio, 2)}; CALS ${f(x.op.cals.ratio, 2)}; mu ${x.uls ? f(x.uls.mu, 2) : '> ' + f(x.muStop, 2)}; ${x.pass ? 'PASS' : 'FAIL'}`)
   }
   L.push('')
   L.push(`SELECTED: ${label(R.size)}`)
@@ -658,7 +760,7 @@ const MESSAGE_CLASS = {
 function SizeTable({ r }) {
   const sel = r.selected.size
   const rows = [
-    ['T,e,QD (s)', (x) => f(x.Te, 3)],
+    ['T,e (s)', (x) => f(x.Te, 3)],
     ['Locking', (x) => f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)],
     ['ULS', (x) => f(x.op.uls.ratio, 2)],
     ['CALS', (x) => f(x.op.cals.ratio, 2)],
@@ -813,7 +915,7 @@ function DeviceSection({ s, B }) {
     <section>
       <StepHead eyebrow="Device" title={`${s.size} hysteresis, full loop to the hard stop`} />
       <p className="text-base text-slate-500 leading-relaxed mb-4">
-        The dots show where the SLS, ULS and CALS points sit on the loop, the same points as on the ADRS below. The green dot is the Step 3 SLS locking-check force, {f(s.FbSLS)} kN: the larger of the SLS brace forces at T,e,QD and at the full-bar-area period, which should stay below the LBH slip force. The SLS point on the ADRS below is the displacement demand at T,e,QD. ULS travel is limited to 33 mm; at CALS the QD may travel to its hard stop at 50 mm.
+        The dots show where the SLS, ULS and CALS points sit on the loop, the same points as on the ADRS below. The green dot is the Step 3 SLS locking-check force, {f(s.FbSLS)} kN: the larger of the SLS brace forces at T,e and at the full-bar-area period, which should stay below the LBH slip force. The SLS point on the ADRS below is the displacement demand at T,e. ULS travel is limited to 33 mm; at CALS the QD may travel to its hard stop at 50 mm.
       </p>
       <div className="grid gap-5">
         <div className="max-w-2xl"><LoopChart s={s} /></div>
@@ -1028,7 +1130,7 @@ function PerformancePoints({ s, input }) {
   return (
     <div>
       <p className="text-base text-slate-500 leading-relaxed mb-4">
-        A preliminary version of methodology Step 7, from the estimated backbone; confirm it with the cyclic pushover of your model (Steps 5 to 7). The estimated capacity curve against the damped demand spectra, with the spectrum reduced by {spText(input)} ({SP_METHOD_LABEL[input.spMethod ?? 'marriott']}). Each performance point is where the capacity curve meets the spectrum for its own effective damping.
+        A preliminary version of methodology Step 7, from the estimated backbone; confirm it with the cyclic pushover of your model (Steps 5 to 7). The estimated capacity curve against the damped demand spectra, with the spectrum reduced by {spText(input)} ({SP_METHOD_LABEL[input.spMethod ?? 'marriott']}). Each performance point is where the capacity curve meets the spectrum for its own effective damping. The SLS point is on the T,e line of your DonoBrace-only model; the capacity curve includes the small flexibility of the locked QD, so the SLS point sits slightly above it.
       </p>
       <div className="max-w-3xl">
         <AdrsChart s={s} input={input} />
@@ -1095,6 +1197,8 @@ export default function QdSizingCalculator() {
   const [evalFailed, setEvalFailed] = useState(false)
   const [copyStatus, setCopyStatus] = useState('')
   const [fallbackText, setFallbackText] = useState(null)
+  const termsRef = useRef(null)
+  const onTerms = () => termsRef.current?.showModal()
 
   // Recalculate on every change; on invalid or unevaluable input, keep showing
   // the last good result and flag the fields instead.
@@ -1156,6 +1260,7 @@ export default function QdSizingCalculator() {
     <div className="rounded-3xl border border-slate-100 shadow-sm bg-white overflow-hidden p-4 sm:p-6 md:p-9">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]">
         <form onSubmit={(e) => e.preventDefault()} noValidate aria-label="Inputs">
+          <p className="text-sm mb-5"><TermsButton onOpen={onTerms} /></p>
           <Inputs form={form} errors={errors} onChange={onChange} onSize={onSize} onSpMethod={onSpMethod} />
 
           <div className="flex flex-wrap gap-3 mt-8">
@@ -1192,7 +1297,7 @@ export default function QdSizingCalculator() {
         <div className="min-w-0 space-y-10" aria-live="polite">
           <div className="space-y-4">
             <div className="border border-[#c07c1c]/40 bg-[#fdf6ec] rounded-2xl p-5 text-sm text-slate-700 leading-relaxed">
-              <strong style={{ color: EQ }}>For sizing only.</strong> These checks select a QD and DonoBrace size from your initial model. Re-run your model with the selected size and complete the full design (Steps 5 to 9 of the methodology) in your own calculations.
+              <strong style={{ color: EQ }}>For sizing only.</strong> These checks select a QD and DonoBrace size from your initial model; they are not the design. The real configuration, with the selected QD and DonoBrace in every braced bay, is checked in your full structural model: re-run it with the selected size and complete the full design (Steps 5 to 9 of the methodology) in your own calculations. <TermsButton onOpen={onTerms} />
             </div>
             {stale && (
               <p className="border border-red-200 bg-red-50 text-red-700 rounded-xl px-4 py-2.5 text-sm font-bold">
@@ -1211,6 +1316,7 @@ export default function QdSizingCalculator() {
           <Working s={s} />
         </div>
       </div>
+      <TermsDialog dialogRef={termsRef} />
     </div>
   )
 }
