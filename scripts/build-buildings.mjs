@@ -43,7 +43,13 @@ function parseCsv(text) {
 }
 
 function coerce(key, raw) {
-  const value = raw.trim()
+  // Normalise Windows line endings - text pasted into the Supabase SQL
+  // editor or /walkadmin/ textareas arrives as 
+, which otherwise shows up
+  // as spurious diffs every time the nightly sync regenerates this file.
+  const value = raw.replace(/
+?/g, '
+').trim()
   if (value === '') {
     if (LIST_FIELDS.has(key)) return []
     if (BOOLEAN_FIELDS.has(key)) return null
