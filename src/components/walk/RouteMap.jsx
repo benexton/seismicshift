@@ -28,6 +28,21 @@ function numberMarkerEl(n, color = WALK.maroon) {
   return el
 }
 
+function startMarkerEl() {
+  const el = document.createElement('div')
+  el.style.padding = '3px 8px'
+  el.style.borderRadius = '999px'
+  el.style.backgroundColor = WALK.red
+  el.style.color = 'white'
+  el.style.fontWeight = '800'
+  el.style.fontSize = '11px'
+  el.style.letterSpacing = '0.08em'
+  el.style.border = '2px solid white'
+  el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.3)'
+  el.textContent = 'START'
+  return el
+}
+
 // Renders numbered stop markers + street-following polyline legs when a
 // MapTiler key is configured (PUBLIC_MAPTILER_KEY). Without a key the
 // itinerary list remains the primary, fully-usable interface - see
@@ -44,6 +59,9 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
       style: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
       center: [172.6367, -43.5309],
       zoom: 14,
+      // Without this, a WebGL canvas can come out blank when the page is
+      // printed - and the printed itinerary is one of the main outputs.
+      canvasContextAttributes: { preserveDrawingBuffer: true },
     })
     mapRef.current.addControl(new maplibregl.NavigationControl(), 'top-right')
     return () => {
@@ -80,6 +98,17 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
         markersRef.current.push(marker)
       })
 
+      // The start (Te Pae or another chosen building) isn't a numbered stop,
+      // but without a marker the route line just begins from nowhere. A live
+      // location start is drawn as the blue dot below instead.
+      if (startPoint && !userLocation) {
+        const marker = new maplibregl.Marker({ element: startMarkerEl() })
+          .setLngLat([startPoint.lng, startPoint.lat])
+          .setPopup(new maplibregl.Popup({ offset: 16 }).setText(`Start: ${startPoint.name}`))
+          .addTo(map)
+        markersRef.current.push(marker)
+      }
+
       if (userLocation) {
         const el = document.createElement('div')
         el.style.width = '16px'
@@ -106,15 +135,23 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
         geometry: { type: 'LineString', coordinates: lineCoords },
         properties: {},
       }
+      // Solid once the street-following geometry has arrived, dotted for the
+      // straight-line placeholder. Set on every update, not just when the
+      // layer is first added - the layer is always created before the
+      // directions fetch resolves, so a create-time-only style stayed dotted
+      // for good.
+      const dash = geometry ? [1, 0] : [0.5, 1.5]
       if (source) {
         source.setData(data)
+        map.setPaintProperty('route-line', 'line-dasharray', dash)
       } else {
         map.addSource('route-line', { type: 'geojson', data })
         map.addLayer({
           id: 'route-line',
           type: 'line',
           source: 'route-line',
-          paint: { 'line-color': WALK.red, 'line-width': 4, 'line-dasharray': geometry ? [1, 0] : [0.5, 1.5] },
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': WALK.red, 'line-width': 4, 'line-dasharray': dash },
         })
       }
 

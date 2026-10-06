@@ -12,7 +12,8 @@ const countTag = (tag) => stops.filter((b) => b.structural_tags?.includes(tag)).
 const stats = [
   { value: stops.length, label: 'Engineering sites' },
   { value: countTag('base_isolation'), label: 'Base isolated' },
-  { value: stops.filter((b) => b.structural_tags?.some((t) => ['rocking_wall', 'rocking_frame', 'low_damage'].includes(t))).length, label: 'Low-damage systems' },
+  // Heritage = stone/masonry sites being (or awaiting being) saved.
+  { value: stops.filter((b) => b.structural_tags?.some((t) => ['urm_retrofit', 'heritage_stone', 'facade_retention'].includes(t))).length, label: 'Heritage sites' },
   { value: contextCount, label: 'Context stops' },
 ]
 ---
@@ -21,6 +22,7 @@ const stats = [
   title="Seismic Walk | PCEE 2027 Engineering Walking Tour of Christchurch | Seismic Shift"
   description="A self-guided walking tour of the buildings that tell the story of the Canterbury earthquakes and the Christchurch rebuild, curated for PCEE 2027. Pick your stops and get an optimised walking route."
   canonicalPath="/walk/"
+  ogImage="/og-walk.png"
   manifestHref="/walk-manifest.webmanifest"
   themeColor="#652431"
 >

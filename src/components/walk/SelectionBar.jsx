@@ -1,7 +1,9 @@
 import { formatDistance, formatDuration, walkMinutes } from '../../lib/geo'
 import { WALK } from './theme'
 
-export default function SelectionBar({ count, estimatedMeters, optimised, onOptimise, onClear }) {
+// canPlan: there's a route to plan - two or more points in total, so a single
+// site counts when there's a start point to walk from.
+export default function SelectionBar({ count, estimatedMeters, canPlan, optimised, onOptimise, onClear }) {
   if (count === 0) return null
 
   return (
@@ -19,7 +21,7 @@ export default function SelectionBar({ count, estimatedMeters, optimised, onOpti
                 {formatDistance(estimatedMeters)} · {formatDuration(walkMinutes(estimatedMeters))} walking
               </p>
             ) : (
-              <p className="text-xs text-white/60">Pick at least one more to plan a route</p>
+              <p className="text-xs text-white/60">Pick another site, or set a start point, to plan a route</p>
             )}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -29,7 +31,7 @@ export default function SelectionBar({ count, estimatedMeters, optimised, onOpti
             <button
               type="button"
               onClick={onOptimise}
-              disabled={count < 2}
+              disabled={!canPlan}
               className="px-4 py-2.5 text-sm font-bold rounded-lg text-white transition hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ backgroundColor: WALK.red }}
             >

@@ -1,6 +1,7 @@
 import AccessBadge from './AccessBadge'
 import TagChip from './TagChip'
 import { WALK, isContextSite, stopColor } from './theme'
+import { formatDistance, formatDuration, walkMinutes } from '../../lib/geo'
 
 function metaLine(building) {
   if (isContextSite(building)) return building.address
@@ -10,7 +11,7 @@ function metaLine(building) {
   return parts.join(' · ')
 }
 
-export default function BuildingCard({ building, selected, onToggle, onViewDetail }) {
+export default function BuildingCard({ building, selected, onToggle, onViewDetail, distanceMeters = null }) {
   // The whole card toggles selection on tap - much easier to hit on a phone
   // than the checkbox alone. The thumbnail and title stay dedicated "view
   // details" targets by stopping the click from bubbling to this handler.
@@ -28,7 +29,7 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
       <button
         type="button"
         onClick={(e) => { stop(e); onViewDetail(building) }}
-        className="group flex-shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-lg bg-slate-100 overflow-hidden"
+        className="group flex-shrink-0 w-20 h-20 sm:w-28 sm:h-28 rounded-lg bg-slate-100 overflow-hidden"
         aria-label={`View details for ${building.name}`}
       >
         {building.image && (
@@ -47,6 +48,11 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
             {context && <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-0.5">Context stop</p>}
             <h3 className="font-bold text-[15px] sm:text-base text-slate-900 leading-snug hover:underline underline-offset-2">{building.name}</h3>
             {metaLine(building) && <p className="text-xs text-slate-500 mt-0.5 truncate">{metaLine(building)}</p>}
+            {distanceMeters != null && (
+              <p className="text-xs font-semibold mt-0.5 tabular-nums" style={{ color: WALK.maroon }}>
+                {formatDistance(distanceMeters)} · {formatDuration(walkMinutes(distanceMeters))} from your start
+              </p>
+            )}
           </button>
           <label className="flex-shrink-0 inline-flex items-center p-2 -m-2" onClick={stop}>
             <input

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import buildingsData from '../../data/buildings.json'
 import { solveRoute } from '../../lib/tsp'
 import { getWalkDistance } from '../../lib/matrixDistance'
@@ -65,6 +65,11 @@ export default function TourApp() {
   // effect - is what makes a later selection/start/loop change fall back to
   // "rough estimate" framing automatically.
   const [optimisedSnapshot, setOptimisedSnapshot] = useState(null)
+  // Set when the page opens from a shared ?r= link, so the route is planned
+  // (and shown) straight away instead of leaving the recipient with ticks and
+  // no route until they find the Plan button.
+  const [autoPlan, setAutoPlan] = useState(false)
+  const routeRef = useRef(null)
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- one-time hydration sync
@@ -76,9 +81,13 @@ export default function TourApp() {
     }
     const shareState = readShareStateFromUrl()
     if (shareState) {
-      setSelectedIds(new Set(shareState.ids))
-      setStartId(shareState.startId)
+      // Drop ids that no longer exist (a building renamed or removed since
+      // the link was made) so the selected count matches what's shown.
+      const ids = shareState.ids.filter((id) => buildingsById[id] && id !== DEFAULT_START_ID)
+      setSelectedIds(new Set(ids))
+      setStartId(shareState.startId && buildingsById[shareState.startId] ? shareState.startId : DEFAULT_START_ID)
       setLoop(shareState.loop)
+      if (ids.length > 0) setAutoPlan(true)
     }
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [])
@@ -166,9 +175,16 @@ export default function TourApp() {
 
   const clearSelection = () => {
     setSelectedIds(new Set())
-    setStartId(null)
+    setStartId(DEFAULT_START_ID)
     setUserLocation(null)
     setOptimisedSnapshot(null)
+  }
+
+  // Picking a building as the start replaces a live-location start - before,
+  // location silently kept priority, so the dropdown appeared to do nothing.
+  const changeStart = (id) => {
+    setUserLocation(null)
+    setStartId(id)
   }
 
   const optimise = () => {
@@ -182,7 +198,22 @@ export default function TourApp() {
     fetchRouteGeometry(routePoints).then((geo) => {
       setOptimisedSnapshot((prev) => (prev?.key === key ? { key, geometry: geo } : prev))
     })
+    // The route renders below the whole site list - bring it into view.
+    // setTimeout lets React commit the newly shown section first.
+    setTimeout(() => routeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0)
   }
+
+  useEffect(() => {
+    if (!autoPlan || !routeResult) return
+    /* eslint-disable react-hooks/set-state-in-effect -- one-shot auto-plan for a
+       shared link, run once the hydrated selection has produced a route */
+    setAutoPlan(false)
+    optimise()
+    /* eslint-enable react-hooks/set-state-in-effect */
+    // optimise() is recreated every render but reads that same render's route,
+    // so it's current here; listing it would re-run this on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPlan, routeResult])
 
   const viewDetail = (building) => {
     setDetailBuilding(building)
@@ -208,19 +239,21 @@ export default function TourApp() {
         <StartPointPicker
           buildings={buildingsData}
           startId={startId}
-          onStartChange={setStartId}
+          onStartChange={changeStart}
           loop={loop}
           onLoopChange={setLoop}
           userLocation={userLocation}
           onUseMyLocation={setUserLocation}
         />
 
-        <SectionHeading step="2" title="Pick the sites you want to see" hint="Then optimise your route from the bar at the bottom." />
+        <SectionHeading step="2" title="Pick the sites you want to see" hint="Tick sites or use a quick pick, then tap Plan my route." />
         <BuildingList
           buildings={tourBuildings}
           selectedIds={selectedIds}
           onToggle={toggleSelection}
+          onSelectMany={(ids) => setSelectedIds(new Set(ids))}
           onViewDetail={viewDetail}
+          origin={userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : buildingsById[startId] ?? null}
         />
 
         <p className="text-xs text-slate-500 mt-10">
@@ -235,7 +268,12 @@ export default function TourApp() {
           itinerary should include. Only the buttons above it (share/print/
           install) are interactive-only and get hidden for print. */}
       {optimised && stops.length > 0 && (
-        <div className="mt-10 print:mt-0">
+        <div ref={routeRef} className="mt-10 print:mt-0 scroll-mt-20">
+          <div className="hidden print:block mb-4 pb-3 border-b border-slate-300">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: WALK.red }}>PCEE 2027 · Pacific Conference on Earthquake Engineering</p>
+            <p className="text-2xl font-extrabold tracking-tight text-slate-900">Seismic Walk</p>
+            <p className="text-sm text-slate-600">Self-guided engineering tour of Ōtautahi Christchurch · seismicshift.nz/walk · Powered by Seismic Shift</p>
+          </div>
           <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] mb-1 print:hidden" style={{ color: WALK.red }}>Step 3</p>
@@ -248,15 +286,18 @@ export default function TourApp() {
             </div>
           </div>
 
-          <p className="hidden print:block text-sm text-slate-500 mb-4">
-            {stops.length} stops · {formatDistance(routeResult.totalMeters)} · {formatDuration(walkMinutes(routeResult.totalMeters))} walking
+          <p className="text-sm text-slate-600 mb-4 tabular-nums">
+            <span className="font-semibold text-slate-900">
+              {stops.length} stop{stops.length === 1 ? '' : 's'} · {formatDistance(routeResult.totalMeters)} · {formatDuration(walkMinutes(routeResult.totalMeters))} walking
+            </span>
+            {' '}- walking time only; allow time at each stop.
           </p>
 
           <div className="mb-6">
             <RouteMap stops={stops} geometry={geometry} startPoint={hasVirtualStart ? virtualStart : null} userLocation={userLocation} loop={loop} />
           </div>
 
-          <RouteItinerary stops={stops} legs={legs} closingLeg={closingLeg} onViewDetail={viewDetail} />
+          <RouteItinerary stops={stops} legs={legs} closingLeg={closingLeg} startPoint={hasVirtualStart ? virtualStart : null} onViewDetail={viewDetail} />
         </div>
       )}
 
@@ -267,6 +308,7 @@ export default function TourApp() {
         <SelectionBar
           count={selectedIds.size}
           estimatedMeters={routeResult?.totalMeters ?? null}
+          canPlan={!!routeResult}
           optimised={optimised}
           onOptimise={optimise}
           onClear={clearSelection}

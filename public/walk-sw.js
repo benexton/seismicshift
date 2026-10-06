@@ -1,44 +1,56 @@
-// Minimal offline app-shell cache for /walk/. Scoped narrowly (registered
-// with scope: '/walk/' in walk.astro) so it never intercepts the rest of the
-// site. Caches the tour page itself plus the building data so the tour stays
-// usable offline; tile/route-geometry caching can be layered on once the
-// MapTiler/ORS keys are configured (docs/seismic-walk-tour-scope.md section 7).
-const CACHE_NAME = 'seismic-walk-v2'
-const APP_SHELL = ['/walk/', '/data/buildings.json']
+// Offline cache for /walk/. Registered with scope: '/walk/' in walk.astro, so
+// it only ever controls the walk page - but a controlled page's subresource
+// requests (its /_astro/ JS + CSS bundles, building images, fonts) also come
+// through here, which is what lets the tour actually run offline.
+//
+// Pre-caches just the page itself (anything else listed here must exist, or
+// cache.addAll rejects and the whole install fails - the old v1/v2 pre-cached
+// a /data/buildings.json that was never published, so offline never worked).
+// Everything else is cached on first use, stale-while-revalidate. Map tiles
+// and the directions API aren't cached; offline, the itinerary still works
+// with straight-line legs.
+const CACHE_NAME = 'seismic-walk-v3'
+const PRECACHE = ['/walk/']
+
+const SAME_ORIGIN_PREFIXES = ['/walk', '/_astro/', '/images/walk/', '/logo.png', '/NZSEELogo.png', '/favicon']
+const CROSS_ORIGIN_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting())
   )
 })
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k.startsWith('seismic-walk-') && k !== CACHE_NAME).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
   )
 })
 
+function shouldCache(url) {
+  if (url.origin === self.location.origin) return SAME_ORIGIN_PREFIXES.some((p) => url.pathname.startsWith(p))
+  return CROSS_ORIGIN_HOSTS.includes(url.hostname)
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
   const url = new URL(event.request.url)
-  if (url.origin !== self.location.origin || !url.pathname.startsWith('/walk')) {
-    if (!APP_SHELL.some((p) => url.pathname === p)) return
-  }
+  if (!shouldCache(url)) return
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const copy = response.clone()
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy))
-          }
-          return response
-        })
-        .catch(() => cached)
-      return cached || fetchPromise
-    })
+    caches.open(CACHE_NAME).then((cache) =>
+      // ignoreSearch so a shared ?r= route link still opens offline.
+      cache.match(event.request, { ignoreSearch: url.pathname.startsWith('/walk') }).then((cached) => {
+        const network = fetch(event.request)
+          .then((response) => {
+            if (response.ok || response.type === 'opaque') cache.put(event.request, response.clone())
+            return response
+          })
+          .catch(() => cached)
+        return cached || network
+      })
+    )
   )
 })

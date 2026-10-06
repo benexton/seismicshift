@@ -105,6 +105,11 @@ function main() {
     }
     seenIds.add(building.id)
 
+    // A site added through /walkadmin/ has no image yet - point it at the
+    // generated placeholder plate (scripts/build-placeholder-images.mjs, run
+    // straight after this as part of build:data) rather than a blank tile.
+    if (!building.image) building.image = `/images/walk/${building.id}.svg`
+
     return building
   })
 

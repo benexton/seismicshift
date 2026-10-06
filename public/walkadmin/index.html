@@ -200,6 +200,17 @@
             <option value="by_arrangement">By arrangement / limited</option>
           </select>
         </div>
+        <div class="field">
+          <label for="f-category">Category</label>
+          <select id="f-category">
+            <option value="">None</option>
+            <option value="heritage">Heritage</option>
+            <option value="civic">Civic</option>
+            <option value="commercial">Commercial</option>
+            <option value="new_build">Rebuild / new build</option>
+            <option value="context">Context stop (memorial, exhibition)</option>
+          </select>
+        </div>
         <div class="field full">
           <label for="f-address">Address *</label>
           <input id="f-address" required>
@@ -522,6 +533,7 @@
     field('f-architect').value = b ? (b.architect || '') : '';
     field('f-storeys').value = b && b.storeys != null ? b.storeys : '';
     field('f-step-free').value = b && b.step_free === true ? 'true' : (b && b.step_free === false ? 'false' : '');
+    field('f-category').value = b && b.category ? b.category : '';
 
     document.getElementById('overlay').classList.remove('hidden');
     if(id) startHeartbeat(id);
@@ -565,7 +577,10 @@
       engineer: field('f-engineer').value.trim(),
       architect: field('f-architect').value.trim(),
       storeys: field('f-storeys').value === '' ? null : Number(field('f-storeys').value),
-      step_free: stepFreeRaw === '' ? null : stepFreeRaw === 'true'
+      step_free: stepFreeRaw === '' ? null : stepFreeRaw === 'true',
+      // 'context' puts a site in the tour's separate "Context and remembrance"
+      // section; the others only set its placeholder image colour.
+      category: field('f-category').value || null
     };
     if(editingId) b.id = editingId;
     return b;

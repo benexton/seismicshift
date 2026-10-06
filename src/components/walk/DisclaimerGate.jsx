@@ -1,5 +1,6 @@
 import { acknowledgeDisclaimer } from '../../lib/disclaimerStorage'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
+import { useDialog } from '../../lib/useDialog'
 
 import { WALK } from './theme'
 
@@ -19,6 +20,8 @@ const POINTS = [
 // footer link, having already agreed once this session).
 export default function DisclaimerGate({ open, dismissable = false, onAcknowledge, onDismiss }) {
   useBodyScrollLock(open)
+  // Escape only closes it once it's been agreed to this session.
+  const dialogRef = useDialog(open, dismissable ? onDismiss : null)
   if (!open) return null
 
   const acknowledge = () => {
@@ -29,11 +32,18 @@ export default function DisclaimerGate({ open, dismissable = false, onAcknowledg
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6 bg-[#1c1517]/70 backdrop-blur-sm">
-      <div className="relative bg-white w-full md:max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh]">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="walk-disclaimer-title"
+        tabIndex={-1}
+        className="relative bg-white w-full md:max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh] outline-none"
+      >
         <div className="px-7 pt-7 pb-4 border-b border-slate-100 flex-shrink-0 flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.16em] mb-1.5" style={{ color: WALK.red }}>Before you set off</p>
-            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Seismic Walk safety notice</h2>
+            <h2 id="walk-disclaimer-title" className="text-2xl font-extrabold tracking-tight text-slate-900">Seismic Walk safety notice</h2>
           </div>
           {dismissable && (
             <button

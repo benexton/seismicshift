@@ -1,6 +1,7 @@
 import AccessBadge from './AccessBadge'
 import TagChip from './TagChip'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
+import { useDialog } from '../../lib/useDialog'
 import { WALK, isContextSite } from './theme'
 
 function Fact({ label, value }) {
@@ -15,6 +16,7 @@ function Fact({ label, value }) {
 
 export default function BuildingDetail({ building, selected = false, onToggle, onClose }) {
   useBodyScrollLock(!!building)
+  const dialogRef = useDialog(!!building, onClose)
   if (!building) return null
 
   // story is free text from /walkadmin/; blank lines separate paragraphs.
@@ -23,7 +25,12 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6 bg-[#1c1517]/70 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="relative bg-white w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="walk-detail-title"
+        tabIndex={-1}
+        className="relative bg-white w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative w-full h-44 md:h-56 flex-shrink-0 bg-slate-200">
@@ -36,7 +43,7 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
             {building.name_mi && !building.name.includes(building.name_mi) && (
               <p className="text-xs font-semibold text-white/75 mb-1">{building.name_mi}</p>
             )}
-            <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-white leading-tight">{building.name}</h2>
+            <h2 id="walk-detail-title" className="text-2xl md:text-3xl font-extrabold tracking-tight text-white leading-tight">{building.name}</h2>
             <p className="text-sm text-white/75 mt-1">{building.address}</p>
           </div>
           <button
@@ -85,17 +92,30 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
         </div>
 
         <div className="flex-shrink-0 border-t px-6 md:px-8 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3" style={{ borderColor: WALK.line }}>
-          {building.external_url ? (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-semibold">
+            {/* Walking directions from wherever the phone is - handy when
+                someone opens a single site rather than planning a route. */}
             <a
-              href={building.external_url}
+              href={`https://www.google.com/maps/dir/?api=1&destination=${building.lat},${building.lng}&travelmode=walking`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-semibold underline underline-offset-2"
+              className="underline underline-offset-2"
               style={{ color: WALK.maroon }}
             >
-              Further reading ↗
+              Directions ↗
             </a>
-          ) : <span />}
+            {building.external_url && (
+              <a
+                href={building.external_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2"
+                style={{ color: WALK.maroon }}
+              >
+                Further reading ↗
+              </a>
+            )}
+          </div>
           {onToggle && (
             <button
               type="button"

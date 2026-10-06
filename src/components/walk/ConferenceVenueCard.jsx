@@ -7,12 +7,14 @@ export default function ConferenceVenueCard({ building, onViewDetail }) {
   if (!building) return null
 
   return (
-    <div className="rounded-xl overflow-hidden border bg-white flex flex-col sm:flex-row" style={{ borderColor: WALK.line }}>
-      <div className="sm:w-48 h-36 sm:h-auto flex-shrink-0 bg-slate-100">
+    // Thumbnail beside the text at every width: a full-width banner on phones
+    // cropped the image plate's year off.
+    <div className="rounded-xl overflow-hidden border bg-white flex gap-4 p-3 sm:p-0 sm:gap-0" style={{ borderColor: WALK.line }}>
+      <div className="w-20 h-20 rounded-lg sm:rounded-none sm:w-48 sm:h-auto flex-shrink-0 bg-slate-100 overflow-hidden">
         {building.image && <img src={building.image} alt="" loading="lazy" className="w-full h-full object-cover" />}
       </div>
 
-      <div className="min-w-0 p-4 sm:p-5">
+      <div className="min-w-0 sm:p-5">
         <p className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: WALK.red }}>Conference venue · tour start</p>
         <h3 className="mt-1 text-lg font-extrabold tracking-tight text-slate-900 leading-tight">{building.name}</h3>
         <p className="text-xs text-slate-500 mt-0.5">{building.address}</p>
