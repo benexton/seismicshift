@@ -6,7 +6,7 @@
   "scope": "/walk/",
   "display": "standalone",
   "background_color": "#f8fafc",
-  "theme_color": "#17638f",
+  "theme_color": "#652431",
   "icons": [
     { "src": "/favicon-32x32.png", "sizes": "32x32", "type": "image/png" },
     { "src": "/logo.png", "sizes": "any", "type": "image/png", "purpose": "any" }

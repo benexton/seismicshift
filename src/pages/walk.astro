@@ -1,24 +1,106 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
 import TourApp from '../components/walk/TourApp.jsx'
+import buildings from '../data/buildings.json'
+
+// Te Pae is the venue/start point, not a stop - same split TourApp makes.
+const stops = buildings.filter((b) => b.id !== 'te-pae')
+const countTag = (tag) => stops.filter((b) => b.structural_tags?.includes(tag)).length
+const years = stops.map((b) => b.year_built).filter(Boolean)
+const stats = [
+  { value: stops.length, label: 'Sites' },
+  { value: countTag('base_isolation'), label: 'Base isolated' },
+  { value: stops.filter((b) => b.structural_tags?.some((t) => ['rocking_wall', 'rocking_frame', 'low_damage'].includes(t))).length, label: 'Low-damage systems' },
+  { value: `${Math.min(...years)}–${Math.max(...years)}`, label: 'Built' },
+]
 ---
 
 <BaseLayout
-  title="Seismic Walk | Self-Guided Engineering Walking Tour | Seismic Shift"
-  description="A self-guided walking tour of engineering-notable buildings in central Christchurch, curated for PCEE 2027. Pick your stops and get an optimised walking route."
+  title="Seismic Walk | PCEE 2027 Engineering Walking Tour of Christchurch | Seismic Shift"
+  description="A self-guided walking tour of the buildings that tell the story of the Canterbury earthquakes and the Christchurch rebuild, curated for PCEE 2027. Pick your stops and get an optimised walking route."
   canonicalPath="/walk/"
   manifestHref="/walk-manifest.webmanifest"
-  themeColor="#17638f"
+  themeColor="#652431"
 >
-  <section class="w-full bg-white py-8 md:py-12 flex-1">
-    <TourApp client:load />
-  </section>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" />
+
+  <div class="walk-root flex-1 flex flex-col bg-[#faf7f7]">
+    <header class="walk-hero relative overflow-hidden text-white print:hidden">
+      <svg class="absolute inset-x-0 bottom-0 w-full h-24 md:h-32 opacity-[0.18]" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true">
+        <polyline
+          fill="none"
+          stroke="white"
+          stroke-width="1.5"
+          vector-effect="non-scaling-stroke"
+          points="0,70 120,70 160,66 190,74 220,62 240,80 260,40 275,100 290,20 305,110 320,35 335,90 350,55 370,78 395,64 430,72 480,68 540,70 600,69 640,71 660,60 672,84 684,50 696,92 708,58 722,76 740,66 780,70 860,70 900,67 930,73 1000,70 1200,70"
+        />
+      </svg>
+
+      <div class="relative max-w-3xl mx-auto px-4 md:px-6 pt-10 pb-10 md:pt-14 md:pb-14">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] font-bold uppercase tracking-[0.18em] text-white/75">
+          <span class="px-2 py-1 rounded border border-white/35 text-white">PCEE 2027</span>
+          <span>Pacific Conference on Earthquake Engineering</span>
+        </div>
+
+        <h1 class="mt-5 text-[2.6rem] leading-none md:text-7xl font-extrabold tracking-tight">Seismic Walk</h1>
+        <p class="mt-3 text-lg md:text-2xl font-semibold text-white/90">
+          A self-guided engineering tour of Ōtautahi Christchurch
+        </p>
+        <p class="mt-4 max-w-2xl text-sm md:text-base leading-relaxed text-white/70">
+          {stops.length} buildings that trace the 2010–2011 Canterbury earthquakes and the rebuild that followed: base
+          isolation, rocking walls, ground improvement, and the heritage still waiting to be saved. Choose your stops
+          and we'll plan the walk from Te Pae.
+        </p>
+
+        <dl class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-px rounded-xl overflow-hidden bg-white/15">
+          {stats.map((s) => (
+            <div class="bg-[#4a1724]/70 backdrop-blur px-4 py-3">
+              <dt class="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">{s.label}</dt>
+              <dd class="mt-1 text-xl md:text-2xl font-extrabold tabular-nums whitespace-nowrap">{s.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      <div class="relative bg-[#1c1517]">
+        <div class="max-w-3xl mx-auto px-4 md:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <p class="text-sm font-bold">16–18 February 2027 <span class="text-white/40 mx-1.5">·</span> Te Pae, Christchurch</p>
+          <p class="text-sm italic text-white/70">Shared Ground: Resilience Across the Pacific</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="w-full flex-1">
+      <TourApp client:load />
+    </section>
+
+    <footer class="print:hidden border-t border-[#e7dfe0] bg-white">
+      <div class="max-w-3xl mx-auto px-4 md:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <img src="/NZSEELogo.png" alt="NZSEE - New Zealand Society for Earthquake Engineering" class="h-9 w-auto" loading="lazy" />
+          <span class="text-xs text-slate-500 leading-snug">Curated for PCEE 2027,<br />hosted by NZSEE</span>
+        </div>
+        <a href="/" class="flex items-center gap-2.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors">
+          Powered by
+          <img src="/logo.png" alt="Seismic Shift" class="h-8 w-auto" loading="lazy" />
+        </a>
+      </div>
+    </footer>
+  </div>
 </BaseLayout>
 
 <style>
+  .walk-root {
+    font-family: 'Montserrat', 'DM Sans', system-ui, sans-serif;
+  }
+  .walk-hero {
+    background:
+      radial-gradient(120% 140% at 100% 0%, rgba(181, 50, 50, 0.55) 0%, transparent 55%),
+      linear-gradient(115deg, #2a0a12 0%, #652431 60%, #7a2a36 100%);
+  }
   @media print {
     :global(nav),
-    :global(footer) {
+    :global(body > footer) {
       display: none !important;
     }
   }

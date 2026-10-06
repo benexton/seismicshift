@@ -11,6 +11,16 @@ const TAG_LABELS = {
   precast: 'Precast',
   low_damage: 'Low damage',
   long_span_roof: 'Long-span roof',
+  steel_braced_frame: 'Steel braced frame',
+  brb: 'Buckling-restrained braces',
+  rocking_wall: 'Rocking walls',
+  rocking_frame: 'Rocking steel frame',
+  post_tensioned: 'Post-tensioned',
+  dampers: 'Supplemental damping',
+  heritage_stone: 'Heritage stone',
+  timber_lvl: 'Timber / LVL',
+  paper_tube: 'Cardboard tubes',
+  facade_retention: 'Facade retention',
 }
 
 function titleCaseWord(word) {

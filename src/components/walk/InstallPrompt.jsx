@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-const BRAND = '#17638f'
+import { WALK } from './theme'
 
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null)
@@ -32,8 +32,8 @@ export default function InstallPrompt() {
     <button
       type="button"
       onClick={install}
-      className="px-4 py-2 rounded-full border-2 font-bold text-xs tracking-wide transition-colors"
-      style={{ borderColor: BRAND, color: BRAND }}
+      className="px-3.5 py-2 rounded-lg border font-semibold text-xs transition-colors"
+      style={{ borderColor: WALK.maroon, color: WALK.maroon }}
     >
       Install for offline use
     </button>

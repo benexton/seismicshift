@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const BRAND = '#17638f'
+import { WALK } from './theme'
 
 export default function StartPointPicker({ buildings, startId, onStartChange, loop, onLoopChange, userLocation, onUseMyLocation }) {
   const [locating, setLocating] = useState(false)
@@ -27,27 +27,26 @@ export default function StartPointPicker({ buildings, startId, onStartChange, lo
   }
 
   return (
-    <div className="rounded-3xl border-2 border-slate-100 bg-white p-4">
-      <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">Start point</p>
+    <div className="rounded-xl border bg-white p-4" style={{ borderColor: WALK.line }}>
 
       <div className="flex flex-wrap gap-2 mb-2">
         <button
           type="button"
           onClick={requestLocation}
-          className="px-3 py-1.5 rounded-full border-2 font-bold text-xs tracking-wide transition-colors"
+          className="px-3 py-2 sm:py-1.5 rounded-lg border font-semibold text-xs transition-colors"
           style={
             userLocation
-              ? { borderColor: BRAND, backgroundColor: '#eef1f3', color: BRAND }
-              : { borderColor: '#cbd5e1', backgroundColor: 'white', color: '#475569' }
+              ? { borderColor: WALK.maroon, backgroundColor: WALK.maroon, color: 'white' }
+              : { borderColor: WALK.line, backgroundColor: 'white', color: '#475569' }
           }
         >
-          {locating ? 'Locating…' : userLocation ? '📍 My location' : 'Use my location'}
+          {locating ? 'Locating…' : userLocation ? 'Using my location' : 'Use my location'}
         </button>
 
         <select
           value={userLocation ? '' : startId ?? ''}
           onChange={(e) => onStartChange(e.target.value || null)}
-          className="px-3 py-1.5 rounded-full border-2 border-slate-300 font-bold text-base sm:text-xs tracking-wide text-slate-600 bg-white max-w-full"
+          className="px-3 py-2 sm:py-1.5 rounded-lg border border-[#e7dfe0] font-semibold text-base sm:text-xs text-slate-700 bg-white max-w-full"
         >
           <option value="">No fixed start</option>
           {buildings.map((b) => (
@@ -58,12 +57,12 @@ export default function StartPointPicker({ buildings, startId, onStartChange, lo
 
       {locationError && <p className="text-xs text-red-500 mb-2">{locationError}</p>}
 
-      <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 mt-1">
+      <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 mt-2">
         <input
           type="checkbox"
           checked={loop}
           onChange={(e) => onLoopChange(e.target.checked)}
-          className="w-4 h-4 rounded border-2 border-slate-300 accent-[#17638f]"
+          className="w-4 h-4 rounded accent-[#652431]"
         />
         Return to start (loop)
       </label>

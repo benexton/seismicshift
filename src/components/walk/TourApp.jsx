@@ -17,6 +17,7 @@ import ShareButton from './ShareButton'
 import PrintButton from './PrintButton'
 import InstallPrompt from './InstallPrompt'
 import ConferenceVenueCard from './ConferenceVenueCard'
+import { WALK } from './theme'
 
 const VIRTUAL_START_ID = '__start__'
 const DEFAULT_START_ID = 'te-pae'
@@ -25,6 +26,16 @@ const buildingsById = Object.fromEntries(buildingsData.map((b) => [b.id, b]))
 // it gets its own info card (ConferenceVenueCard) instead of a selectable
 // tile in the building list.
 const tourBuildings = buildingsData.filter((b) => b.id !== DEFAULT_START_ID)
+
+function SectionHeading({ step, title, hint }) {
+  return (
+    <div className="mt-10 mb-4">
+      <p className="text-[11px] font-bold uppercase tracking-[0.16em] mb-1" style={{ color: WALK.red }}>Step {step}</p>
+      <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">{title}</h2>
+      {hint && <p className="text-sm text-slate-500 mt-1">{hint}</p>}
+    </div>
+  )
+}
 
 function trackEvent(name, params) {
   if (typeof window !== 'undefined' && typeof window.gtag === 'function') window.gtag('event', name, params)
@@ -179,7 +190,7 @@ export default function TourApp() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 md:px-6 py-8 print:px-0 print:py-0">
+    <div className="max-w-3xl mx-auto px-4 md:px-6 pt-8 md:pt-10 pb-8 print:px-0 print:py-0">
       <DisclaimerGate
         open={disclaimerOpen}
         dismissable={acknowledged}
@@ -191,16 +202,9 @@ export default function TourApp() {
       />
 
       <div className="print:hidden">
-        <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-slate-900 mb-2">
-          Ōtautahi Christchurch: self-guided engineering walking tour
-        </h1>
-        <p className="text-slate-500 leading-relaxed mb-6">
-          Curated for PCEE 2027. Tick the buildings you want to see, set a start point, and get an optimised
-          walking route with per-stop engineering detail.
-        </p>
+        <ConferenceVenueCard building={buildingsById[DEFAULT_START_ID]} onViewDetail={viewDetail} />
 
-        <ConferenceVenueCard building={buildingsById[DEFAULT_START_ID]} />
-
+        <SectionHeading step="1" title="Choose where you start" />
         <StartPointPicker
           buildings={buildingsData}
           startId={startId}
@@ -211,17 +215,17 @@ export default function TourApp() {
           onUseMyLocation={setUserLocation}
         />
 
-        <div className="mt-6">
-          <BuildingList
-            buildings={tourBuildings}
-            selectedIds={selectedIds}
-            onToggle={toggleSelection}
-            onViewDetail={viewDetail}
-          />
-        </div>
+        <SectionHeading step="2" title="Pick the sites you want to see" hint="Then optimise your route from the bar at the bottom." />
+        <BuildingList
+          buildings={tourBuildings}
+          selectedIds={selectedIds}
+          onToggle={toggleSelection}
+          onViewDetail={viewDetail}
+        />
 
-        <p className="text-xs text-slate-400 mt-10">
-          <button type="button" className="underline" onClick={() => setDisclaimerOpen(true)}>
+        <p className="text-xs text-slate-500 mt-10">
+          Self-guided, at your own risk.{' '}
+          <button type="button" className="font-semibold underline underline-offset-2" onClick={() => setDisclaimerOpen(true)}>
             Safety information
           </button>
         </p>
@@ -231,9 +235,12 @@ export default function TourApp() {
           itinerary should include. Only the buttons above it (share/print/
           install) are interactive-only and get hidden for print. */}
       {optimised && stops.length > 0 && (
-        <div className="mt-8 print:mt-0">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-black tracking-tighter text-slate-900">Your route</h2>
+        <div className="mt-10 print:mt-0">
+          <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] mb-1 print:hidden" style={{ color: WALK.red }}>Step 3</p>
+              <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Your route</h2>
+            </div>
             <div className="flex flex-wrap gap-2 print:hidden">
               <ShareButton ids={[...selectedIds]} startId={startId} loop={loop} />
               <PrintButton />
@@ -253,7 +260,10 @@ export default function TourApp() {
         </div>
       )}
 
-      <div className="print:hidden">
+      {/* sticky lives on this wrapper, not inside SelectionBar - a sticky
+          element only sticks within its parent, and this wrapper is the
+          only thing as tall as the bar itself. */}
+      <div className="sticky bottom-0 z-30 print:hidden">
         <SelectionBar
           count={selectedIds.size}
           estimatedMeters={routeResult?.totalMeters ?? null}
@@ -263,7 +273,12 @@ export default function TourApp() {
         />
       </div>
 
-      <BuildingDetail building={detailBuilding} onClose={() => setDetailBuilding(null)} />
+      <BuildingDetail
+        building={detailBuilding}
+        selected={!!detailBuilding && selectedIds.has(detailBuilding.id)}
+        onToggle={detailBuilding?.id === DEFAULT_START_ID ? null : toggleSelection}
+        onClose={() => setDetailBuilding(null)}
+      />
     </div>
   )
 }

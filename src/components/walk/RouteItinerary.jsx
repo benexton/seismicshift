@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import AccessBadge from './AccessBadge'
 import { formatDistance, formatDuration, walkMinutes } from '../../lib/geo'
+import { WALK } from './theme'
 
 function directionsUrl(from, to) {
   const origin = `${from.lat},${from.lng}`
@@ -10,7 +11,7 @@ function directionsUrl(from, to) {
 
 function LegLine({ fromPoint, toPoint, meters, printMode }) {
   return (
-    <div className="flex items-center gap-2 text-xs text-slate-400 font-bold mb-1.5">
+    <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold mb-1.5 tabular-nums">
       <span>{formatDistance(meters)} · {formatDuration(walkMinutes(meters))}</span>
       {!printMode && (
         <a
@@ -18,7 +19,7 @@ function LegLine({ fromPoint, toPoint, meters, printMode }) {
           target="_blank"
           rel="noopener noreferrer"
           className="underline print:hidden"
-          style={{ color: '#17638f' }}
+          style={{ color: WALK.maroon }}
           onClick={() => window.gtag?.('event', 'directions_opened')}
         >
           Open in maps
@@ -45,8 +46,8 @@ export default function RouteItinerary({ stops, legs, closingLeg, onViewDetail, 
           <li key={stop.id} className="flex gap-3">
             <div className="flex flex-col items-center flex-shrink-0">
               <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black"
-                style={{ backgroundColor: '#17638f' }}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-extrabold"
+                style={{ backgroundColor: WALK.maroon }}
               >
                 {idx + 1}
               </div>
@@ -61,8 +62,8 @@ export default function RouteItinerary({ stops, legs, closingLeg, onViewDetail, 
                 onClick={() => !printMode && setExpandedId(isExpanded ? null : stop.id)}
                 className="text-left w-full"
               >
-                <h4 className="font-black text-slate-900 leading-tight">{stop.name}</h4>
-                {stop.name_mi && <p className="text-xs text-slate-400 italic">{stop.name_mi}</p>}
+                <h4 className="font-bold text-slate-900 leading-tight">{stop.name}</h4>
+                {stop.name_mi && !stop.name.includes(stop.name_mi) && <p className="text-xs text-slate-400 italic">{stop.name_mi}</p>}
                 <div className="mt-1"><AccessBadge level={stop.access_level} /></div>
               </button>
 
@@ -74,7 +75,7 @@ export default function RouteItinerary({ stops, legs, closingLeg, onViewDetail, 
                     type="button"
                     onClick={() => onViewDetail(stop)}
                     className="mt-2 text-xs font-bold underline"
-                    style={{ color: '#17638f' }}
+                    style={{ color: WALK.maroon }}
                   >
                     Full details →
                   </button>
@@ -88,13 +89,13 @@ export default function RouteItinerary({ stops, legs, closingLeg, onViewDetail, 
       {closingLeg && (
         <li className="flex gap-3">
           <div className="flex flex-col items-center flex-shrink-0">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black bg-slate-400">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-extrabold bg-slate-400">
               ↩
             </div>
           </div>
           <div className="flex-1 min-w-0">
             <LegLine fromPoint={closingLeg.fromPoint} toPoint={closingLeg.toPoint} meters={closingLeg.meters} printMode={printMode} />
-            <p className="font-black text-slate-900 leading-tight">Return to start</p>
+            <p className="font-bold text-slate-900 leading-tight">Return to start</p>
           </div>
         </li>
       )}

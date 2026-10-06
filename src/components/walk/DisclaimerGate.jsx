@@ -1,7 +1,7 @@
 import { acknowledgeDisclaimer } from '../../lib/disclaimerStorage'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 
-const BRAND = '#17638f'
+import { WALK } from './theme'
 
 const POINTS = [
   'Watch for traffic, cyclists, e-scooters, and the heritage tram - central Christchurch has shared and separated cycle lanes and a tram loop through the tour area; look both ways and cross at signals.',
@@ -28,12 +28,12 @@ export default function DisclaimerGate({ open, dismissable = false, onAcknowledg
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6 bg-slate-900/60 backdrop-blur-sm">
-      <div className="relative bg-white w-full md:max-w-lg md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6 bg-[#1c1517]/70 backdrop-blur-sm">
+      <div className="relative bg-white w-full md:max-w-lg md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh]">
         <div className="px-7 pt-7 pb-4 border-b border-slate-100 flex-shrink-0 flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Before you set off</p>
-            <h2 className="text-2xl font-black tracking-tighter text-slate-900">Seismic Walk safety notice</h2>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] mb-1.5" style={{ color: WALK.red }}>Before you set off</p>
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Seismic Walk safety notice</h2>
           </div>
           {dismissable && (
             <button
@@ -52,7 +52,7 @@ export default function DisclaimerGate({ open, dismissable = false, onAcknowledg
           <ul className="space-y-3">
             {POINTS.map((point) => (
               <li key={point} className="flex gap-3 text-sm text-slate-600 leading-relaxed">
-                <span aria-hidden="true" className="flex-shrink-0" style={{ color: BRAND }}>●</span>
+                <span aria-hidden="true" className="flex-shrink-0 mt-2 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: WALK.maroon }} />
                 {point}
               </li>
             ))}
@@ -64,8 +64,8 @@ export default function DisclaimerGate({ open, dismissable = false, onAcknowledg
         <div className="px-7 pt-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] border-t border-slate-100 flex-shrink-0">
           <button
             onClick={acknowledge}
-            className="w-full text-white px-5 py-3 text-sm font-bold tracking-widest rounded-full transition shadow-md hover:opacity-90"
-            style={{ backgroundColor: BRAND }}
+            className="w-full text-white px-5 py-3 text-sm font-bold rounded-lg transition hover:brightness-110"
+            style={{ backgroundColor: WALK.maroon }}
           >
             I understand and agree
           </button>

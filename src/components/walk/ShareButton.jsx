@@ -23,7 +23,7 @@ export default function ShareButton({ ids, startId, loop }) {
     <button
       type="button"
       onClick={share}
-      className="px-4 py-2 rounded-full border-2 border-slate-300 font-bold text-xs tracking-wide text-slate-600 hover:border-slate-400 transition-colors"
+      className="px-3.5 py-2 rounded-lg border border-slate-300 bg-white font-semibold text-xs text-slate-700 hover:border-slate-500 transition-colors"
     >
       {copied ? 'Link copied!' : 'Share route'}
     </button>

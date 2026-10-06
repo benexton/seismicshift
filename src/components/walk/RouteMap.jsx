@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { boundsOf } from '../../lib/geo'
+import { WALK } from './theme'
 
 const MAPTILER_KEY = import.meta.env.PUBLIC_MAPTILER_KEY
 
@@ -14,12 +15,12 @@ function numberMarkerEl(n) {
   el.style.width = '28px'
   el.style.height = '28px'
   el.style.borderRadius = '50%'
-  el.style.backgroundColor = '#17638f'
+  el.style.backgroundColor = WALK.maroon
   el.style.color = 'white'
   el.style.display = 'flex'
   el.style.alignItems = 'center'
   el.style.justifyContent = 'center'
-  el.style.fontWeight = '900'
+  el.style.fontWeight = '800'
   el.style.fontSize = '12px'
   el.style.border = '2px solid white'
   el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.3)'
@@ -113,7 +114,7 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
           id: 'route-line',
           type: 'line',
           source: 'route-line',
-          paint: { 'line-color': '#17638f', 'line-width': 4, 'line-dasharray': geometry ? [1, 0] : [0.5, 1.5] },
+          paint: { 'line-color': WALK.red, 'line-width': 4, 'line-dasharray': geometry ? [1, 0] : [0.5, 1.5] },
         })
       }
 
@@ -131,7 +132,7 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
 
   if (!MAPTILER_KEY) {
     return (
-      <div className="print:hidden rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+      <div className="print:hidden rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
         <p className="text-sm text-slate-500 font-bold mb-1">Map preview not configured</p>
         <p className="text-xs text-slate-400">
           Set a <code className="bg-slate-100 px-1 rounded">PUBLIC_MAPTILER_KEY</code> env var to show the route map. The itinerary below works fully without it.
@@ -140,5 +141,5 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
     )
   }
 
-  return <div ref={containerRef} className="w-full h-72 sm:h-96 md:h-[420px] print:h-64 rounded-3xl overflow-hidden border-2 border-slate-100" />
+  return <div ref={containerRef} className="w-full h-72 sm:h-96 md:h-[420px] print:h-64 rounded-xl overflow-hidden border border-[#e7dfe0]" />
 }

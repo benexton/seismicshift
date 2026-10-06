@@ -3,7 +3,7 @@
 // site. Caches the tour page itself plus the building data so the tour stays
 // usable offline; tile/route-geometry caching can be layered on once the
 // MapTiler/ORS keys are configured (docs/seismic-walk-tour-scope.md section 7).
-const CACHE_NAME = 'seismic-walk-v1'
+const CACHE_NAME = 'seismic-walk-v2'
 const APP_SHELL = ['/walk/', '/data/buildings.json']
 
 self.addEventListener('install', (event) => {
