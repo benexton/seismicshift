@@ -43,13 +43,10 @@ function parseCsv(text) {
 }
 
 function coerce(key, raw) {
-  // Normalise Windows line endings - text pasted into the Supabase SQL
-  // editor or /walkadmin/ textareas arrives as 
-, which otherwise shows up
-  // as spurious diffs every time the nightly sync regenerates this file.
-  const value = raw.replace(/
-?/g, '
-').trim()
+  // Normalise Windows line endings: text pasted into the Supabase SQL editor
+  // or /walkadmin/ textareas arrives as CRLF, which otherwise shows up as a
+  // spurious diff every time the nightly sync regenerates buildings.json.
+  const value = raw.replace(/\r\n?/g, '\n').trim()
   if (value === '') {
     if (LIST_FIELDS.has(key)) return []
     if (BOOLEAN_FIELDS.has(key)) return null
