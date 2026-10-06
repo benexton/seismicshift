@@ -9,7 +9,7 @@ const ACCESS_FILTERS = [
   { value: 'by_arrangement', label: 'By arrangement' },
 ]
 
-import { WALK } from './theme'
+import { WALK, isContextSite } from './theme'
 
 function FilterChip({ active, onClick, children }) {
   return (
@@ -48,6 +48,11 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onViewD
     })
   }, [buildings, accessFilter, tagFilter, stepFreeOnly])
 
+  // Context stops (Quake City, memorials) sit in their own section below the
+  // engineering sites - see isContextSite.
+  const engineering = filtered.filter((b) => !isContextSite(b))
+  const context = filtered.filter(isContextSite)
+
   return (
     <div>
       {/* Mobile: one scrollable row per filter group, edge-to-edge, so the
@@ -81,7 +86,7 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onViewD
       <p className="text-xs text-slate-500 font-semibold mb-3 mt-1">Showing {filtered.length} of {buildings.length} sites</p>
 
       <div className="space-y-3">
-        {filtered.map((b) => (
+        {engineering.map((b) => (
           <BuildingCard
             key={b.id}
             building={b}
@@ -94,6 +99,30 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onViewD
           <p className="text-sm text-slate-500 text-center py-8">No sites match these filters.</p>
         )}
       </div>
+
+      {context.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center gap-3 mb-1">
+            <span className="h-px flex-1" style={{ backgroundColor: WALK.line }} />
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">Context and remembrance</p>
+            <span className="h-px flex-1" style={{ backgroundColor: WALK.line }} />
+          </div>
+          <p className="text-sm text-slate-500 text-center mb-4">
+            Not engineering case studies - places that explain what happened and who it happened to.
+          </p>
+          <div className="space-y-3">
+            {context.map((b) => (
+              <BuildingCard
+                key={b.id}
+                building={b}
+                selected={selectedIds.has(b.id)}
+                onToggle={onToggle}
+                onViewDetail={onViewDetail}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -10,7 +10,7 @@ const POINTS = [
   'This is a self-guided tour undertaken at your own risk.',
   'Only enter buildings marked as publicly accessible, and respect private property, tenants, and staff. Interior access and opening hours are not guaranteed - check ahead.',
   'Some earthquake-damaged and heritage sites (e.g. the Cathedral) may be fenced or under construction - exterior viewing only.',
-  'Seismic Shift and NZSEE are not affiliated with the building owners and provide this information as-is, without warranty or liability.',
+  'Seismic Shift and NZSEE are not affiliated with the building owners and provide this information as-is, without warranty or liability. The information has been prepared with as much accuracy as possible.',
   'In an emergency, call 111.',
 ]
 

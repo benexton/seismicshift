@@ -1,7 +1,7 @@
 import AccessBadge from './AccessBadge'
 import TagChip from './TagChip'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
-import { WALK } from './theme'
+import { WALK, isContextSite } from './theme'
 
 function Fact({ label, value }) {
   if (!value) return null
@@ -30,6 +30,9 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
           {building.image && <img src={building.image} alt="" className="w-full h-full object-cover" />}
           <div className="absolute inset-0 bg-gradient-to-t from-[#1c1517]/90 via-[#1c1517]/30 to-transparent" />
           <div className="absolute bottom-0 inset-x-0 px-6 md:px-8 pb-5">
+            {isContextSite(building) && (
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 mb-1">Context and remembrance</p>
+            )}
             {building.name_mi && !building.name.includes(building.name_mi) && (
               <p className="text-xs font-semibold text-white/75 mb-1">{building.name_mi}</p>
             )}

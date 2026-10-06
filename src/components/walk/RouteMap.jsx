@@ -6,16 +6,16 @@ import { useEffect, useRef } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { boundsOf } from '../../lib/geo'
-import { WALK } from './theme'
+import { WALK, stopColor } from './theme'
 
 const MAPTILER_KEY = import.meta.env.PUBLIC_MAPTILER_KEY
 
-function numberMarkerEl(n) {
+function numberMarkerEl(n, color = WALK.maroon) {
   const el = document.createElement('div')
   el.style.width = '28px'
   el.style.height = '28px'
   el.style.borderRadius = '50%'
-  el.style.backgroundColor = WALK.maroon
+  el.style.backgroundColor = color
   el.style.color = 'white'
   el.style.display = 'flex'
   el.style.alignItems = 'center'
@@ -73,7 +73,7 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
       if (points.length === 0) return
 
       stops.forEach((stop, idx) => {
-        const marker = new maplibregl.Marker({ element: numberMarkerEl(idx + 1) })
+        const marker = new maplibregl.Marker({ element: numberMarkerEl(idx + 1, stopColor(stop)) })
           .setLngLat([stop.lng, stop.lat])
           .setPopup(new maplibregl.Popup({ offset: 16 }).setText(stop.name))
           .addTo(map)

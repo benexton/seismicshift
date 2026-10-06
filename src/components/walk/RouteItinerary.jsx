@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import AccessBadge from './AccessBadge'
 import { formatDistance, formatDuration, walkMinutes } from '../../lib/geo'
-import { WALK } from './theme'
+import { WALK, stopColor } from './theme'
 
 function directionsUrl(from, to) {
   const origin = `${from.lat},${from.lng}`
@@ -47,7 +47,7 @@ export default function RouteItinerary({ stops, legs, closingLeg, onViewDetail, 
             <div className="flex flex-col items-center flex-shrink-0">
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-extrabold"
-                style={{ backgroundColor: WALK.maroon }}
+                style={{ backgroundColor: stopColor(stop) }}
               >
                 {idx + 1}
               </div>

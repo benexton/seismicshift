@@ -10,3 +10,11 @@ export const WALK = {
   tint: '#f7eff0',
   line: '#e7dfe0',
 }
+
+// Sites with category 'context' (the walk_buildings.category column - set via
+// SQL, not exposed in /walkadmin/) are memorials and
+// exhibitions rather than engineering case studies: listed in their own
+// section and drawn in charcoal instead of maroon on the card, map and
+// itinerary.
+export const isContextSite = (building) => building?.category === 'context'
+export const stopColor = (building) => (isContextSite(building) ? WALK.ink : WALK.maroon)

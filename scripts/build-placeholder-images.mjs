@@ -17,6 +17,7 @@ const CATEGORIES = {
   civic: { label: 'CIVIC', colors: ['#652431', '#2a0a12'] },
   commercial: { label: 'COMMERCIAL', colors: ['#4f2a3f', '#1c1517'] },
   new_build: { label: 'REBUILD', colors: ['#b53232', '#3a0f1a'] },
+  context: { label: 'CONTEXT', colors: ['#4a4245', '#1c1517'] },
 }
 const DEFAULT_CATEGORY = { label: 'SITE', colors: ['#5b4a4e', '#1c1517'] }
 
@@ -31,13 +32,13 @@ function rng(seedText) {
   }
 }
 
-function seismograph(id) {
+function seismograph(id, calm) {
   const rand = rng(id)
   const burstAt = 220 + rand() * 360
   const points = []
   for (let x = 0; x <= 800; x += 8) {
     const d = Math.abs(x - burstAt)
-    const amp = 4 + 150 * Math.exp(-((d / 70) ** 2))
+    const amp = calm ? 2 : 4 + 150 * Math.exp(-((d / 70) ** 2))
     const y = 330 + (rand() - 0.5) * 2 * amp
     points.push(`${x},${y.toFixed(1)}`)
   }
@@ -58,7 +59,9 @@ function escapeXml(s) {
 function svgFor(building) {
   const { label, colors: [c1, c2] } = CATEGORIES[building.category] ?? DEFAULT_CATEGORY
   const gradId = `g-${building.id}`
-  const year = building.year_built ? String(building.year_built) : ''
+  // Context stops (memorials, exhibitions) get a calm flat line and no year.
+  const calm = building.category === 'context'
+  const year = !calm && building.year_built ? String(building.year_built) : ''
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Illustration for ${escapeXml(building.name)}">
   <defs>
     <linearGradient id="${gradId}" x1="0" y1="0" x2="1" y2="1">
@@ -68,7 +71,7 @@ function svgFor(building) {
   </defs>
   <rect width="800" height="600" fill="url(#${gradId})" />
   <g stroke="white" stroke-opacity="0.06" stroke-width="1">${gridLines()}</g>
-  <polyline points="${seismograph(building.id)}" fill="none" stroke="white" stroke-opacity="0.55" stroke-width="3" stroke-linejoin="round" />
+  <polyline points="${seismograph(building.id, calm)}" fill="none" stroke="white" stroke-opacity="0.55" stroke-width="3" stroke-linejoin="round" />
   <text x="400" y="110" text-anchor="middle" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="26" font-weight="700" letter-spacing="5" fill="white" fill-opacity="0.7">${label}</text>
   <text x="400" y="530" text-anchor="middle" font-family="Montserrat, Arial, Helvetica, sans-serif" font-size="130" font-weight="800" fill="white" fill-opacity="0.92">${year}</text>
 </svg>

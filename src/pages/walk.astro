@@ -4,14 +4,16 @@ import TourApp from '../components/walk/TourApp.jsx'
 import buildings from '../data/buildings.json'
 
 // Te Pae is the venue/start point, not a stop - same split TourApp makes.
-const stops = buildings.filter((b) => b.id !== 'te-pae')
+// Context stops (memorials, Quake City) aren't counted as engineering sites.
+const allStops = buildings.filter((b) => b.id !== 'te-pae')
+const stops = allStops.filter((b) => b.category !== 'context')
+const contextCount = allStops.length - stops.length
 const countTag = (tag) => stops.filter((b) => b.structural_tags?.includes(tag)).length
-const years = stops.map((b) => b.year_built).filter(Boolean)
 const stats = [
-  { value: stops.length, label: 'Sites' },
+  { value: stops.length, label: 'Engineering sites' },
   { value: countTag('base_isolation'), label: 'Base isolated' },
   { value: stops.filter((b) => b.structural_tags?.some((t) => ['rocking_wall', 'rocking_frame', 'low_damage'].includes(t))).length, label: 'Low-damage systems' },
-  { value: `${Math.min(...years)}–${Math.max(...years)}`, label: 'Built' },
+  { value: contextCount, label: 'Context stops' },
 ]
 ---
 
@@ -48,8 +50,8 @@ const stats = [
         </p>
         <p class="mt-4 max-w-2xl text-sm md:text-base leading-relaxed text-white/70">
           {stops.length} buildings that trace the 2010–2011 Canterbury earthquakes and the rebuild that followed: base
-          isolation, rocking walls, ground improvement, and the heritage still waiting to be saved. Choose your stops
-          and we'll plan the walk from Te Pae.
+          isolation, rocking walls, ground improvement, and the heritage still waiting to be saved, plus {contextCount}
+          places of context and remembrance. Choose your stops and we'll plan the walk from Te Pae.
         </p>
 
         <dl class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-px rounded-xl overflow-hidden bg-white/15">
