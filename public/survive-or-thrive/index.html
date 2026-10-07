@@ -143,6 +143,7 @@
   .budget .value.right{justify-content:flex-end;}
   .budget-track{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-top:10px;}
   .budget-fill{height:100%;background:var(--brand);border-radius:3px;transition:width .25s ease;}
+  .budget-note{font-size:12.5px;color:var(--muted);line-height:1.5;margin:8px 2px 0;}
 
   /* ---------- choice cards ---------- */
   .group-title{font-size:13.5px;font-weight:700;color:var(--ink-2);margin:20px 0 8px;}
@@ -165,12 +166,12 @@
   .card .name{display:block;font-weight:700;font-size:15.5px;letter-spacing:-.01em;}
   .card .desc{display:block;font-size:13px;color:var(--muted);margin-top:3px;line-height:1.45;}
   .badge{display:inline-block;font-size:11px;font-weight:700;color:var(--brand);background:var(--brand-tint);border-radius:999px;padding:3px 9px;margin-bottom:6px;}
+  .badge.muted{color:var(--ink-2);background:var(--soft);}
   .card-meta{flex:0 0 auto;display:flex;flex-direction:column;gap:5px;align-items:flex-end;}
   .pill{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;border-radius:999px;padding:4px 10px;white-space:nowrap;}
   .pill.spend{color:var(--ink-2);background:var(--soft);}
   .pill.gain{color:var(--gain);background:var(--gain-bg);}
   .pill.mass{font-size:11px;color:var(--mass);background:var(--mass-bg);padding:3px 8px;}
-  .coin{width:12px;height:12px;display:inline-block;flex:0 0 auto;}
   .check{flex:0 0 22px;height:22px;border:2px solid var(--line-2);border-radius:7px;display:flex;align-items:center;justify-content:center;transition:background .15s, border-color .15s;}
   .toggle.selected .check{background:var(--brand);border-color:var(--brand);}
   .toggle.selected .check::after{content:"";width:10px;height:5px;border-left:2.5px solid #fff;border-bottom:2.5px solid #fff;transform:rotate(-45deg) translate(1px,-1px);}
@@ -200,7 +201,8 @@
   .seis-strip #seis-status{color:var(--ink-2);}
   #seismograph{width:100%;height:56px;display:block;margin-top:4px;}
   .level-select{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-  .level-btn{background:var(--card);border:1px solid var(--line-2);border-radius:999px;padding:10px 6px;font-weight:700;font-size:14px;color:var(--ink-2);cursor:pointer;}
+  .level-btn{background:var(--card);border:1px solid var(--line-2);border-radius:16px;padding:9px 6px;font-weight:700;font-size:14px;color:var(--ink-2);cursor:pointer;line-height:1.2;}
+  .level-btn .rp{display:block;font-size:11px;font-weight:500;opacity:.75;margin-top:2px;}
   .level-btn.selected{background:var(--ink);border-color:var(--ink);color:#fff;}
   .level-btn:disabled{opacity:.5;cursor:not-allowed;}
   .level-note{font-size:12.5px;color:var(--muted);line-height:1.45;margin:8px 2px 14px;}
@@ -219,6 +221,18 @@
   .score-hero{display:flex;align-items:baseline;gap:8px;}
   .score-hero .num{font-size:60px;font-weight:900;letter-spacing:-.05em;line-height:1;}
   .score-hero .unit{font-size:15px;color:var(--muted);font-weight:500;}
+  .score-caption{font-size:12.5px;color:var(--muted);margin:4px 0 0;}
+  .profile-title{font-size:13.5px;font-weight:700;color:var(--ink-2);margin:16px 0 8px;}
+  .profile{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .pf{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 11px 11px;}
+  .pf.watched{border-color:var(--ink-2);box-shadow:0 0 0 1px var(--ink-2);}
+  .pf .q{font-size:12.5px;font-weight:700;color:var(--ink-2);}
+  .pf .rp{font-size:11px;color:var(--muted);}
+  .pf .st{margin-top:7px;font-size:14px;font-weight:900;letter-spacing:-.01em;}
+  .pf .tr{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-top:1px;}
+  .pf.thrive .st, .pf.thrive .tr{color:var(--thrive);}
+  .pf.survive .st, .pf.survive .tr{color:var(--survive);}
+  .pf.fail .st, .pf.fail .tr{color:var(--fail);}
   .narrative{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:12px;padding:14px 16px;font-size:15px;line-height:1.55;margin:16px 0 12px;}
   .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px;}
   .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;}
@@ -343,10 +357,11 @@
     <p class="sub">Pick what you're designing today, then choose the structural system that holds it up.</p>
 
     <div class="budget">
-      <div class="label">Budget remaining</div>
+      <div class="label">Upgrade budget</div>
       <div class="value" id="budget-value-build"></div>
       <div class="budget-track"><div class="budget-fill" id="budget-fill-build"></div></div>
     </div>
+    <p class="budget-note">Every building's base cost is 100, whether it's a home or an office block, and options are priced as a share of that. Your client will go up to 5% over for a better building.</p>
 
     <div class="group-title">Building type</div>
     <div class="cards" id="type-cards"></div>
@@ -366,12 +381,12 @@
   <!-- STEP 2: ADDITIONS -->
   <section class="screen" id="screen-additions">
     <h2 tabindex="-1">Add-Ons &amp; Revenue</h2>
-    <p class="sub">Optional features that earn revenue - each one adds coins back to your budget (in green), but adds weight up high, which the earthquake will find. Skip them, or gamble on the trade-off.</p>
+    <p class="sub">Optional features that earn back more than they cost. Each one adds to your upgrade budget (in green), but adds weight up high, which the earthquake will find. Skip them, or gamble on the trade-off.</p>
 
     <div class="budget">
       <div class="budget-row">
         <div>
-          <div class="label">Budget remaining</div>
+          <div class="label">Upgrade budget</div>
           <div class="value" id="budget-value-additions"></div>
         </div>
         <div style="text-align:right;">
@@ -394,10 +409,10 @@
   <!-- STEP 3: SEISMIC PROTECTION -->
   <section class="screen" id="screen-protect">
     <h2 tabindex="-1">Add Seismic Protection</h2>
-    <p class="sub">Spend what's left of your budget on technology that helps your building ride out the shake.</p>
+    <p class="sub">Spend what's left of your upgrade budget on technology that helps your building ride out the shake.</p>
 
     <div class="budget">
-      <div class="label">Budget remaining</div>
+      <div class="label">Upgrade budget</div>
       <div class="value" id="budget-value-protect"></div>
       <div class="budget-track"><div class="budget-fill" id="budget-fill-protect"></div></div>
     </div>
@@ -429,7 +444,7 @@
 
     <div class="group-title">Earthquake level</div>
     <div class="level-select" id="level-select"></div>
-    <p class="level-note">Changes how hard the shake looks. Your score always uses the same reference earthquake, so every design is judged the same way.</p>
+    <p class="level-note">Watch your building in any of the three. Your score covers all three earthquakes, weighted towards Strong - the design-level quake buildings are designed for.</p>
 
     <button class="btn btn-shake" id="btn-shake" disabled>Shake It</button>
 
@@ -449,7 +464,12 @@
   <section class="screen" id="screen-results">
     <div class="result-banner" id="result-banner" tabindex="-1" aria-live="polite">-</div>
     <p class="result-subtag" id="result-subtag"></p>
-    <div class="score-hero" id="score-hero"><span class="num" id="score-num">0</span><span class="unit">points</span></div>
+    <div id="score-block">
+      <div class="score-hero"><span class="num" id="score-num">0</span><span class="unit">points</span></div>
+      <p class="score-caption">Overall score, across all three earthquakes</p>
+    </div>
+    <div class="profile-title">Across all three earthquakes</div>
+    <div class="profile" id="profile"></div>
     <div class="narrative" id="result-narrative"></div>
 
     <div class="stat-grid" id="stat-grid"></div>
@@ -482,7 +502,7 @@
 
 </div>
 
-<script src="/survive-or-thrive/model.js?v=2026-10-07"></script>
+<script src="/survive-or-thrive/model.js?v=2026-10-08"></script>
 <script>
 (function(){
   "use strict";
@@ -516,18 +536,22 @@
   /* =========================================================
      CONSTANTS
   ========================================================= */
-  // The level only changes how dramatic the shake ANIMATION looks - the
-  // verdict and score come from model.js's fixed reference scenario.
+  // Animation ranges for the ground motion drawn for each level. The
+  // outcome for each level (and the score, across all three) comes from
+  // model.js's QUAKES - these only shape what the shake looks like.
   var LEVELS = {
     moderate: { key:'moderate', label:'Moderate', intensity:[0.15,0.22], freq:[0.7,1.3],  duration:[8,14] },
     strong:   { key:'strong',   label:'Strong',   intensity:[0.25,0.35], freq:[0.5,1.7],  duration:[12,20] },
     major:    { key:'major',    label:'Major',    intensity:[0.35,0.50], freq:[0.35,2.2], duration:[15,28] }
   };
 
-  /* Budget is spent/earned in coins - deliberately a different currency
-     from the final score (points), so selecting a revenue add-on never
-     looks like it hands out score. */
-  var COIN = '<svg class="coin" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7" r="2.2" fill="currentColor"/></svg>';
+  /* Prices and the budget are percentages of the building's base cost
+     (see PRICES in model.js) - a different unit from the score (points),
+     so a revenue add-on never looks like it hands out score. */
+  function fmtPct(x){ return (Math.round(x*10)/10) + '%'; }
+  function pricePill(cost){ return cost ? '+' + fmtPct(cost) : 'Included'; }
+  // Budget comparisons on one-decimal percentages, safe from float dust.
+  function fits(x){ return x >= -1e-9; }
 
   var LEARN_MORE = {
     house: { url:'https://www.seismicshift.nz/frontfoot/', label:'Learn about FrontFoot' },
@@ -578,7 +602,7 @@
     systemKey: null,
     additions: {},
     protections: {},
-    levelKey: 'moderate',
+    levelKey: 'strong',
     lastRun: null,
     // Remembered (in memory only) so a replay doesn't mean retyping.
     entrant: { name:'', email:'', optIn:false }
@@ -636,7 +660,7 @@
   function renderBudget(suffix){
     var rem = budgetRemaining();
     var total = budgetTotal();
-    document.getElementById('budget-value-'+suffix).innerHTML = COIN + rem + '<span class="of">/ ' + total + '</span>';
+    document.getElementById('budget-value-'+suffix).innerHTML = fmtPct(rem) + ' left <span class="of">of ' + fmtPct(total) + '</span>';
     document.getElementById('budget-fill-'+suffix).style.width = clamp(rem/total*100, 0, 100) + '%';
     if(suffix==='build'){
       document.getElementById('btn-to-additions').disabled = !(state.typeKey && state.systemKey);
@@ -707,7 +731,7 @@
       s += '<line x1="34" y1="6" x2="10" y2="18" stroke="'+ICON_ACCENT+'" stroke-width="1.6"/>';
       s += '<line x1="10" y1="18" x2="34" y2="30" stroke="'+ICON_ACCENT+'" stroke-width="1.6"/>';
       s += '<line x1="34" y1="18" x2="10" y2="30" stroke="'+ICON_ACCENT+'" stroke-width="1.6"/>';
-    } else if(key==='shearwalls' || key==='concreteShear'){
+    } else if(key==='shearwalls'){
       s += '<rect x="10" y="6" width="8" height="30" fill="'+ICON_ACCENT+'" opacity="0.7"/>';
     }
     s += '</svg>';
@@ -754,11 +778,12 @@
     P.systemOrder.forEach(function(k){
       var sys = P.systems[k];
       var isCurrent = state.systemKey===k;
-      // Switching refunds the current system's cost - and switching to
-      // Shear Walls also refunds Extra Shear Walls, which isn't offered on
-      // a shear-wall building and is dropped below.
-      var refund = spentDesign() + ((k==='shearwalls' && state.protections.shearwallsAdd) ? P.protections.shearwallsAdd.cost : 0);
-      var affordable = isCurrent || budgetRemaining() + refund >= sys.cost;
+      // Protections that don't suit this system (e.g. Quake Defender on
+      // shear walls) are dropped on switching to it, so switching refunds
+      // them as well as the current system's cost.
+      var dropped = M.chosen(state.protections, P.protections).filter(function(pk){ return !M.suitable(state.typeKey, k, pk); });
+      var refund = spentDesign() + dropped.reduce(function(sum, pk){ return sum + P.protections[pk].cost; }, 0);
+      var affordable = isCurrent || fits(budgetRemaining() + refund - sys.cost);
       var el = document.createElement('button');
       el.type = 'button';
       el.className = 'card' + (isCurrent ? ' selected' : '') + (!affordable ? ' disabled' : '');
@@ -768,7 +793,7 @@
         '<span class="icon">'+systemIcon(k)+'</span>'+
         '<span class="body"><span class="name">'+sys.label+'</span>'+
         '<span class="desc">'+sys.desc+'</span></span>'+
-        '<span class="card-meta"><span class="pill spend">'+COIN+sys.cost+'</span></span>';
+        '<span class="card-meta"><span class="pill spend">'+pricePill(sys.cost)+'</span></span>';
       el.addEventListener('click', function(){
         if(!affordable){
           flashNote('build-note', 'Not enough budget left for that system - remove some protection first.');
@@ -776,9 +801,10 @@
         }
         if(!isCurrent){
           state.systemKey = k;
-          if(k==='shearwalls' && state.protections.shearwallsAdd){
-            state.protections.shearwallsAdd = false;
-            flashNote('build-note', 'Removed Extra Shear Walls - a shear-wall building already has them.');
+          if(dropped.length){
+            dropped.forEach(function(pk){ state.protections[pk] = false; });
+            flashNote('build-note', 'Removed ' + dropped.map(function(pk){ return P.protections[pk].label; }).join(' and ') +
+              ' - not suitable for ' + sys.label.toLowerCase() + '.');
           }
           track('system_selected', { system:k, type:state.typeKey });
         }
@@ -803,7 +829,7 @@
       var selected = !!state.additions[k];
       // Deselecting is blocked only if the revenue is already committed to
       // protection spend (would push the budget negative) - guards back-nav.
-      var blocksRemoval = selected && (budgetRemaining() - a.budgetBonus < 0);
+      var blocksRemoval = selected && !fits(budgetRemaining() - a.budgetBonus);
       var el = document.createElement('button');
       el.type = 'button';
       el.className = 'card toggle' + (selected ? ' selected' : '');
@@ -812,7 +838,7 @@
         '<span class="check" aria-hidden="true"></span>'+
         '<span class="body"><span class="name">'+a.label+'</span>'+
         '<span class="desc">'+a.desc+'</span></span>'+
-        '<span class="card-meta"><span class="pill gain">+'+COIN+a.budgetBonus+'</span>'+
+        '<span class="card-meta"><span class="pill gain">+'+fmtPct(a.budgetBonus)+' budget</span>'+
         '<span class="pill mass">+'+Math.round(a.massPct*100)+'% mass</span></span>';
       el.addEventListener('click', function(){
         if(blocksRemoval){
@@ -836,9 +862,11 @@
     var P = pools();
     var featuredKey = P.featuredKey;
     P.protectionOrder.forEach(function(k){
-      if(k==='shearwallsAdd' && state.systemKey==='shearwalls') return; // already maxed
       var p = P.protections[k];
       var selected = !!state.protections[k];
+      // Not suitable for the chosen structural system (e.g. Quake Defender on
+      // shear walls): still shown, but greyed out, tagged and not selectable.
+      var unsuitable = !M.suitable(state.typeKey, state.systemKey, k);
       // Selecting this card may auto-clear others (the exclusivity rule
       // below) - that frees their budget too, so affordability has to
       // account for it, not just this card's own cost.
@@ -850,21 +878,32 @@
       } else if(!selected && state.protections[featuredKey]){
         freedByThis = P.protections[featuredKey].cost;
       }
-      var affordable = selected || budgetRemaining() + freedByThis >= p.cost;
+      var affordable = selected || fits(budgetRemaining() + freedByThis - p.cost);
+      var blocked = unsuitable || !affordable;
       var el = document.createElement('button');
       el.type = 'button';
-      el.className = 'card toggle' + (selected ? ' selected' : '') + (!affordable ? ' disabled' : '') + (p.featured ? ' featured' : '');
+      el.className = 'card toggle' + (selected ? ' selected' : '') + (blocked ? ' disabled' : '') + (p.featured && !unsuitable ? ' featured' : '');
       el.setAttribute('aria-pressed', selected ? 'true' : 'false');
-      if(!affordable) el.setAttribute('aria-disabled', 'true');
+      if(blocked) el.setAttribute('aria-disabled', 'true');
+      var badge = unsuitable ? '<span class="badge muted">Not suitable for the primary structural system</span>'
+        : (p.featured ? '<span class="badge">Recommended</span>' : '');
       el.innerHTML =
         '<span class="check" aria-hidden="true"></span>'+
-        '<span class="body">'+(p.featured ? '<span class="badge">Recommended</span>' : '')+
+        '<span class="body">'+badge+
         '<span class="name">'+p.label+'</span>'+
         '<span class="desc">'+p.desc+'</span></span>'+
-        '<span class="card-meta"><span class="pill spend">'+COIN+p.cost+'</span></span>';
+        '<span class="card-meta"><span class="pill spend">'+pricePill(p.cost)+'</span></span>';
       el.addEventListener('click', function(){
+        if(unsuitable){
+          var fits = P.systemOrder.filter(function(sk){ return M.suitable(state.typeKey, sk, k); })
+            .map(function(sk){ return P.systems[sk].label.toLowerCase(); });
+          flashNote('protect-note', p.label + " isn't suitable for " + P.systems[state.systemKey].label.toLowerCase() +
+            ' - it works with a ' + fits.join(' or ') + '.');
+          return;
+        }
         if(!affordable){
-          flashNote('protect-note', 'Not enough budget remaining - deselect something first.');
+          flashNote('protect-note', p.label + ' needs ' + fmtPct(p.cost) + ' and you have ' +
+            fmtPct(budgetRemaining() + freedByThis) + ' left. Revenue add-ons lift your budget.');
           return;
         }
         var turningOn = !selected;
@@ -891,8 +930,9 @@
 
   /* =========================================================
      SIMULATION
-     model.js decides the verdict and score from the design alone.
-     The random earthquake drawn here only drives the animation.
+     model.js assesses the design against all three earthquakes; the
+     chosen level picks which of those outcomes is shown. The random
+     ground motion drawn here only drives the animation.
   ========================================================= */
   function runSimulation(){
     var snap = JSON.parse(JSON.stringify(design()));
@@ -905,17 +945,24 @@
     };
     result.design = snap;
     result.levelKey = state.levelKey;
+    result.level = result.levels[state.levelKey];
     result.eq = eq;
     result.r = eq.freq / result.derived.fn;
     result.tr = M.transmissibility(result.r, result.derived.zeta);
     return result;
   }
 
-  var TIER_COPY = {
-    fail:    { title:'Structural Failure', sub:'Can you try again and Survive or Thrive?' },
-    survive: { title:'You Survived',       sub:'Well done, but can you try again and thrive?' },
-    thrive:  { title:'You Thrived',        sub:'Excellent design!' }
+  var TIER_TITLE = { fail:'Structural Failure', survive:'You Survived', thrive:'You Thrived' };
+  var DAMAGE_COPY = {
+    none:      'No damage - back in use straight away.',
+    slight:    'Cosmetic damage only - back in use the same day.',
+    moderate:  'Repairable damage - weeks of disruption.',
+    extensive: "Heavy damage - everyone got out, but it may not be worth repairing.",
+    collapse:  'The building collapsed.'
   };
+
+  // "25", "500", "2,500"
+  function fmtReturnPeriod(rp){ return String(rp).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 
   /* =========================================================
      SHAKE TEST - SCENE BUILD
@@ -1030,7 +1077,7 @@
     SCENE.storeyH = storeyH;
     SCENE.bx = bx;
     SCENE.bw = bw;
-    SCENE.rigidBody = (state.systemKey==='shearwalls' || state.systemKey==='concreteShear');
+    SCENE.rigidBody = (state.systemKey==='shearwalls');
     SCENE.singleBay = (segments===1 && !SCENE.rigidBody);
     SCENE.storeyEls = Array.prototype.slice.call(svg.querySelectorAll('.storey'));
     SCENE.crackEls = Array.prototype.slice.call(svg.querySelectorAll('.crack'));
@@ -1043,6 +1090,7 @@
     SCENE.hasForceViz = (SCENE.braceEls.length>0 || SCENE.haunchEls.length>0);
     SCENE.groundGroupEl = svg.querySelector('#groundGroup');
     SCENE.isolatorGroupEl = svg.querySelector('#isolatorGroup');
+    SCENE.chimneyEl = svg.querySelector('.chimney');
   }
 
   /* Blend two #rrggbb colours; t in [0,1]. Used for force colouring. */
@@ -1173,12 +1221,15 @@
     // House brick chimney - unreinforced masonry stack near the ridge.
     if(state.additions.chimney){
       var chX=bx+bw*0.64, chTop=roofY-34, chBot=roofY-4, chW=11;
+      // Own group so the shake can topple it (see runShakeAnimation).
+      g+='<g class="chimney" data-cx="'+(chX+chW/2).toFixed(1)+'" data-cy="'+chBot.toFixed(1)+'">';
       g+='<rect x="'+chX.toFixed(1)+'" y="'+chTop.toFixed(1)+'" width="'+chW+'" height="'+(chBot-chTop).toFixed(1)+'" fill="#8a4b39" stroke="#6b3a2c" stroke-width="0.8"/>';
       g+='<rect x="'+(chX-1.5).toFixed(1)+'" y="'+chTop.toFixed(1)+'" width="'+(chW+3)+'" height="3.5" fill="#a35a44" stroke="#6b3a2c" stroke-width="0.6"/>';
       for(var bc=1; bc<5; bc++){
         var by=chTop+3.5+bc*((chBot-chTop-3.5)/5);
         g+='<line x1="'+chX.toFixed(1)+'" y1="'+by.toFixed(1)+'" x2="'+(chX+chW).toFixed(1)+'" y2="'+by.toFixed(1)+'" stroke="#5f3226" stroke-width="0.6" stroke-opacity="0.7"/>';
       }
+      g+='</g>';
     }
 
     // Rooftop signage (industrial/commercial) - billboard on posts.
@@ -1197,14 +1248,10 @@
     var y = baseY-(i+1)*storeyH;
     var top = (i===segments-1);
     var isPlywood = state.systemKey==='plywood';
-    var isConcrete = state.systemKey==='concreteShear';
     var upspec = !!state.protections.upspecBracing;
     var g = '<g class="storey" data-i="'+i+'">';
     g += faceSide(bx+bw, y, storeyH, SC.wallSide);
     g += '<rect x="'+bx+'" y="'+y.toFixed(2)+'" width="'+bw+'" height="'+storeyH.toFixed(2)+'" fill="'+SC.wallFront+'" stroke="'+SC.line+'" stroke-opacity="0.75" stroke-width="1"/>';
-    if(isConcrete){
-      g += '<rect x="'+bx+'" y="'+y.toFixed(2)+'" width="'+(bw*0.28)+'" height="'+storeyH.toFixed(2)+'" fill="'+SC.concrete+'" fill-opacity="0.55"/>';
-    }
     if(isPlywood){
       for(var d=0; d<3; d++){
         var xo = bx + d*(bw/3);
@@ -1252,10 +1299,11 @@
       return '<line class="brace" data-i="'+i+'" data-dir="back" x1="'+x1.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+yb.toFixed(1)+'" stroke="'+FORCE_NEUTRAL+'" stroke-width="1.6" stroke-opacity="0.9"/>'+
              '<line class="brace" data-i="'+i+'" data-dir="fwd" x1="'+x2.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+yb.toFixed(1)+'" stroke="'+FORCE_NEUTRAL+'" stroke-width="1.6" stroke-opacity="0.9"/>';
     }
-    function damperDiag(x1,x2){
-      var ang = Math.atan2(y-yb, x2-x1)*180/Math.PI;
-      var mx=(x1+x2)/2, my=(y+yb)/2;
-      return '<line x1="'+x1.toFixed(1)+'" y1="'+yb.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+SC.brand+'" stroke-width="1.5"/>'+
+    // A damper brace from its foot (ground line) up to its top (eave line).
+    function damperDiag(xFoot,xTop){
+      var ang = Math.atan2(y-yb, xTop-xFoot)*180/Math.PI;
+      var mx=(xFoot+xTop)/2, my=(y+yb)/2;
+      return '<line x1="'+xFoot.toFixed(1)+'" y1="'+yb.toFixed(1)+'" x2="'+xTop.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+SC.brand+'" stroke-width="1.5"/>'+
              '<rect x="'+(mx-5).toFixed(1)+'" y="'+(my-3).toFixed(1)+'" width="10" height="6" rx="1" fill="'+SC.brandTint+'" stroke="'+SC.brand+'" stroke-width="1.1" transform="rotate('+ang.toFixed(1)+' '+mx.toFixed(1)+' '+my.toFixed(1)+')"/>';
     }
 
@@ -1277,7 +1325,7 @@
     // structural system, in the two bays either side of the door
     if(system==='braced'){
       g += xbrace(leftBayL,leftBayR) + xbrace(rightBayL,rightBayR);
-    } else if(system==='shearwalls' || state.protections.shearwallsAdd){
+    } else if(system==='shearwalls'){
       g += '<rect x="'+leftBayL.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(leftBayR-leftBayL).toFixed(1)+'" height="'+storeyH.toFixed(1)+'" fill="'+SC.concrete+'" fill-opacity="0.45" stroke="'+SC.concrete+'" stroke-width="0.8"/>';
       g += '<rect x="'+rightBayL.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(rightBayR-rightBayL).toFixed(1)+'" height="'+storeyH.toFixed(1)+'" fill="'+SC.concrete+'" fill-opacity="0.45" stroke="'+SC.concrete+'" stroke-width="0.8"/>';
     }
@@ -1310,9 +1358,10 @@
       g += '<line x1="'+doorL.toFixed(1)+'" y1="'+sly.toFixed(1)+'" x2="'+doorR.toFixed(1)+'" y2="'+sly.toFixed(1)+'" stroke="'+SC.line+'" stroke-width="0.6" stroke-opacity="0.4"/>';
     }
 
-    // Quake Defender viscous dampers - a diagonal in each bay
+    // Quake Defender damper braces - one in each bay, opposing each other
+    // (both lean in towards the door) as a symmetric pair would be built.
     if(state.protections.quakeDefender){
-      g += damperDiag(leftBayL,leftBayR) + damperDiag(rightBayL,rightBayR);
+      g += damperDiag(leftBayL,leftBayR) + damperDiag(rightBayR,rightBayL);
     }
 
     if(top){ g += drawAdditions('industrial', bx, bw, y); }
@@ -1325,7 +1374,7 @@
     var y = baseY-(i+1)*storeyH;
     var top = (i===segments-1);
     var showBracing = (state.systemKey==='braced');
-    var showShear = (state.systemKey==='shearwalls' || state.protections.shearwallsAdd);
+    var showShear = (state.systemKey==='shearwalls');
     var showMoment = (state.systemKey==='moment');
     var showDampers = state.protections.quakeDefender;
     var damperHere = showDampers && (i===0 || i===Math.floor(segments/2));
@@ -1374,6 +1423,7 @@
     if(SCENE.isolatorGroupEl) SCENE.isolatorGroupEl.setAttribute('transform','translate(0,0)');
     SCENE.storeyEls.forEach(function(el){ el.setAttribute('transform','translate(0,0)'); });
     SCENE.crackEls.forEach(function(el){ el.setAttribute('opacity','0'); });
+    if(SCENE.chimneyEl){ SCENE.chimneyEl.removeAttribute('transform'); SCENE.chimneyEl.setAttribute('opacity','1'); }
     resetForceViz();
     var flashEl = document.getElementById('quake-flash');
     if(flashEl) flashEl.style.opacity = '0';
@@ -1398,7 +1448,7 @@
       el.type = 'button';
       el.className = 'level-btn' + (state.levelKey===k ? ' selected' : '');
       el.setAttribute('aria-pressed', state.levelKey===k ? 'true' : 'false');
-      el.textContent = lvl.label;
+      el.innerHTML = lvl.label + '<span class="rp">1 in ' + fmtReturnPeriod(M.QUAKES[k].returnPeriod) + ' yrs</span>';
       el.disabled = animRunning;
       el.addEventListener('click', function(){
         if(animRunning) return;
@@ -1538,21 +1588,30 @@
     cameraRAF = requestAnimationFrame(cameraFrame);
   }
 
+  // Crack / collapse timing (as fractions of the animation) per damage state.
+  var DAMAGE_SCHED = {
+    none:      { c1:9,    c2:9,    collapse:9 },
+    slight:    { c1:0.6,  c2:9,    collapse:9 },
+    moderate:  { c1:0.45, c2:0.72, collapse:9 },
+    extensive: { c1:0.35, c2:0.55, collapse:9 },
+    collapse:  { c1:0.32, c2:0.52, collapse:0.66 }
+  };
+
   function runShakeAnimation(result, onDone){
     var derived = result.derived;
+    var level = result.level;
     var eq = result.eq;
     var animMs = clamp(eq.duration*300, reduceMotion?3200:5000, reduceMotion?4200:9500);
     var groundAmp = lerp(6, 26, clamp((eq.intensity-0.15)/(0.5-0.15), 0, 1)) * (reduceMotion?0.5:1);
     var isolatedBaseFactor = derived.isolated ? clamp(result.tr, 0.15, 1.2) : 1;
 
-    /* Visible building drift is driven by how hard the structure is
-       being pushed relative to its capacity - the same demand/capacity
-       ratio behind the verdict - expressed as a drift ratio of the
-       building's rendered height, so movement is consistent across
-       building types. The building sways at its own natural period,
-       so flexible frames sway slowly and stiff ones quickly. */
-    var dcr = result.demand / Math.max(result.capacity, 0.1);
-    var peakDriftRatio = clamp(0.018 + dcr*0.072, 0.018, 0.16) * (reduceMotion?0.6:1);
+    /* Visible building drift is driven by the ductility demand behind the
+       verdict for this quake - how far past yield the structure is pushed
+       - expressed as a drift ratio of the building's rendered height, so
+       movement is consistent across building types. The building sways at
+       its own natural period, so flexible frames sway slowly and stiff
+       ones quickly. */
+    var peakDriftRatio = clamp(0.015 + 0.02*Math.min(level.mu, 6), 0.015, 0.16) * (reduceMotion?0.6:1);
     var buildingPxH = Math.max(SCENE.segments * SCENE.storeyH, 1);
     var peakTopDrift = peakDriftRatio * buildingPxH;
     var fB = clamp(derived.fn, 0.28, 3.2);   // sway rate = natural frequency
@@ -1569,12 +1628,13 @@
     var isoSmoothed = 0, topSmoothed = 0, depthSmoothed = 0;
     var startT = null, lastTs = null, seisSampleAcc = 0;
 
-    var sched;
-    if(!result.survives) sched = { c1:0.32, c2:0.52, collapse:0.66 };
-    else if(result.margin < 1.8) sched = { c1:0.55, c2:9, collapse:9 };
-    else sched = { c1:9, c2:9, collapse:9 };
+    var sched = DAMAGE_SCHED[level.state];
     var tiltDir = Math.random()<0.5 ? -1 : 1;
-    var residual = (result.survives && result.margin < 1.4) ? 1 : 0;
+    // Heavy damage leaves a permanent lean once the shaking stops.
+    var residual = level.state==='extensive' ? 1 : 0;
+    // An unreinforced brick chimney topples partway through strong shaking.
+    var CHIMNEY_FALL_START = 0.42, CHIMNEY_FALL_END = 0.62;
+    var chimneyImpactFired = false;
 
     var svg = document.getElementById('scene');
     var fxGroup = null, particles = [], dust = [];
@@ -1814,6 +1874,21 @@
         updateForceViz(us, collapseFrac);
       }
 
+      // Brick chimney: rocks, then topples off the roof and drops out of view.
+      if(level.chimneyFell && SCENE.chimneyEl && frac > CHIMNEY_FALL_START){
+        var cp = clamp((frac-CHIMNEY_FALL_START)/(CHIMNEY_FALL_END-CHIMNEY_FALL_START), 0, 1);
+        var ease = cp*cp;
+        SCENE.chimneyEl.setAttribute('transform',
+          'translate('+(tiltDir*14*ease).toFixed(2)+','+(46*ease*ease).toFixed(2)+') '+
+          'rotate('+(tiltDir*100*ease).toFixed(2)+' '+SCENE.chimneyEl.getAttribute('data-cx')+' '+SCENE.chimneyEl.getAttribute('data-cy')+')');
+        SCENE.chimneyEl.setAttribute('opacity', (1-clamp((cp-0.8)/0.2, 0, 1)).toFixed(2));
+        if(cp >= 1 && !chimneyImpactFired){
+          chimneyImpactFired = true;
+          flashPulse = Math.max(flashPulse, 0.3);
+          bumpCameraShake(3.0);
+        }
+      }
+
       SCENE.crackEls.forEach(function(el){
         var stage = el.getAttribute('data-stage');
         var at = stage==='1' ? sched.c1 : sched.c2;
@@ -1910,74 +1985,100 @@
   /* =========================================================
      RESULTS
   ========================================================= */
-  var CAUSE_TEXT = {
-    resonance: "The earthquake's rhythm matched your building's natural sway, and each cycle pumped in more energy than the last.",
-    capacity: "Your structure had too little strength in reserve. As the shaking went on, damage built up until it couldn't hold.",
-    movement: "Your building moved too far, too fast - the sway itself became the problem."
+  var DAMAGE_SHORT = { none:'No damage', slight:'Slight damage', moderate:'Moderate damage', extensive:'Heavy damage', collapse:'Collapse' };
+  var TIER_WORD = { thrive:'Thrive', survive:'Survive', fail:'Fail' };
+
+  // What repairable / heavy damage looks like for each structural system.
+  var SYSTEM_DAMAGE = {
+    plasterboard: 'cracked linings and racked bracing walls',
+    plywood: 'cracked linings and some loosened sheathing',
+    moment: 'yielded beam-column joints, and damaged cladding and partitions',
+    braced: 'stretched and buckled braces',
+    shearwalls: 'cracked walls and damaged panel connections'
   };
 
   function buildNarrative(result){
+    var L = result.level;
     var derived = result.derived;
     var prot = result.design.protections;
-    if(result.survives){
+    var qName = M.QUAKES[result.levelKey].label.toLowerCase();
+    var chimney = L.chimneyFell ? ' The brick chimney came down - a classic life-safety hazard.' : '';
+    if(L.state==='collapse'){
+      if(derived.massFactor > 1.2) return 'The extra weight up on the roof was never part of the structural design. In a '+qName+' earthquake it pushed the structure past what it could take, and it collapsed.' + chimney;
+      return 'The '+qName+' earthquake asked the structure to deform further than it could, and it collapsed.' + chimney;
+    }
+    if(L.tier==='thrive'){
       if(derived.isolated){
         return derived.isHouse
           ? "The FrontFoot dampers in the floor slab kept most of the ground's motion from ever reaching the home above."
           : "Base isolation kept most of the ground's motion from ever reaching the structure above.";
       }
-      if(!derived.isHouse && prot.quakeDefender) return "Quake Defender bracing soaked up the shaking's energy and calmed the sway quickly.";
-      if(derived.isHouse && prot.upspecBracing) return "Your up-specced bracing held the sway well within safe limits.";
-      if(derived.strength > 7) return "Your structural system held firm against the shaking, with margin to spare.";
-      return "Your design had just enough strength and flexibility to ride out the shake.";
+      if(!derived.isHouse && prot.quakeDefender) return "Quake Defender soaked up the shaking's energy and kept the structure elastic - it's back in use straight away.";
+      return L.state==='none'
+        ? 'Your structure stayed elastic - no damage at all.'
+        : 'Your structure stayed elastic - just some cosmetic cracking to patch.';
     }
-    return CAUSE_TEXT[result.cause];
+    if(result.featured) return 'Even in a '+qName+' earthquake, Quake Defender kept the damage repairable - an inspection and some repairs, not a rebuild.' + chimney;
+    if(derived.isolated) return 'The isolators kept most of the shaking out, but the structure above still yielded - repairable damage.' + chimney;
+    var what = SYSTEM_DAMAGE[result.design.systemKey];
+    if(L.state==='moderate') return 'Your building rode it out with repairable damage - '+what+". Expect weeks of repairs before it's fully back in use." + chimney;
+    return 'Everyone got out safely - which is what building codes design for - but the damage is heavy: '+what+'. After the 2011 Christchurch earthquake, many buildings like this were demolished rather than repaired.' + chimney;
   }
 
   function pickConcept(result){
+    var L = result.level;
     var derived = result.derived;
     if(derived.isolated){
       return derived.isHouse
         ? { tag:'FrontFoot Dampers', text:"Dampers in the floor slab let the home above slide relative to the ground, so far less shaking reaches the structure - the same principle as base isolation, scaled for a house." }
         : { tag:'Base Isolation', text:"Base isolation separates the building from much of the ground's movement. A flexible layer at the base absorbs the relative motion, so far less shaking reaches the structure above." };
     }
-    if(!derived.isHouse && result.design.protections.quakeDefender) return { tag:'Damping', text:'Dampers absorb energy as the building sways, shortening how long - and how far - it keeps moving after the ground settles.' };
-    if(result.cause==='resonance') return { tag:'Resonance', text:'Every building has a natural rhythm. When an earthquake shakes at close to that same rhythm, the sway can build with every cycle rather than cancel out.' };
-    if(result.cause==='capacity' || derived.strength<=5) return { tag:'Stiffness & Strength', text:"A stiffer structure generally moves less, but stiffness alone isn't everything - the goal is managing both movement and the forces that movement creates." };
-    return { tag:'Mass', text:'The heavier a building is, the greater the inertial forces generated when the ground accelerates beneath it.' };
+    if(!derived.isHouse && result.design.protections.quakeDefender) return { tag:'Damping', text:"Dampers absorb energy as the building sways, shortening how long - and how far - it keeps moving, so the structure itself doesn't have to yield." };
+    if(L.chimneyFell) return { tag:'Unreinforced masonry', text:'Brick chimneys are heavy, brittle and high up. In the 2010-11 Canterbury earthquakes thousands of them collapsed, many through roofs or onto paths below.' };
+    if(L.state==='collapse'){
+      return derived.massFactor > 1.2
+        ? { tag:'Mass', text:'The heavier a building is, the bigger the forces when the ground accelerates beneath it - and weight up high is the worst place for it. Adding it without strengthening the structure eats into its safety margin.' }
+        : { tag:'Ductility', text:"Ductility is a structure's ability to bend and yield without breaking. When an earthquake asks for more deformation than the structure can give, it collapses." };
+    }
+    if(L.state==='extensive') return { tag:'Life safety vs resilience', text:'Building codes are written to protect lives in a design-level earthquake, not to keep the building usable. After the 2011 Christchurch earthquake, many buildings that did exactly what the code asked were still demolished.' };
+    if(L.state==='moderate') return { tag:'Ductility', text:'Most buildings are designed to yield in a big earthquake - bending and cracking to absorb energy. That protects lives, but every bit of yielding is damage that has to be repaired.' };
+    return { tag:'Stiffness & Strength', text:'Staying elastic - not yielding at all - is what keeps a building usable after an earthquake. That takes strength and stiffness, or keeping the shaking out of the structure in the first place.' };
   }
-
-  var CAUSE_SHORT = { capacity:'Too little reserve', movement:'Too much movement', resonance:'Resonance' };
 
   function showResults(result){
     var d = result.design;
     var P = M.pools(d.typeKey);
-    var copy = TIER_COPY[result.tier];
+    var L = result.level;
+    var Q = M.QUAKES[result.levelKey];
 
     var banner = document.getElementById('result-banner');
-    banner.textContent = copy.title;
-    banner.className = 'result-banner ' + result.tier;
-    document.getElementById('result-subtag').textContent = copy.sub;
-    document.getElementById('score-hero').style.display = result.survives ? '' : 'none';
+    banner.textContent = TIER_TITLE[L.tier];
+    banner.className = 'result-banner ' + L.tier;
+    document.getElementById('result-subtag').textContent =
+      'In a ' + Q.label.toLowerCase() + ' earthquake (about 1 in ' + fmtReturnPeriod(Q.returnPeriod) + ' years): ' + DAMAGE_COPY[L.state];
+    document.getElementById('score-block').style.display = result.eligible ? '' : 'none';
     document.getElementById('score-num').textContent = result.score;
     document.getElementById('result-narrative').textContent = buildNarrative(result);
 
-    // Physical quantities only - the model's internal 0-1 scoring factors
-    // aren't shown, since a featured design's guaranteed band can sit next
-    // to low raw factors and read as a contradiction.
+    document.getElementById('profile').innerHTML = M.QUAKE_ORDER.map(function(k){
+      var lv = result.levels[k], q = M.QUAKES[k];
+      return '<div class="pf '+lv.tier+(k===result.levelKey ? ' watched' : '')+'">'+
+        '<div class="q">'+q.label+'</div>'+
+        '<div class="rp">1 in '+fmtReturnPeriod(q.returnPeriod)+' yrs</div>'+
+        '<div class="st">'+DAMAGE_SHORT[lv.state]+'</div>'+
+        '<div class="tr">'+TIER_WORD[lv.tier]+'</div>'+
+      '</div>';
+    }).join('');
+
     var stats = [
-      ['Damage', result.survives ? (result.margin>1.8 ? 'Low' : 'Moderate') : 'Severe'],
-      ['Strength vs demand', result.margin.toFixed(1) + '&times;'],
-      ['Budget spent', COIN + spentTotal(d) + ' / ' + M.budgetTotal(d)]
+      ['Damage (this quake)', DAMAGE_SHORT[L.state]],
+      ['Upgrade cost', '+' + fmtPct(spentTotal(d)) + ' of build cost']
     ];
-    if(result.survives){
-      var effPct = Math.round((result.efficiency-1)*100);
-      stats.push(['Efficiency', (effPct>=0 ? '+' : '') + effPct + '% budget bonus']);
+    if(result.eligible){
+      stats.push(['Cost efficiency', Math.round(result.efficiency*100) + '%']);
       stats.push(result.featured
         ? ['Protection', P.protections[P.featuredKey].label]
         : ['Design score', Math.round(result.performance) + ' before efficiency']);
-      stats.push(['Earthquake watched', LEVELS[result.levelKey].label]);
-    } else {
-      stats.push(['Weak point', CAUSE_SHORT[result.cause]]);
     }
     document.getElementById('stat-grid').innerHTML = stats.map(function(s){
       return '<div class="stat"><div class="k">'+s[0]+'</div><div class="v">'+s[1]+'</div></div>';
@@ -1996,28 +2097,31 @@
 
     var featuredLabel = P.protections[P.featuredKey].label;
     var hasFeatured = !!d.protections[P.featuredKey];
-    document.getElementById('whatif-slot').innerHTML =
-      '<button type="button" class="btn btn-secondary mt" id="btn-whatif">What would this look like '+
-      (hasFeatured ? 'without' : 'with') + ' ' + featuredLabel + '?</button>';
-    document.getElementById('btn-whatif').addEventListener('click', retestWithFeaturedToggle);
+    var canFeature = M.suitable(d.typeKey, d.systemKey, P.featuredKey);
+    document.getElementById('whatif-slot').innerHTML = canFeature
+      ? '<button type="button" class="btn btn-secondary mt" id="btn-whatif">What would this look like '+
+        (hasFeatured ? 'without' : 'with') + ' ' + featuredLabel + '?</button>'
+      : '';
+    if(canFeature) document.getElementById('btn-whatif').addEventListener('click', retestWithFeaturedToggle);
 
     var how = document.getElementById('how-panel');
     how.classList.remove('open');
     document.getElementById('btn-how').setAttribute('aria-expanded', 'false');
     document.getElementById('btn-how').textContent = 'See How It Works';
     how.innerHTML =
-      '<div class="spec-line"><span>Strength vs demand</span><span>'+result.capacity.toFixed(1)+' vs '+result.demand.toFixed(1)+' ('+result.margin.toFixed(1)+'&times;)</span></div>'+
-      '<div class="spec-line"><span>Average shaking amplification</span><span>'+result.meanTr.toFixed(2)+'&times;</span></div>'+
-      '<div class="spec-line"><span>Building natural frequency</span><span>'+result.derived.fn.toFixed(2)+' Hz</span></div>'+
-      '<div class="spec-line"><span>This test\'s earthquake frequency</span><span>'+result.eq.freq.toFixed(2)+' Hz</span></div>'+
-      '<p class="how-note">Your score rewards strength in reserve and a calm, low-movement building, adjusted for how efficiently you used the budget. Every design is judged against the same reference earthquake, so the level you watch changes the animation, not the result. A simplified teaching model - not an engineering assessment.</p>';
+      '<div class="spec-line"><span>This earthquake</span><span>'+Q.label+', peak ground acceleration '+Q.pga.toFixed(2)+' g</span></div>'+
+      '<div class="spec-line"><span>Building period</span><span>'+result.derived.T.toFixed(2)+' s'+(result.derived.isolated ? ' (isolated)' : '')+'</span></div>'+
+      '<div class="spec-line"><span>Damping</span><span>'+Math.round(result.derived.zeta*100)+'%</span></div>'+
+      '<div class="spec-line"><span>Shaking demand vs strength</span><span>'+L.Sa.toFixed(2)+' g vs '+result.derived.Cy.toFixed(2)+' g</span></div>'+
+      '<div class="spec-line"><span>Ductility demand vs capacity</span><span>'+L.mu.toFixed(1)+' vs '+L.muCap+'</span></div>'+
+      '<p class="how-note">Demand comes from a design-style response spectrum for each earthquake. Staying below yield (ductility under 1) means no or slight damage - Thrive. Yielding means repairable to heavy damage - Survive. Past the ductility capacity, it collapses. Your score covers all three earthquakes - mostly the design-level Strong one - compared with the best design possible for your building type, then adjusted for cost: each 1% of build cost you spend takes 2% off. A simplified teaching model - not an engineering assessment.</p>';
 
     renderLeaderboardCard(result);
     document.getElementById('share-status').textContent = '';
 
     showScreen('results');
     track('result', {
-      tier: result.tier, score: result.score, type: d.typeKey, system: d.systemKey,
+      tier: L.tier, damage: L.state, score: result.score, type: d.typeKey, system: d.systemKey,
       protections: d.protections, additions: d.additions, level: result.levelKey
     });
   }
@@ -2031,6 +2135,7 @@
   function retestWithFeaturedToggle(){
     if(animRunning) return;
     var P = pools();
+    if(!M.suitable(state.typeKey, state.systemKey, P.featuredKey)) return;
     var turningOn = !state.protections[P.featuredKey];
     if(turningOn) resetProtections();
     state.protections[P.featuredKey] = turningOn;
@@ -2044,16 +2149,18 @@
   ========================================================= */
   function shareText(result){
     if(!result) return 'Can you design a building that thrives in an earthquake?';
-    if(result.tier==='thrive') return 'My building thrived in the earthquake - ' + result.score + ' points on Survive or Thrive? Can you beat it?';
-    if(result.tier==='survive') return 'My building survived the earthquake (' + result.score + ' points). Can you design one that thrives?';
-    return 'My building collapsed in the earthquake. Can you design one that survives - or thrives?';
+    var q = M.QUAKES[result.levelKey].label.toLowerCase();
+    var tier = result.level.tier;
+    if(tier==='thrive') return 'My building thrived in a ' + q + ' earthquake - ' + result.score + ' points on Survive or Thrive? Can you beat it?';
+    if(tier==='survive') return 'My building survived a ' + q + ' earthquake (' + result.score + ' points). Can you design one that thrives?';
+    return 'My building collapsed in a ' + q + ' earthquake. Can you design one that survives - or thrives?';
   }
 
   function shareResult(){
     var result = state.lastRun;
     var text = shareText(result);
     var statusEl = document.getElementById('share-status');
-    track('share', { tier: result ? result.tier : 'none' });
+    track('share', { tier: result ? result.level.tier : 'none' });
     if(navigator.share){
       navigator.share({ title:'Survive or Thrive?', text:text, url:SHARE_URL }).catch(function(){});
       return;
@@ -2076,16 +2183,16 @@
 
   function renderLeaderboardCard(result){
     var card = document.getElementById('leaderboard-card');
-    if(!result.survives){
+    if(!result.eligible){
       card.innerHTML =
         '<div class="lb-title">Leaderboard</div>'+
-        '<p class="lb-sub" style="margin:0;">Your building didn\'t survive, so there\'s no score to enter this time. Try another design!</p>';
+        '<p class="lb-sub" style="margin:0;">This design collapses in the design-level (Strong) earthquake, so it doesn\'t meet the basic life-safety standard and can\'t go on the board. Try another design!</p>';
       return;
     }
     card.innerHTML =
       '<p class="lb-prize">Enter your details by 12pm on the final day of PCEE to go into the draw to win a $100 Prezzy card. Winner must be present on the final afternoon of PCEE to collect their prize from Ben Exton of Seismic Shift.</p>'+
       '<div class="lb-title">Enter the leaderboard</div>'+
-      '<p class="lb-sub">Add your name to the board with your score of <b>'+result.score+'</b> - every entry goes into the prize draw.</p>'+
+      '<p class="lb-sub">Add your name to the board with your score of <b>'+result.score+'</b> (across all three earthquakes) - every entry goes into the prize draw.</p>'+
       '<div class="field"><label for="lb-name">Name</label><input type="text" id="lb-name" autocomplete="name" placeholder="Your name" maxlength="'+NAME_MAX+'"></div>'+
       '<div class="field"><label for="lb-email">Email</label><input type="email" id="lb-email" autocomplete="email" inputmode="email" placeholder="you@email.com" maxlength="254"></div>'+
       '<label class="consent"><input type="checkbox" id="lb-optin"><span>Send me occasional news and product updates from Seismic Shift (optional).</span></label>'+
@@ -2198,7 +2305,7 @@
     state.systemKey = null;
     resetAdditions();
     resetProtections();
-    state.levelKey = 'moderate';
+    state.levelKey = 'strong';
     document.getElementById('system-section').classList.remove('open');
     document.getElementById('system-cards').innerHTML = '';
   }
