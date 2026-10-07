@@ -116,42 +116,46 @@
   };
   var STANDARD_PROTECTION_ORDER = ['quakeDefender','isolation'];
 
-  /* Additions: revenue-generating / value-adding features. They earn back
-     more than they cost - that net value (budgetBonus, from PRICES) RAISES
-     the upgrade budget - but ADD MASS up at roof level that the structure
-     wasn't designed for. massPct is a fraction of the building's weight. */
+  /* Additions: extras that cost money to install but add more than that
+     to the building's value (ADDON_ECONOMICS). The client puts the
+     difference towards seismic upgrades, so they RAISE the upgrade budget
+     - but they ADD MASS up at roof level that the structure wasn't
+     designed for. massPct is a fraction of the building's weight. */
   var HOUSE_ADDITIONS = {
-    solar:    { key:'solar',    label:'Solar Panels', massPct:0.15, desc:'Rooftop PV. Feed-in revenue more than pays for the panels and lifts your budget - but they add roof mass.' },
-    tileRoof: { key:'tileRoof', label:'Tile Roof',    massPct:0.28, desc:'Premium kerb appeal - but tiles are far heavier than a metal roof, right at the top.' },
-    chimney:  { key:'chimney',  label:'Brick Chimney', massPct:0.12, desc:'Adds character and value. Unreinforced masonry up high is a classic quake weak point and life-safety hazard.' }
+    solar:    { key:'solar',    label:'Solar Panels', massPct:0.15, desc:'Power savings and feed-in earn back more than the install cost, but the panels add weight to the roof.' },
+    tileRoof: { key:'tileRoof', label:'Tile Roof',    massPct:0.28, desc:'Kerb appeal adds resale value, but tiles are far heavier than a metal roof, right at the top.' },
+    chimney:  { key:'chimney',  label:'Brick Chimney', massPct:0.12, desc:'A fireplace adds character and resale value. But unreinforced masonry up high is a classic quake weak point and a life-safety hazard.' }
   };
   var HOUSE_ADDITION_ORDER = ['solar','tileRoof','chimney'];
 
   var STANDARD_ADDITIONS = {
-    solar:     { key:'solar',     label:'Solar Array',           massPct:0.14, desc:'Rooftop PV. Energy revenue more than pays for the array; the panels add moderate roof mass.' },
-    greenroof: { key:'greenroof', label:'Green Roof',            massPct:0.30, desc:'Amenity and stormwater value - but saturated soil is heavy, and it is all up high.' },
-    signage:   { key:'signage',   label:'Rooftop Plant & Signage', massPct:0.10, desc:'Advertising and services lease. Good revenue for a lighter appendage up top.' }
+    solar:     { key:'solar',     label:'Solar Array',           massPct:0.14, desc:'Energy revenue earns back well over the install cost, but the panels add weight to the roof.' },
+    greenroof: { key:'greenroof', label:'Green Roof',            massPct:0.30, desc:'Amenity and stormwater value, but saturated soil is heavy, and it is all up high.' },
+    signage:   { key:'signage',   label:'Rooftop Plant & Signage', massPct:0.10, desc:'Advertising and services lease income, for a lighter appendage up top.' }
   };
   var STANDARD_ADDITION_ORDER = ['solar','greenroof','signage'];
 
   /* Prices, as a percentage of the building's base cost. Every building
      costs 100 whether it's a home or an office block, so options are
      priced by their realistic SHARE of the build, not in dollars. 0 = the
-     base option, already in the 100. Systems and protections cost money;
-     add-ons are their net value (what they earn back beyond their own
-     cost), which raises the upgrade budget. Indicative NZ new-build
-     figures; FrontFoot's 2% is from its Central Otago case study (1.5-2.0%
-     of build cost). */
+     base option, already in the 100. Indicative NZ new-build figures;
+     FrontFoot's 2% is from its Central Otago case study (1.5-2.0% of
+     build cost). */
   var PRICES = {
     house:      { plasterboard:0, plywood:0.5,
-                  frontfootDampers:2, lightweight:1, upspecBracing:0.5,
-                  solar:1, tileRoof:0.5, chimney:0.5 },
+                  frontfootDampers:2, lightweight:1, upspecBracing:0.5 },
     industrial: { moment:0, braced:0.5, shearwalls:3,
-                  quakeDefender:1.5, isolation:8,
-                  solar:2, greenroof:0.5, signage:1 },
+                  quakeDefender:1.5, isolation:8 },
     commercial: { moment:1.5, braced:0, shearwalls:1,
-                  quakeDefender:2, isolation:5,
-                  solar:1, greenroof:0.5, signage:1.5 }
+                  quakeDefender:2, isolation:5 }
+  };
+  /* Add-ons on the same basis: what each costs to install, and what it
+     adds to the building's value (resale, rent, power savings, lease
+     income). value - cost is what the client puts towards upgrades. */
+  var ADDON_ECONOMICS = {
+    house:      { solar:{ cost:1.5, value:2.5 }, tileRoof:{ cost:1.5, value:2 },     chimney:{ cost:3,   value:3.5 } },
+    industrial: { solar:{ cost:2,   value:4 },   greenroof:{ cost:5,   value:5.5 },  signage:{ cost:0.5, value:1.5 } },
+    commercial: { solar:{ cost:1,   value:2 },   greenroof:{ cost:2.5, value:3 },    signage:{ cost:0.5, value:2 } }
   };
   // How far over the base cost the client will go for a better building,
   // as a percentage - the same for every building type.
@@ -184,14 +188,22 @@
   var FRONTFOOT_T = 2.0, FRONTFOOT_ZETA = 0.20;
   var ISOLATION_T = 2.5, ISOLATION_ZETA = 0.15;
 
-  // Copy of a set of option definitions with this type's price attached
-  // as `field` (cost for systems/protections, budgetBonus for add-ons).
-  function priced(defs, typeKey, field){
+  // Copy of a set of option definitions with this type's prices attached:
+  // `cost` for systems and protections; `installCost`, `value` and the
+  // net `budgetBonus` for add-ons.
+  function priced(defs, typeKey, isAddon){
     var out = {};
     Object.keys(defs).forEach(function(k){
       var o = {};
       Object.keys(defs[k]).forEach(function(f){ o[f] = defs[k][f]; });
-      o[field] = PRICES[typeKey][k];
+      if(isAddon){
+        var econ = ADDON_ECONOMICS[typeKey][k];
+        o.installCost = econ.cost;
+        o.value = econ.value;
+        o.budgetBonus = round1(econ.value - econ.cost);
+      } else {
+        o.cost = PRICES[typeKey][k];
+      }
       out[k] = o;
     });
     return out;
@@ -204,11 +216,11 @@
     var isHouse = BUILDING_TYPES[typeKey].category==='house';
     return (poolCache[typeKey] = {
       isHouse: isHouse,
-      systems: priced(isHouse ? HOUSE_SYSTEMS : STANDARD_SYSTEMS, typeKey, 'cost'),
+      systems: priced(isHouse ? HOUSE_SYSTEMS : STANDARD_SYSTEMS, typeKey, false),
       systemOrder: isHouse ? HOUSE_SYSTEM_ORDER : STANDARD_SYSTEM_ORDER,
-      protections: priced(isHouse ? HOUSE_PROTECTIONS : STANDARD_PROTECTIONS, typeKey, 'cost'),
+      protections: priced(isHouse ? HOUSE_PROTECTIONS : STANDARD_PROTECTIONS, typeKey, false),
       protectionOrder: isHouse ? HOUSE_PROTECTION_ORDER : STANDARD_PROTECTION_ORDER,
-      additions: priced(isHouse ? HOUSE_ADDITIONS : STANDARD_ADDITIONS, typeKey, 'budgetBonus'),
+      additions: priced(isHouse ? HOUSE_ADDITIONS : STANDARD_ADDITIONS, typeKey, true),
       additionOrder: isHouse ? HOUSE_ADDITION_ORDER : STANDARD_ADDITION_ORDER,
       // FrontFoot Dampers / Quake Defender - Seismic Shift's own products.
       featuredKey: isHouse ? 'frontfootDampers' : 'quakeDefender',

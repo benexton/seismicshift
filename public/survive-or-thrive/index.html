@@ -143,7 +143,11 @@
   .budget .value.right{justify-content:flex-end;}
   .budget-track{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-top:10px;}
   .budget-fill{height:100%;background:var(--brand);border-radius:3px;transition:width .25s ease;}
-  .budget-note{font-size:12.5px;color:var(--muted);line-height:1.5;margin:8px 2px 0;}
+  .budget .breakdown{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px;}
+  .card .econ{display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);margin-top:7px;}
+  .card .pills-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .addon-summary{font-size:13px;line-height:1.45;color:var(--ink-2);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0 0;}
+  .addon-summary:empty{display:none;}
 
   /* ---------- choice cards ---------- */
   .group-title{font-size:13.5px;font-weight:700;color:var(--ink-2);margin:20px 0 8px;}
@@ -183,6 +187,8 @@
   .flash-note.show{max-height:90px;opacity:1;padding:10px 12px;margin-top:10px;}
   .reveal-section{max-height:0;overflow:hidden;opacity:0;transition:max-height .4s ease, opacity .3s ease .05s;}
   .reveal-section.open{max-height:2400px;opacity:1;}
+  /* room for the selected card's outline inside the clipped reveal box */
+  .reveal-section .cards{padding:1px 1px 2px;}
 
   /* ---------- shake test ---------- */
   .scene-wrap{background:var(--card);border:1px solid var(--line);border-radius:20px;overflow:hidden;margin:16px 0 4px;}
@@ -354,14 +360,7 @@
   <!-- STEP 1: CHOOSE BUILDING -->
   <section class="screen" id="screen-build">
     <h2 tabindex="-1">Choose Your Building</h2>
-    <p class="sub">Pick what you're designing today, then choose the structural system that holds it up.</p>
-
-    <div class="budget">
-      <div class="label">Upgrade budget</div>
-      <div class="value" id="budget-value-build"></div>
-      <div class="budget-track"><div class="budget-fill" id="budget-fill-build"></div></div>
-    </div>
-    <p class="budget-note">Every building's base cost is 100, whether it's a home or an office block, and options are priced as a share of that. Your client will go up to 5% over for a better building.</p>
+    <p class="sub">Pick what you're designing today, then choose the structural system that holds it up. Costs are shown as a share of the building's base price, so they mean the same for a home or an office block.</p>
 
     <div class="group-title">Building type</div>
     <div class="cards" id="type-cards"></div>
@@ -380,24 +379,11 @@
 
   <!-- STEP 2: ADDITIONS -->
   <section class="screen" id="screen-additions">
-    <h2 tabindex="-1">Add-Ons &amp; Revenue</h2>
-    <p class="sub">Optional features that earn back more than they cost. Each one adds to your upgrade budget (in green), but adds weight up high, which the earthquake will find. Skip them, or gamble on the trade-off.</p>
+    <h2 tabindex="-1">Add-Ons &amp; Value</h2>
+    <p class="sub">Optional extras that cost money to install, but add more than that to the building's value. Your client will put the difference towards seismic upgrades. The catch: they add weight up high, which the earthquake will find.</p>
 
-    <div class="budget">
-      <div class="budget-row">
-        <div>
-          <div class="label">Upgrade budget</div>
-          <div class="value" id="budget-value-additions"></div>
-        </div>
-        <div style="text-align:right;">
-          <div class="label">Seismic mass</div>
-          <div class="value right" id="mass-value-additions">Base</div>
-        </div>
-      </div>
-      <div class="budget-track"><div class="budget-fill" id="budget-fill-additions"></div></div>
-    </div>
-
-    <div class="cards" id="addition-cards" style="margin-top:14px;"></div>
+    <div class="cards" id="addition-cards" style="margin-top:16px;"></div>
+    <p class="addon-summary" id="addon-summary" role="status"></p>
     <p class="flash-note" id="addition-note" role="status"></p>
 
     <div class="nav-buttons">
@@ -412,8 +398,9 @@
     <p class="sub">Spend what's left of your upgrade budget on technology that helps your building ride out the shake.</p>
 
     <div class="budget">
-      <div class="label">Upgrade budget</div>
+      <div class="label">Upgrade budget left</div>
       <div class="value" id="budget-value-protect"></div>
+      <div class="breakdown" id="budget-breakdown"></div>
       <div class="budget-track"><div class="budget-fill" id="budget-fill-protect"></div></div>
     </div>
 
@@ -502,7 +489,7 @@
 
 </div>
 
-<script src="/survive-or-thrive/model.js?v=2026-10-08"></script>
+<script src="/survive-or-thrive/model.js?v=2026-10-08b"></script>
 <script>
 (function(){
   "use strict";
@@ -549,7 +536,8 @@
      (see PRICES in model.js) - a different unit from the score (points),
      so a revenue add-on never looks like it hands out score. */
   function fmtPct(x){ return (Math.round(x*10)/10) + '%'; }
-  function pricePill(cost){ return cost ? '+' + fmtPct(cost) : 'Included'; }
+  // Costs never get a "+" sign - that's kept for what add-ons put back.
+  function pricePill(cost){ return cost ? 'Costs ' + fmtPct(cost) : 'Included'; }
   // Budget comparisons on one-decimal percentages, safe from float dust.
   function fits(x){ return x >= -1e-9; }
 
@@ -655,22 +643,42 @@
   }
 
   /* =========================================================
-     BUDGET DISPLAY (shared by the three choice screens)
+     BUDGET
+     The upgrade budget is only shown on the Protection step, the one
+     place it can actually limit a choice. Design shows plain costs, and
+     Add-ons shows what each extra costs, what it adds in value, and the
+     difference that goes towards upgrades.
   ========================================================= */
-  function renderBudget(suffix){
+  function syncBuildNav(){
+    document.getElementById('btn-to-additions').disabled = !(state.typeKey && state.systemKey);
+  }
+
+  function renderAddonSummary(){
+    var P = pools();
+    var keys = M.chosen(state.additions, P.additions);
+    var el = document.getElementById('addon-summary');
+    if(!keys.length){ el.textContent = ''; return; }
+    var gain = keys.reduce(function(sum, k){ return sum + P.additions[k].budgetBonus; }, 0);
+    var weight = Math.round(M.additionMassPct(design())*100);
+    el.textContent = 'Your add-ons put an extra ' + fmtPct(gain) + ' towards seismic upgrades, and add ' +
+      weight + '% to the building\'s weight, up high.';
+  }
+
+  function renderUpgradeBudget(){
+    var d = design();
     var rem = budgetRemaining();
     var total = budgetTotal();
-    document.getElementById('budget-value-'+suffix).innerHTML = fmtPct(rem) + ' left <span class="of">of ' + fmtPct(total) + '</span>';
-    document.getElementById('budget-fill-'+suffix).style.width = clamp(rem/total*100, 0, 100) + '%';
-    if(suffix==='build'){
-      document.getElementById('btn-to-additions').disabled = !(state.typeKey && state.systemKey);
-    }
-    if(suffix==='additions'){
-      var pct = Math.round(M.additionMassPct(design())*100);
-      var massEl = document.getElementById('mass-value-additions');
-      massEl.textContent = pct===0 ? 'Base' : '+' + pct + '%';
-      massEl.style.color = pct===0 ? '' : 'var(--mass)';
-    }
+    var fromAddons = total - M.UPGRADE_BUDGET;
+    var structure = M.spentDesign(d), protection = M.spentProtections(d);
+    document.getElementById('budget-value-protect').textContent = fmtPct(rem);
+    document.getElementById('budget-fill-protect').style.width = clamp(rem/total*100, 0, 100) + '%';
+    var text = "Your client's " + fmtPct(M.UPGRADE_BUDGET) + ' over the base price';
+    if(fromAddons > 0.05) text += ', plus ' + fmtPct(fromAddons) + ' from add-on value';
+    var spent = [];
+    if(structure > 0) spent.push(fmtPct(structure) + ' on the structure');
+    if(protection > 0) spent.push(fmtPct(protection) + ' on protection');
+    if(spent.length) text += ', less ' + spent.join(' and ');
+    document.getElementById('budget-breakdown').textContent = text + '.';
   }
 
   var flashNoteTimers = {};
@@ -764,7 +772,7 @@
         document.getElementById('system-group-title').textContent =
           pools().isHouse ? 'Structural system - bracing' : 'Structural system';
         document.getElementById('system-section').classList.add('open');
-        renderBudget('build');
+        syncBuildNav();
       });
       wrap.appendChild(el);
     });
@@ -796,7 +804,7 @@
         '<span class="card-meta"><span class="pill spend">'+pricePill(sys.cost)+'</span></span>';
       el.addEventListener('click', function(){
         if(!affordable){
-          flashNote('build-note', 'Not enough budget left for that system - remove some protection first.');
+          flashNote('build-note', 'That system won\'t fit your upgrade budget alongside your current protection - remove some protection first.');
           return;
         }
         if(!isCurrent){
@@ -808,7 +816,7 @@
           }
           track('system_selected', { system:k, type:state.typeKey });
         }
-        renderSystemCards(); renderBudget('build');
+        renderSystemCards(); syncBuildNav();
       });
       wrap.appendChild(el);
     });
@@ -827,8 +835,8 @@
     P.additionOrder.forEach(function(k){
       var a = P.additions[k];
       var selected = !!state.additions[k];
-      // Deselecting is blocked only if the revenue is already committed to
-      // protection spend (would push the budget negative) - guards back-nav.
+      // Deselecting is blocked only if its value is already being spent on
+      // protection (would push the budget negative) - guards back-nav.
       var blocksRemoval = selected && !fits(budgetRemaining() - a.budgetBonus);
       var el = document.createElement('button');
       el.type = 'button';
@@ -837,17 +845,18 @@
       el.innerHTML =
         '<span class="check" aria-hidden="true"></span>'+
         '<span class="body"><span class="name">'+a.label+'</span>'+
-        '<span class="desc">'+a.desc+'</span></span>'+
-        '<span class="card-meta"><span class="pill gain">+'+fmtPct(a.budgetBonus)+' budget</span>'+
-        '<span class="pill mass">+'+Math.round(a.massPct*100)+'% mass</span></span>';
+        '<span class="desc">'+a.desc+'</span>'+
+        '<span class="econ">Costs '+fmtPct(a.installCost)+' to install, adds '+fmtPct(a.value)+' in value</span>'+
+        '<span class="pills-row"><span class="pill gain">+'+fmtPct(a.budgetBonus)+' to upgrades</span>'+
+        '<span class="pill mass">+'+Math.round(a.massPct*100)+'% weight</span></span></span>';
       el.addEventListener('click', function(){
         if(blocksRemoval){
-          flashNote('addition-note', 'Free up protection spend before removing this - the revenue is already committed.');
+          flashNote('addition-note', "This add-on's value is already paying for your protection - remove some protection first.");
           return;
         }
         state.additions[k] = !selected;
         track('addition_toggled', { addition:k, on:!selected });
-        renderAdditionCards(); renderBudget('additions');
+        renderAdditionCards(); renderAddonSummary();
       });
       wrap.appendChild(el);
     });
@@ -902,8 +911,8 @@
           return;
         }
         if(!affordable){
-          flashNote('protect-note', p.label + ' needs ' + fmtPct(p.cost) + ' and you have ' +
-            fmtPct(budgetRemaining() + freedByThis) + ' left. Revenue add-ons lift your budget.');
+          flashNote('protect-note', p.label + ' costs ' + fmtPct(p.cost) + ' and you have ' +
+            fmtPct(budgetRemaining() + freedByThis) + ' left. Add-ons that add value raise your budget.');
           return;
         }
         var turningOn = !selected;
@@ -922,7 +931,7 @@
         }
         state.protections[k] = turningOn;
         track('protection_toggled', { protection:k, on:turningOn });
-        renderProtectionCards(); renderBudget('protect');
+        renderProtectionCards(); renderUpgradeBudget();
       });
       wrap.appendChild(el);
     });
@@ -2072,7 +2081,7 @@
 
     var stats = [
       ['Damage (this quake)', DAMAGE_SHORT[L.state]],
-      ['Upgrade cost', '+' + fmtPct(spentTotal(d)) + ' of build cost']
+      ['Upgrade cost', fmtPct(spentTotal(d)) + ' of the base price']
     ];
     if(result.eligible){
       stats.push(['Cost efficiency', Math.round(result.efficiency*100) + '%']);
@@ -2312,7 +2321,7 @@
 
   function startNewDesign(){
     resetDesign();
-    renderTypeCards(); renderBudget('build');
+    renderTypeCards(); syncBuildNav();
     showScreen('build');
   }
 
@@ -2323,12 +2332,12 @@
     });
 
     document.getElementById('btn-to-additions').addEventListener('click', function(){
-      renderAdditionCards(); renderBudget('additions');
+      renderAdditionCards(); renderAddonSummary();
       showScreen('additions');
     });
 
     document.getElementById('btn-additions-to-protect').addEventListener('click', function(){
-      renderProtectionCards(); renderBudget('protect');
+      renderProtectionCards(); renderUpgradeBudget();
       showScreen('protect');
     });
 
@@ -2343,7 +2352,7 @@
     document.getElementById('btn-back-build-from-add').addEventListener('click', function(){
       renderTypeCards(); renderSystemCards();
       if(state.typeKey) document.getElementById('system-section').classList.add('open');
-      renderBudget('build');
+      syncBuildNav();
       showScreen('build');
     });
 
@@ -2352,13 +2361,13 @@
     });
 
     document.getElementById('btn-back-additions').addEventListener('click', function(){
-      renderAdditionCards(); renderBudget('additions');
+      renderAdditionCards(); renderAddonSummary();
       showScreen('additions');
     });
 
     document.getElementById('btn-back-protect').addEventListener('click', function(){
       if(animRunning) return;
-      renderProtectionCards(); renderBudget('protect');
+      renderProtectionCards(); renderUpgradeBudget();
       showScreen('protect');
     });
 
