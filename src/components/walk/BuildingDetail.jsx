@@ -2,7 +2,7 @@ import AccessBadge from './AccessBadge'
 import TagChip from './TagChip'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 import { useDialog } from '../../lib/useDialog'
-import { WALK, isContextSite } from './theme'
+import { WALK, isContextSite, isRefreshment } from './theme'
 
 function Fact({ label, value }) {
   if (!value) return null
@@ -40,6 +40,9 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
             {isContextSite(building) && (
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 mb-1">Context and remembrance</p>
             )}
+            {isRefreshment(building) && (
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/70 mb-1">Coffee, drinks and nibbles</p>
+            )}
             {building.name_mi && !building.name.includes(building.name_mi) && (
               <p className="text-xs font-semibold text-white/75 mb-1">{building.name_mi}</p>
             )}
@@ -59,7 +62,7 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
         </div>
 
         <div className="overflow-y-auto px-6 md:px-8 pt-5 pb-6">
-          <div className="flex flex-wrap items-center gap-1.5">
+          <div className={`flex flex-wrap items-center gap-1.5 ${isRefreshment(building) ? 'hidden' : ''}`}>
             <AccessBadge level={building.access_level} />
             {building.step_free && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-md ring-1 ring-inset ring-slate-200 text-slate-600 text-[11px] font-semibold">
@@ -67,7 +70,15 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
               </span>
             )}
           </div>
-          {building.access_notes && <p className="text-sm text-slate-500 mt-2">{building.access_notes}</p>}
+          {building.access_notes && (
+            isRefreshment(building) ? (
+              <p className="text-sm font-semibold text-slate-800">
+                Opening hours: <span className="font-normal text-slate-600">{building.access_notes}</span>
+              </p>
+            ) : (
+              <p className="text-sm text-slate-500 mt-2">{building.access_notes}</p>
+            )
+          )}
 
           <div className="md:grid md:grid-cols-[1fr_190px] md:gap-8 mt-5">
             <div className="space-y-3.5 text-[15px] text-slate-700 leading-relaxed">

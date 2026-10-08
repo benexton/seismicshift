@@ -6,8 +6,10 @@ import buildings from '../data/buildings.json'
 // Te Pae is the venue/start point, not a stop - same split TourApp makes.
 // Context stops (memorials, Quake City) aren't counted as engineering sites.
 const allStops = buildings.filter((b) => b.id !== 'te-pae')
-const stops = allStops.filter((b) => b.category !== 'context')
-const contextCount = allStops.length - stops.length
+// Refreshment stops (cafes, bars) are counted separately again.
+const stops = allStops.filter((b) => b.category !== 'context' && b.category !== 'refreshments')
+const contextCount = allStops.filter((b) => b.category === 'context').length
+const refreshmentCount = allStops.filter((b) => b.category === 'refreshments').length
 const countTag = (tag) => stops.filter((b) => b.structural_tags?.includes(tag)).length
 const stats = [
   { value: stops.length, label: 'Engineering sites' },
@@ -51,9 +53,10 @@ const stats = [
           A self-guided engineering tour of Ōtautahi Christchurch
         </p>
         <p class="mt-4 max-w-2xl text-sm md:text-base leading-relaxed text-white/70">
-          {stops.length} buildings that trace the 2010–2011 Canterbury earthquakes and the rebuild that followed: base
+          {stops.length} buildings that trace the 2010-2011 Canterbury earthquakes and the rebuild that followed: base
           isolation, rocking walls, ground improvement, and the heritage still waiting to be saved, plus {contextCount}
-          places of context and remembrance. Choose your stops and we'll plan the walk from Te Pae.
+          places of context and remembrance{refreshmentCount > 0 && `, and ${refreshmentCount} spots for a coffee or a drink along the way`}.
+          Choose your stops and we'll plan the walk from Te Pae.
         </p>
 
         <dl class="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-px rounded-xl overflow-hidden bg-white/15">
@@ -68,7 +71,7 @@ const stats = [
 
       <div class="relative bg-[#1c1517]">
         <div class="max-w-3xl mx-auto px-4 md:px-6 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <p class="text-sm font-bold">16–18 February 2027 <span class="text-white/40 mx-1.5">·</span> Te Pae, Christchurch</p>
+          <p class="text-sm font-bold">16-18 February 2027 <span class="text-white/40 mx-1.5">·</span> Te Pae, Christchurch</p>
           <p class="text-sm italic text-white/70">Shared Ground: Resilience Across the Pacific</p>
         </div>
       </div>

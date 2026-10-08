@@ -1,10 +1,10 @@
 import AccessBadge from './AccessBadge'
 import TagChip from './TagChip'
-import { WALK, isContextSite, stopColor } from './theme'
+import { WALK, isContextSite, isRefreshment, stopColor } from './theme'
 import { formatDistance, formatDuration, walkMinutes } from '../../lib/geo'
 
 function metaLine(building) {
-  if (isContextSite(building)) return building.address
+  if (isContextSite(building) || isRefreshment(building)) return building.address
   const parts = []
   if (building.year_built) parts.push(building.year_retrofit ? `${building.year_built} · retrofit ${building.year_retrofit}` : String(building.year_built))
   if (building.engineer) parts.push(building.engineer)
@@ -17,12 +17,13 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
   // details" targets by stopping the click from bubbling to this handler.
   const stop = (e) => e.stopPropagation()
   const context = isContextSite(building)
+  const refreshment = isRefreshment(building)
   const accent = stopColor(building)
 
   return (
     <div
       onClick={() => onToggle(building.id)}
-      className={`relative overflow-hidden rounded-xl border p-3 sm:p-4 flex gap-4 cursor-pointer transition-shadow hover:shadow-md active:bg-slate-50 ${context ? 'bg-[#f5f3f2]' : 'bg-white'}`}
+      className={`relative overflow-hidden rounded-xl border p-3 sm:p-4 flex gap-4 cursor-pointer transition-shadow hover:shadow-md active:bg-slate-50 ${context ? 'bg-[#f5f3f2]' : refreshment ? 'bg-[#faf6f1]' : 'bg-white'}`}
       style={{ borderColor: selected ? accent : WALK.line }}
     >
       {selected && <span aria-hidden="true" className="absolute left-0 inset-y-0 w-1" style={{ backgroundColor: accent }} />}
@@ -46,6 +47,7 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
         <div className="flex items-start justify-between gap-3">
           <button type="button" onClick={(e) => { stop(e); onViewDetail(building) }} className="text-left min-w-0">
             {context && <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-0.5">Context stop</p>}
+            {refreshment && <p className="text-[10px] font-bold uppercase tracking-[0.16em] mb-0.5" style={{ color: WALK.coffee }}>Refreshments</p>}
             <h3 className="font-bold text-[15px] sm:text-base text-slate-900 leading-snug hover:underline underline-offset-2">{building.name}</h3>
             {metaLine(building) && <p className="text-xs text-slate-500 mt-0.5 truncate">{metaLine(building)}</p>}
             {distanceMeters != null && (
@@ -59,7 +61,7 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
               type="checkbox"
               checked={selected}
               onChange={() => onToggle(building.id)}
-              className={`w-6 h-6 sm:w-5 sm:h-5 rounded cursor-pointer ${context ? 'accent-[#1c1517]' : 'accent-[#652431]'}`}
+              className={`w-6 h-6 sm:w-5 sm:h-5 rounded cursor-pointer ${context ? 'accent-[#1c1517]' : refreshment ? 'accent-[#7b5a3c]' : 'accent-[#652431]'}`}
               aria-label={`Add ${building.name} to your route`}
             />
           </label>
@@ -67,7 +69,14 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
 
         <p className="text-sm text-slate-600 leading-snug mt-2 line-clamp-2">{building.summary}</p>
 
-        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        {/* Cafes and bars show their opening hours (access_notes) in place of
+            the access badge - "interior open" says nothing useful about a cafe. */}
+        {refreshment && building.access_notes && (
+          <p className="mt-2 text-xs font-semibold text-slate-700">
+            <span aria-hidden="true" style={{ color: WALK.coffee }}>◷ </span>{building.access_notes}
+          </p>
+        )}
+        <div className={`mt-2.5 flex flex-wrap items-center gap-1.5 ${refreshment ? 'hidden' : ''}`}>
           <AccessBadge level={building.access_level} />
           {building.step_free && (
             <span className="inline-flex items-center px-2 py-0.5 rounded-md ring-1 ring-inset ring-slate-200 text-slate-600 text-[11px] font-semibold">

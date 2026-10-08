@@ -18,6 +18,7 @@ const CATEGORIES = {
   commercial: { label: 'COMMERCIAL', colors: ['#4f2a3f', '#1c1517'] },
   new_build: { label: 'REBUILD', colors: ['#b53232', '#3a0f1a'] },
   context: { label: 'CONTEXT', colors: ['#4a4245', '#1c1517'] },
+  refreshments: { label: 'REFRESHMENTS', colors: ['#8a6a4a', '#2b1d14'] },
 }
 const DEFAULT_CATEGORY = { label: 'SITE', colors: ['#5b4a4e', '#1c1517'] }
 
@@ -59,8 +60,9 @@ function escapeXml(s) {
 function svgFor(building) {
   const { label, colors: [c1, c2] } = CATEGORIES[building.category] ?? DEFAULT_CATEGORY
   const gradId = `g-${building.id}`
-  // Context stops (memorials, exhibitions) get a calm flat line and no year.
-  const calm = building.category === 'context'
+  // Context stops (memorials, exhibitions) and cafes/bars get a calm flat line
+  // and no year.
+  const calm = building.category === 'context' || building.category === 'refreshments'
   const year = !calm && building.year_built ? String(building.year_built) : ''
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-label="Illustration for ${escapeXml(building.name)}">
   <defs>

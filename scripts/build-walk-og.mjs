@@ -30,7 +30,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" v
   <text x="76" y="250" font-family="${FONT}" font-size="124" font-weight="800" fill="white">Seismic Walk</text>
   <text x="80" y="320" font-family="${FONT}" font-size="40" font-weight="600" fill="white" fill-opacity="0.9">A self-guided engineering tour of Ōtautahi Christchurch</text>
   <rect x="0" y="560" width="1200" height="70" fill="#1c1517"/>
-  <text x="80" y="604" font-family="${FONT}" font-size="26" font-weight="700" fill="white">16–18 February 2027 · Te Pae, Christchurch</text>
+  <text x="80" y="604" font-family="${FONT}" font-size="26" font-weight="700" fill="white">16-18 February 2027 · Te Pae, Christchurch</text>
   <text x="1120" y="604" text-anchor="end" font-family="${FONT}" font-size="24" font-weight="600" fill="white" fill-opacity="0.75">Powered by Seismic Shift</text>
 </svg>`
 

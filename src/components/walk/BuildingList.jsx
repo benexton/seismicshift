@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import BuildingCard from './BuildingCard'
 import { tagLabel } from '../../lib/structuralTags'
 import { getWalkDistance } from '../../lib/matrixDistance'
-import { WALK, isContextSite } from './theme'
+import { WALK, isContextSite, isRefreshment } from './theme'
 
 const ACCESS_FILTERS = [
   { value: 'interior_public', label: 'Interior open' },
@@ -70,8 +70,10 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onSelec
     visibleTags.push(tagCounts.find(([t]) => t === tagFilter))
   }
 
+  // Cafes and bars are never part of a quick pick - "Everything" means every
+  // site, not every coffee stop.
   const picks = useMemo(
-    () => QUICK_PICKS.map((p) => ({ ...p, ids: buildings.filter(p.match).map((b) => b.id) })).filter((p) => p.ids.length > 0),
+    () => QUICK_PICKS.map((p) => ({ ...p, ids: buildings.filter((b) => !isRefreshment(b) && p.match(b)).map((b) => b.id) })).filter((p) => p.ids.length > 0),
     [buildings]
   )
   const activePick = picks.find((p) => p.ids.length === selectedIds.size && p.ids.every((id) => selectedIds.has(id)))
@@ -95,8 +97,9 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onSelec
 
   // Context stops (Quake City, memorials) sit in their own section below the
   // engineering sites - see isContextSite.
-  const engineering = filtered.filter((b) => !isContextSite(b))
+  const engineering = filtered.filter((b) => !isContextSite(b) && !isRefreshment(b))
   const context = filtered.filter(isContextSite)
+  const refreshments = filtered.filter(isRefreshment)
   const filtersActive = accessFilter || tagFilter || stepFreeOnly
 
   const card = (b) => (
@@ -215,6 +218,20 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onSelec
             Not engineering case studies - places that explain what happened and who it happened to.
           </p>
           <div className="space-y-3">{context.map(card)}</div>
+        </div>
+      )}
+
+      {refreshments.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center gap-3 mb-1">
+            <span className="h-px flex-1" style={{ backgroundColor: WALK.line }} />
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: WALK.coffee }}>Coffee, drinks and nibbles</h3>
+            <span className="h-px flex-1" style={{ backgroundColor: WALK.line }} />
+          </div>
+          <p className="text-sm text-slate-500 text-center mb-4">
+            Places to refuel along the way. Tick one to add it to your route. Hours can change, so check before you go.
+          </p>
+          <div className="space-y-3">{refreshments.map(card)}</div>
         </div>
       )}
     </div>
