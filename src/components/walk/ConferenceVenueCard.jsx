@@ -3,7 +3,9 @@ import { WALK } from './theme'
 // Te Pae isn't a tour stop - it's the PCEE 2027 venue and the tour's default
 // start point, so it's surfaced here as a one-off info card up front rather
 // than as a selectable building tile.
-export default function ConferenceVenueCard({ building, onViewDetail }) {
+// onToggle is only passed when the walk starts somewhere other than Te Pae,
+// so it can then be added as a stop.
+export default function ConferenceVenueCard({ building, onViewDetail, selected = false, onToggle = null }) {
   if (!building) return null
 
   return (
@@ -19,16 +21,29 @@ export default function ConferenceVenueCard({ building, onViewDetail }) {
         <h3 className="mt-1 text-lg font-extrabold tracking-tight text-slate-900 leading-tight">{building.name}</h3>
         <p className="text-xs text-slate-500 mt-0.5">{building.address}</p>
         <p className="text-sm text-slate-600 leading-snug mt-2">{building.summary}</p>
-        {onViewDetail && (
-          <button
-            type="button"
-            onClick={() => onViewDetail(building)}
-            className="mt-2 text-sm font-semibold underline underline-offset-2"
-            style={{ color: WALK.maroon }}
-          >
-            About the building
-          </button>
-        )}
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          {onViewDetail && (
+            <button
+              type="button"
+              onClick={() => onViewDetail(building)}
+              className="px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors hover:bg-slate-50"
+              style={{ borderColor: WALK.line, color: WALK.maroon }}
+            >
+              More info
+            </button>
+          )}
+          {onToggle && (
+            <button
+              type="button"
+              onClick={() => onToggle(building.id)}
+              aria-pressed={selected}
+              className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors"
+              style={selected ? { color: WALK.maroon, backgroundColor: WALK.tint } : { color: 'white', backgroundColor: WALK.maroon }}
+            >
+              {selected ? '✓ Te Pae is on your route' : 'Add Te Pae to my route'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

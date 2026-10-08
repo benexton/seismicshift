@@ -83,7 +83,7 @@ export default function TourApp() {
     if (shareState) {
       // Drop ids that no longer exist (a building renamed or removed since
       // the link was made) so the selected count matches what's shown.
-      const ids = shareState.ids.filter((id) => buildingsById[id] && id !== DEFAULT_START_ID)
+      const ids = shareState.ids.filter((id) => buildingsById[id])
       setSelectedIds(new Set(ids))
       setStartId(shareState.startId && buildingsById[shareState.startId] ? shareState.startId : DEFAULT_START_ID)
       setLoop(shareState.loop)
@@ -185,6 +185,16 @@ export default function TourApp() {
   const changeStart = (id) => {
     setUserLocation(null)
     setStartId(id)
+    // Back to starting at Te Pae: drop it as a stop too, since its "add"
+    // toggle disappears once it's the start again.
+    if (id === DEFAULT_START_ID) {
+      setSelectedIds((prev) => {
+        if (!prev.has(DEFAULT_START_ID)) return prev
+        const next = new Set(prev)
+        next.delete(DEFAULT_START_ID)
+        return next
+      })
+    }
   }
 
   const optimise = () => {
@@ -215,6 +225,11 @@ export default function TourApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoPlan, routeResult])
 
+  // Te Pae is normally the start, so it isn't a tickable stop. But someone
+  // starting from their hotel or another site may want to walk to it (or
+  // finish there), so it becomes addable whenever it isn't the start.
+  const venueAddable = !!userLocation || startId !== DEFAULT_START_ID
+
   const viewDetail = (building) => {
     setDetailBuilding(building)
     trackEvent('building_detail_view', { building_id: building.id })
@@ -233,7 +248,12 @@ export default function TourApp() {
       />
 
       <div className="print:hidden">
-        <ConferenceVenueCard building={buildingsById[DEFAULT_START_ID]} onViewDetail={viewDetail} />
+        <ConferenceVenueCard
+          building={buildingsById[DEFAULT_START_ID]}
+          onViewDetail={viewDetail}
+          selected={selectedIds.has(DEFAULT_START_ID)}
+          onToggle={venueAddable ? toggleSelection : null}
+        />
 
         <SectionHeading step="1" title="Choose where you start" />
         <StartPointPicker
@@ -318,7 +338,7 @@ export default function TourApp() {
       <BuildingDetail
         building={detailBuilding}
         selected={!!detailBuilding && selectedIds.has(detailBuilding.id)}
-        onToggle={detailBuilding?.id === DEFAULT_START_ID ? null : toggleSelection}
+        onToggle={detailBuilding?.id === DEFAULT_START_ID && !venueAddable ? null : toggleSelection}
         onClose={() => setDetailBuilding(null)}
       />
     </div>

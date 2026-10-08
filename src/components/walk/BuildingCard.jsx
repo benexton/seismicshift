@@ -76,14 +76,32 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
             <span aria-hidden="true" style={{ color: WALK.coffee }}>◷ </span>{building.access_notes}
           </p>
         )}
-        <div className={`mt-2.5 flex flex-wrap items-center gap-1.5 ${refreshment ? 'hidden' : ''}`}>
-          <AccessBadge level={building.access_level} />
-          {building.step_free && (
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md ring-1 ring-inset ring-slate-200 text-slate-600 text-[11px] font-semibold">
-              Step-free
-            </span>
-          )}
-          {building.structural_tags?.slice(0, 2).map((tag) => <TagChip key={tag} tag={tag} />)}
+        <div className="mt-2.5 flex items-end justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+            {!refreshment && (
+              <>
+                <AccessBadge level={building.access_level} />
+                {building.step_free && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md ring-1 ring-inset ring-slate-200 text-slate-600 text-[11px] font-semibold">
+                    Step-free
+                  </span>
+                )}
+                {building.structural_tags?.slice(0, 2).map((tag) => <TagChip key={tag} tag={tag} />)}
+              </>
+            )}
+          </div>
+          {/* An explicit button as well as the tappable title/photo: field
+              testing found people ticked sites without ever discovering the
+              full story behind the summary. */}
+          <button
+            type="button"
+            onClick={(e) => { stop(e); onViewDetail(building) }}
+            className="flex-shrink-0 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors hover:bg-slate-50"
+            style={{ borderColor: WALK.line, color: accent }}
+            aria-label={`More information about ${building.name}`}
+          >
+            More info
+          </button>
         </div>
       </div>
     </div>

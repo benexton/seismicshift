@@ -51,6 +51,8 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef([])
+  const geolocateRef = useRef(null)
+  const autoLocatedRef = useRef(false)
 
   useEffect(() => {
     if (!MAPTILER_KEY || !containerRef.current || mapRef.current) return
@@ -64,6 +66,16 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
       canvasContextAttributes: { preserveDrawingBuffer: true },
     })
     mapRef.current.addControl(new maplibregl.NavigationControl(), 'top-right')
+    // Live "you are here" dot that follows the phone as people walk the
+    // route. Tapping the control turns it on; it's switched on automatically
+    // below when the walker has already shared their location.
+    geolocateRef.current = new maplibregl.GeolocateControl({
+      positionOptions: { enableHighAccuracy: true },
+      trackUserLocation: true,
+      showUserLocation: true,
+      showAccuracyCircle: true,
+    })
+    mapRef.current.addControl(geolocateRef.current, 'top-right')
     return () => {
       mapRef.current?.remove()
       mapRef.current = null
@@ -98,10 +110,11 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
         markersRef.current.push(marker)
       })
 
-      // The start (Te Pae or another chosen building) isn't a numbered stop,
-      // but without a marker the route line just begins from nowhere. A live
-      // location start is drawn as the blue dot below instead.
-      if (startPoint && !userLocation) {
+      // The start (Te Pae, another chosen building, or where the walker was
+      // when they shared their location) isn't a numbered stop, but without a
+      // marker the route line just begins from nowhere. Their live position
+      // is the separate blue dot from the GeolocateControl.
+      if (startPoint) {
         const marker = new maplibregl.Marker({ element: startMarkerEl() })
           .setLngLat([startPoint.lng, startPoint.lat])
           .setPopup(new maplibregl.Popup({ offset: 16 }).setText(`Start: ${startPoint.name}`))
@@ -109,16 +122,12 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
         markersRef.current.push(marker)
       }
 
-      if (userLocation) {
-        const el = document.createElement('div')
-        el.style.width = '16px'
-        el.style.height = '16px'
-        el.style.borderRadius = '50%'
-        el.style.backgroundColor = '#2563eb'
-        el.style.border = '3px solid white'
-        el.style.boxShadow = '0 1px 4px rgba(0,0,0,0.4)'
-        const marker = new maplibregl.Marker({ element: el }).setLngLat([userLocation.lng, userLocation.lat]).addTo(map)
-        markersRef.current.push(marker)
+      // Location already shared (they started from "my location"): start
+      // tracking straight away rather than making them find the control.
+      // Only once - after that the control's own on/off state is theirs.
+      if (userLocation && !autoLocatedRef.current && geolocateRef.current) {
+        autoLocatedRef.current = true
+        geolocateRef.current.trigger()
       }
 
       // The fetched geometry already includes the closing leg when looped
