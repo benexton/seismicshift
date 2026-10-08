@@ -9,7 +9,7 @@
 // Everything else is cached on first use, stale-while-revalidate. Map tiles
 // and the directions API aren't cached; offline, the itinerary still works
 // with straight-line legs.
-const CACHE_NAME = 'seismic-walk-v3'
+const CACHE_NAME = 'seismic-walk-v4'
 const PRECACHE = ['/walk/']
 
 const SAME_ORIGIN_PREFIXES = ['/walk', '/_astro/', '/images/walk/', '/logo.png', '/NZSEELogo.png', '/favicon']
@@ -38,6 +38,25 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
   const url = new URL(event.request.url)
   if (!shouldCache(url)) return
+
+  // The page itself is network-first: serving the saved copy first (as v3
+  // did) meant every update needed two refreshes to appear. The saved copy is
+  // only used when the network fails, i.e. offline. Everything else (hashed
+  // bundles, ?v= versioned photos, fonts) stays cache-first, which is safe
+  // because a changed file always arrives under a new URL.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      caches.open(CACHE_NAME).then((cache) =>
+        fetch(event.request)
+          .then((response) => {
+            if (response.ok) cache.put(event.request, response.clone())
+            return response
+          })
+          .catch(() => cache.match(event.request, { ignoreSearch: true }).then((cached) => cached || Response.error()))
+      )
+    )
+    return
+  }
 
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) =>

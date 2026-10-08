@@ -3,6 +3,7 @@
 // Run: node scripts/build-buildings.mjs (wired into `npm run build:data`).
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { createHash } from 'node:crypto'
 
 const CSV_PATH = fileURLToPath(new URL('../src/data/buildings.csv', import.meta.url))
 const JSON_PATH = fileURLToPath(new URL('../src/data/buildings.json', import.meta.url))
@@ -119,7 +120,12 @@ function main() {
     if (!building.image || building.image === placeholder) {
       const photo = PHOTO_EXTENSIONS.map((ext) => `${building.id}.${ext}`)
         .find((name) => existsSync(`${IMAGES_DIR}/${name}`))
-      building.image = photo ? `/images/walk/${photo}` : placeholder
+      // ?v=<content hash>: a replaced photo keeps its file name, so without
+      // this browsers and the walk's offline cache kept showing the old one.
+      // A new hash means a new URL, fetched straight away.
+      building.image = photo
+        ? `/images/walk/${photo}?v=${createHash('sha1').update(readFileSync(`${IMAGES_DIR}/${photo}`)).digest('hex').slice(0, 8)}`
+        : placeholder
     }
 
     return building
