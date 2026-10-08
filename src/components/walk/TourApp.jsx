@@ -266,12 +266,11 @@ export default function TourApp() {
           onUseMyLocation={setUserLocation}
         />
 
-        <SectionHeading step="2" title="Pick the sites you want to see" hint="Tick sites or use a quick pick, then tap Plan my route." />
+        <SectionHeading step="2" title="Pick the sites you want to see" hint="Tick the sites you want, then tap Plan my route." />
         <BuildingList
           buildings={tourBuildings}
           selectedIds={selectedIds}
           onToggle={toggleSelection}
-          onSelectMany={(ids) => setSelectedIds(new Set(ids))}
           onViewDetail={viewDetail}
           origin={userLocation ? { lat: userLocation.lat, lng: userLocation.lng } : buildingsById[startId] ?? null}
         />

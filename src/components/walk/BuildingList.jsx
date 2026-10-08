@@ -11,17 +11,6 @@ const ACCESS_FILTERS = [
   { value: 'by_arrangement', label: 'By arrangement' },
 ]
 
-const hasAnyTag = (b, tags) => b.structural_tags?.some((t) => tags.includes(t))
-
-// One-tap themed selections for people who don't want to tick sites one by
-// one. Driven by structural_tags, so they pick up new sites automatically.
-const QUICK_PICKS = [
-  { id: 'isolation', label: 'Base isolation', match: (b) => hasAnyTag(b, ['base_isolation']) },
-  { id: 'lowdamage', label: 'Rocking, damped & braced', match: (b) => hasAnyTag(b, ['rocking_wall', 'rocking_frame', 'brb', 'dampers', 'low_damage']) },
-  { id: 'heritage', label: 'Heritage & recovery', match: (b) => hasAnyTag(b, ['urm_retrofit', 'heritage_stone', 'facade_retention']) },
-  { id: 'all', label: 'Everything', match: () => true },
-]
-
 // Feature chips beyond this many collapse behind a "More" toggle - with ~17
 // tags the full set pushed the list itself a long way down the page.
 const VISIBLE_TAGS = 6
@@ -51,7 +40,7 @@ function GroupLabel({ children }) {
 
 const chipRow = 'flex flex-nowrap sm:flex-wrap gap-2 mb-4 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:pb-0'
 
-export default function BuildingList({ buildings, selectedIds, onToggle, onSelectMany, onViewDetail, origin }) {
+export default function BuildingList({ buildings, selectedIds, onToggle, onViewDetail, origin }) {
   const [accessFilter, setAccessFilter] = useState(null)
   const [tagFilter, setTagFilter] = useState(null)
   const [stepFreeOnly, setStepFreeOnly] = useState(false)
@@ -69,14 +58,6 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onSelec
   if (!showAllTags && tagFilter && !visibleTags.some(([t]) => t === tagFilter)) {
     visibleTags.push(tagCounts.find(([t]) => t === tagFilter))
   }
-
-  // Cafes and bars are never part of a quick pick - "Everything" means every
-  // site, not every coffee stop.
-  const picks = useMemo(
-    () => QUICK_PICKS.map((p) => ({ ...p, ids: buildings.filter((b) => !isRefreshment(b) && p.match(b)).map((b) => b.id) })).filter((p) => p.ids.length > 0),
-    [buildings]
-  )
-  const activePick = picks.find((p) => p.ids.length === selectedIds.size && p.ids.every((id) => selectedIds.has(id)))
 
   const distances = useMemo(() => {
     if (!origin) return null
@@ -115,19 +96,6 @@ export default function BuildingList({ buildings, selectedIds, onToggle, onSelec
 
   return (
     <div>
-      {onSelectMany && (
-        <>
-          <GroupLabel>Quick picks</GroupLabel>
-          <div className={chipRow}>
-            {picks.map((p) => (
-              <FilterChip key={p.id} active={activePick?.id === p.id} count={p.ids.length} onClick={() => onSelectMany(p.ids)}>
-                {p.label}
-              </FilterChip>
-            ))}
-          </div>
-        </>
-      )}
-
       {/* Mobile: one scrollable row per filter group, edge-to-edge, so the
           filters don't push the building list several screens down. Desktop
           (sm+): wraps into a normal grid of chips instead. */}
