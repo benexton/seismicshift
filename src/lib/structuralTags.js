@@ -17,7 +17,7 @@ const TAG_LABELS = {
   rocking_frame: 'Rocking steel frame',
   post_tensioned: 'Post-tensioned',
   dampers: 'Supplemental damping',
-  friction_damper: 'Self-centring friction braces',
+  dmax_brace: 'DMAX seismic braces',
   heritage_stone: 'Heritage stone',
   timber_lvl: 'Timber / LVL',
   paper_tube: 'Cardboard tubes',
