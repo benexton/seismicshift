@@ -27,6 +27,11 @@ docs/Flood_Extent_*.geojson
 # dev/build, so it never gets committed here.
 src/lib/qdSizing.ts
 
+# Full-size Seismic Walk photos, moved here by scripts/build-walk-photos.mjs
+# once it has written the web-sized public/images/walk/<id>.webp (which IS
+# committed). Kept locally only, in case a photo needs re-cropping.
+photos/walk-originals/
+
 # Astro CLI's local lastUpdateCheck timestamp - machine/session-specific, no functional content
 .astro/settings.json
 

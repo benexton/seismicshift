@@ -1,11 +1,14 @@
 // Converts src/data/buildings.csv -> src/data/buildings.json, validating the
 // schema documented in docs/seismic-walk-tour-scope.md (section 3) as it goes.
 // Run: node scripts/build-buildings.mjs (wired into `npm run build:data`).
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const CSV_PATH = fileURLToPath(new URL('../src/data/buildings.csv', import.meta.url))
 const JSON_PATH = fileURLToPath(new URL('../src/data/buildings.json', import.meta.url))
+const IMAGES_DIR = fileURLToPath(new URL('../public/images/walk', import.meta.url))
+// Checked in this order, so a .webp beats a .jpg if both are present.
+const PHOTO_EXTENSIONS = ['webp', 'jpg', 'jpeg', 'png']
 
 const REQUIRED_FIELDS = ['id', 'name', 'address', 'lat', 'lng', 'access_level', 'summary']
 const ACCESS_LEVELS = new Set(['interior_public', 'foyer_only', 'exterior_only', 'by_arrangement'])
@@ -105,10 +108,19 @@ function main() {
     }
     seenIds.add(building.id)
 
-    // A site added through /walkadmin/ has no image yet - point it at the
-    // generated placeholder plate (scripts/build-placeholder-images.mjs, run
-    // straight after this as part of build:data) rather than a blank tile.
-    if (!building.image) building.image = `/images/walk/${building.id}.svg`
+    // A photo in public/images/walk/ named after the id replaces the
+    // placeholder automatically (scripts/build-walk-photos.mjs, run just
+    // before this, has already turned a dropped te-pae.jpg into te-pae.webp). An image set explicitly in
+    // /walkadmin/ or Supabase still wins, unless it is just the placeholder.
+    // With neither, point at the generated placeholder plate
+    // (scripts/build-placeholder-images.mjs, run straight after this as part
+    // of build:data) rather than a blank tile.
+    const placeholder = `/images/walk/${building.id}.svg`
+    if (!building.image || building.image === placeholder) {
+      const photo = PHOTO_EXTENSIONS.map((ext) => `${building.id}.${ext}`)
+        .find((name) => existsSync(`${IMAGES_DIR}/${name}`))
+      building.image = photo ? `/images/walk/${photo}` : placeholder
+    }
 
     return building
   })
