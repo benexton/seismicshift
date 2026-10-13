@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as maplibregl from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { Protocol } from 'pmtiles';
 import { supabaseLfe } from '../../lib/supabaseLfe.js';
@@ -9,6 +10,10 @@ import {
   LIQUEFACTION_BUCKETS, LIQUEFACTION_COLOR, LIQUEFACTION_GEOJSON_URL, LIQUEFACTION_SOURCE_ID,
   FLOOD_BUCKETS, FLOOD_COLOR, FLOOD_GEOJSON_URL, FLOOD_SOURCE_ID,
 } from '../../lib/buildingStockAge.js';
+
+// maplibre-gl 6 loads its worker from a URL rather than bundling it inline; Vite
+// bundles the worker (and its shared chunk) into one file for us.
+maplibregl.setWorkerUrl(maplibreWorkerUrl);
 
 const MAPTILER_KEY = import.meta.env.PUBLIC_MAPTILER_KEY;
 const SOURCE_ID = 'building-stock';

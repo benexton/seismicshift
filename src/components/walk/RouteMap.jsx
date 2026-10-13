@@ -4,9 +4,14 @@ import { useEffect, useRef, useState } from 'react'
 // always resolve reliably - destructuring off the namespace object works
 // either way.
 import * as maplibregl from 'maplibre-gl'
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { boundsOf } from '../../lib/geo'
 import { WALK, stopColor } from './theme'
+
+// maplibre-gl 6 loads its worker from a URL rather than bundling it inline; Vite
+// bundles the worker (and its shared chunk) into one file for us.
+maplibregl.setWorkerUrl(maplibreWorkerUrl)
 
 const MAPTILER_KEY = import.meta.env.PUBLIC_MAPTILER_KEY
 
