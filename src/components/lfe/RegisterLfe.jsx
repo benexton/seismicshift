@@ -40,7 +40,7 @@ export default function RegisterLfe() {
   async function register(e) {
     e.preventDefault();
     setErr('');
-    if (password.length < 6) { setErr('Password must be at least 6 characters.'); return; }
+    if (password.length < 10) { setErr('Password must be at least 10 characters.'); return; }
     if (password !== confirmPassword) { setErr('Passwords do not match.'); return; }
     if (!displayName.trim()) { setErr('Display name is required.'); return; }
     setBusy(true);
