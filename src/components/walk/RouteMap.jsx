@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 // Namespace import, not named imports: maplibre-gl ships a CJS build whose
 // named exports Node's static analysis (used during Astro's SSR pass) can't
 // always resolve reliably - destructuring off the namespace object works
@@ -53,6 +53,7 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
   const markersRef = useRef([])
   const geolocateRef = useRef(null)
   const autoLocatedRef = useRef(false)
+  const [mapReady, setMapReady] = useState(false)
 
   useEffect(() => {
     if (!MAPTILER_KEY || !containerRef.current || mapRef.current) return
@@ -76,7 +77,13 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
       showAccuracyCircle: true,
     })
     mapRef.current.addControl(geolocateRef.current, 'top-right')
+    // Flag the initial style load ourselves rather than polling
+    // map.isStyleLoaded() later: that goes false again whenever tiles/sources
+    // are mid-fetch (e.g. right after a fitBounds), and by then 'load' has
+    // already fired so a once('load') fallback would never run.
+    mapRef.current.once('load', () => setMapReady(true))
     return () => {
+      setMapReady(false)
       mapRef.current?.remove()
       mapRef.current = null
     }
@@ -168,13 +175,14 @@ export default function RouteMap({ stops, geometry, startPoint, userLocation, lo
       if (bounds) map.fitBounds(bounds, { padding: 60, maxZoom: 17, duration: 500 })
     }
 
-    if (map.isStyleLoaded()) runUpdate()
-    else map.once('load', runUpdate)
+    // Not ready yet: the effect re-runs when the 'load' handler flips mapReady.
+    if (!mapReady) return
+    runUpdate()
 
     return () => {
       cancelled = true
     }
-  }, [stops, geometry, startPoint, userLocation, loop])
+  }, [stops, geometry, startPoint, userLocation, loop, mapReady])
 
   if (!MAPTILER_KEY) {
     return (
