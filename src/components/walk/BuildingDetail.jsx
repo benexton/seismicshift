@@ -30,7 +30,7 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
         aria-modal="true"
         aria-labelledby="walk-detail-title"
         tabIndex={-1}
-        className="relative bg-white w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden outline-none"
+        className="relative bg-white w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[92vh] max-h-[92dvh] overflow-hidden outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative w-full h-44 md:h-56 flex-shrink-0 bg-slate-200">
@@ -127,6 +127,13 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
               </a>
             )}
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="md:hidden px-4 py-2.5 rounded-lg text-sm font-bold text-slate-600 bg-slate-100"
+          >
+            Close
+          </button>
           {onToggle && (
             <button
               type="button"

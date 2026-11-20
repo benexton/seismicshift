@@ -23,14 +23,14 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
   return (
     <div
       onClick={() => onToggle(building.id)}
-      className={`relative overflow-hidden rounded-xl border p-3 sm:p-4 flex gap-4 cursor-pointer transition-shadow hover:shadow-md active:bg-slate-50 ${context ? 'bg-[#f5f3f2]' : refreshment ? 'bg-[#faf6f1]' : 'bg-white'}`}
+      className={`relative overflow-hidden rounded-xl border p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 cursor-pointer transition-shadow hover:shadow-md active:bg-slate-50 ${context ? 'bg-[#f5f3f2]' : refreshment ? 'bg-[#faf6f1]' : 'bg-white'}`}
       style={{ borderColor: selected ? accent : WALK.line }}
     >
       {selected && <span aria-hidden="true" className="absolute left-0 inset-y-0 w-1" style={{ backgroundColor: accent }} />}
       <button
         type="button"
         onClick={(e) => { stop(e); onViewDetail(building) }}
-        className="group flex-shrink-0 w-20 h-20 sm:w-28 sm:h-28 rounded-lg bg-slate-100 overflow-hidden"
+        className="group flex-shrink-0 w-full h-40 sm:w-28 sm:h-28 rounded-lg bg-slate-100 overflow-hidden"
         aria-label={`View details for ${building.name}`}
       >
         {building.image && (
@@ -67,7 +67,7 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
           </label>
         </div>
 
-        <p className="text-sm text-slate-600 leading-snug mt-2 line-clamp-2">{building.summary}</p>
+        <p className="text-sm text-slate-600 leading-snug mt-2 line-clamp-3 sm:line-clamp-2">{building.summary}</p>
 
         {/* Cafes and bars show their opening hours (access_notes) in place of
             the access badge - "interior open" says nothing useful about a cafe. */}

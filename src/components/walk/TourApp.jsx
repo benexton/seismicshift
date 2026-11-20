@@ -16,6 +16,7 @@ import BuildingDetail from './BuildingDetail'
 import ShareButton from './ShareButton'
 import PrintButton from './PrintButton'
 import InstallPrompt from './InstallPrompt'
+import RouteActions from './RouteActions'
 import ConferenceVenueCard from './ConferenceVenueCard'
 import { WALK } from './theme'
 
@@ -311,6 +312,15 @@ export default function TourApp() {
             </span>
             {' '}- walking time only; allow time at each stop.
           </p>
+
+          <RouteActions
+            orderedPoints={orderedPoints}
+            stops={stops}
+            legs={legs}
+            startName={hasVirtualStart ? virtualStart.name : stops[0]?.name}
+            loop={loop}
+            totalMeters={routeResult.totalMeters}
+          />
 
           <div className="mb-6">
             <RouteMap stops={stops} geometry={geometry} startPoint={hasVirtualStart ? virtualStart : null} userLocation={userLocation} loop={loop} />
