@@ -10,7 +10,25 @@
 // its own link.
 const MAX_WAYPOINTS = 9
 
-const coord = (p) => `${p.lat},${p.lng}`
+// Stops are sent as "name, address, Christchurch" text rather than raw
+// coordinates: given coordinates, Google labels each stop with whatever
+// business is nearest (Te Pae showed as "Mutual Fund House"). Every stop's
+// text was checked against Google Maps search on 2026-11-20; these four
+// didn't resolve to a single place as name + address, so they have their own
+// wording. A point with no address (the walker's live location) stays as
+// coordinates.
+const QUERY_OVERRIDES = {
+  'christ-church-cathedral': 'ChristChurch Cathedral, Christchurch',
+  'earthquake-memorial': 'Canterbury Earthquake National Memorial, Christchurch',
+  'christchurch-hospital-waipapa': 'Waipapa, Christchurch Hospital, Christchurch',
+  ogb: 'OGB Bar, Cathedral Square, Christchurch',
+}
+
+const place = (p) => {
+  if (QUERY_OVERRIDES[p.id]) return QUERY_OVERRIDES[p.id]
+  if (p.name && p.address) return `${p.name}, ${p.address}, Christchurch`
+  return `${p.lat},${p.lng}`
+}
 
 // `points` are the ordered walk points, start first. When `loop` is set the
 // walk returns to the first point.
@@ -23,11 +41,11 @@ export function mapsRouteUrls(points, loop, waypointLimit = MAX_WAYPOINTS) {
     const part = pts.slice(i, i + perPart)
     const params = new URLSearchParams({
       api: '1',
-      origin: coord(part[0]),
-      destination: coord(part[part.length - 1]),
+      origin: place(part[0]),
+      destination: place(part[part.length - 1]),
       travelmode: 'walking',
     })
-    if (part.length > 2) params.set('waypoints', part.slice(1, -1).map(coord).join('|'))
+    if (part.length > 2) params.set('waypoints', part.slice(1, -1).map(place).join('|'))
     urls.push(`https://www.google.com/maps/dir/?${params.toString()}`)
   }
   return urls

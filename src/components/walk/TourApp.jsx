@@ -111,7 +111,7 @@ export default function TourApp() {
     if (userLocation) return { id: VIRTUAL_START_ID, lat: userLocation.lat, lng: userLocation.lng, name: 'Your location' }
     if (startId && !selectedIds.has(startId)) {
       const building = buildingsById[startId]
-      if (building) return { id: building.id, lat: building.lat, lng: building.lng, name: building.name }
+      if (building) return { id: building.id, lat: building.lat, lng: building.lng, name: building.name, address: building.address }
     }
     return null
   }, [userLocation, startId, selectedIds])
