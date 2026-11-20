@@ -73,9 +73,11 @@ export default function RouteActions({ orderedPoints, stops, legs, startName, lo
           {busy ? 'Making your PDF...' : 'Info pack (PDF)'}
         </button>
       </div>
-      {urls.length > 1 && (
-        <p className="text-xs text-slate-500 mt-2">Google Maps only takes a few stops per link on a phone, so the walk is split into {urls.length} parts. Open part 1, then the next part when you reach its last stop.</p>
-      )}
+      <p className="text-xs text-slate-500 mt-2">
+        <span className="font-semibold text-slate-700">On a phone, install the Google Maps app first.</span>{' '}
+        Opened in a phone browser instead, Google Maps may not show every stop.
+        {urls.length > 1 && ` Google takes about 10 stops per link, so this walk is split into ${urls.length} parts: open part 1, then the next part when you reach its last stop.`}
+      </p>
       {failed && <p className="text-xs mt-2" style={{ color: WALK.red }}>Sorry, the PDF could not be made. Check your connection and try again.</p>}
     </div>
   )

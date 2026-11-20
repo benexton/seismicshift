@@ -4,23 +4,17 @@
 //
 // Google's Maps URLs docs (checked 2026-11-20): "up to three waypoints
 // supported on mobile browsers, and a maximum of nine waypoints supported
-// otherwise". A phone with the Maps app installed opens the link in the app,
-// but there's no way to tell from here whether it will, so phones get the
-// safe limit of 3. A longer walk is split into consecutive parts that share
-// their join point; each part is its own link.
-const PHONE_WAYPOINTS = 3
-const DESKTOP_WAYPOINTS = 9
+// otherwise". We use 9: most phones open the link in the Google Maps app,
+// and RouteActions tells phone users to have the app installed. A longer walk
+// is split into consecutive parts that share their join point; each part is
+// its own link.
+const MAX_WAYPOINTS = 9
 
 const coord = (p) => `${p.lat},${p.lng}`
 
-export function maxWaypoints() {
-  if (typeof window === 'undefined' || !window.matchMedia) return PHONE_WAYPOINTS
-  return window.matchMedia('(pointer: coarse)').matches ? PHONE_WAYPOINTS : DESKTOP_WAYPOINTS
-}
-
 // `points` are the ordered walk points, start first. When `loop` is set the
 // walk returns to the first point.
-export function mapsRouteUrls(points, loop, waypointLimit = maxWaypoints()) {
+export function mapsRouteUrls(points, loop, waypointLimit = MAX_WAYPOINTS) {
   const pts = loop && points.length > 1 ? [...points, points[0]] : points
   if (pts.length < 2) return []
   const perPart = waypointLimit + 2 // origin + waypoints + destination
