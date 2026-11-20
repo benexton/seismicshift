@@ -2,21 +2,31 @@
 // pre-loaded, so people can follow it turn by turn in the Maps app (which also
 // reroutes when they wander off the planned path).
 //
-// Maps URLs allow a limited number of waypoints (9, per Google's Maps URLs
-// documentation), so a long walk is split into consecutive parts that share
-// their join point. Each part is its own link.
-const MAX_POINTS = 11 // origin + 9 waypoints + destination
+// Google's Maps URLs docs (checked 2026-11-20): "up to three waypoints
+// supported on mobile browsers, and a maximum of nine waypoints supported
+// otherwise". A phone with the Maps app installed opens the link in the app,
+// but there's no way to tell from here whether it will, so phones get the
+// safe limit of 3. A longer walk is split into consecutive parts that share
+// their join point; each part is its own link.
+const PHONE_WAYPOINTS = 3
+const DESKTOP_WAYPOINTS = 9
 
 const coord = (p) => `${p.lat},${p.lng}`
 
+export function maxWaypoints() {
+  if (typeof window === 'undefined' || !window.matchMedia) return PHONE_WAYPOINTS
+  return window.matchMedia('(pointer: coarse)').matches ? PHONE_WAYPOINTS : DESKTOP_WAYPOINTS
+}
+
 // `points` are the ordered walk points, start first. When `loop` is set the
 // walk returns to the first point.
-export function mapsRouteUrls(points, loop) {
+export function mapsRouteUrls(points, loop, waypointLimit = maxWaypoints()) {
   const pts = loop && points.length > 1 ? [...points, points[0]] : points
   if (pts.length < 2) return []
+  const perPart = waypointLimit + 2 // origin + waypoints + destination
   const urls = []
-  for (let i = 0; i < pts.length - 1; i += MAX_POINTS - 1) {
-    const part = pts.slice(i, i + MAX_POINTS)
+  for (let i = 0; i < pts.length - 1; i += perPart - 1) {
+    const part = pts.slice(i, i + perPart)
     const params = new URLSearchParams({
       api: '1',
       origin: coord(part[0]),

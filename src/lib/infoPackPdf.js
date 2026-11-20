@@ -60,7 +60,16 @@ function wrap(text, font, size, maxWidth) {
   const lines = []
   for (const para of clean(text).split('\n')) {
     let line = ''
-    for (const word of para.split(/\s+/).filter(Boolean)) {
+    for (let word of para.split(/\s+/).filter(Boolean)) {
+      // A single word wider than the column (long URLs) is broken by
+      // character so it can't run off the page.
+      while (font.widthOfTextAtSize(word, size) > maxWidth) {
+        if (line) { lines.push(line); line = '' }
+        let n = word.length - 1
+        while (n > 1 && font.widthOfTextAtSize(word.slice(0, n), size) > maxWidth) n -= 1
+        lines.push(word.slice(0, n))
+        word = word.slice(n)
+      }
       const test = line ? `${line} ${word}` : word
       if (font.widthOfTextAtSize(test, size) <= maxWidth) {
         line = test
@@ -124,7 +133,17 @@ export async function buildInfoPackPdf({ stops, legs, startName, loop, totalMete
 
   for (let i = 0; i < stops.length; i += 1) {
     const stop = stops[i]
-    ensure(110)
+    const image = images[i]
+    // Size the photo up front so the heading starts a new page with it
+    // rather than being stranded at the bottom of the previous one.
+    let imgH = 0
+    let imgW = 0
+    if (image) {
+      const w = Math.min(contentW, 360)
+      imgH = Math.min(220, (w * image.height) / image.width)
+      imgW = (imgH * image.width) / image.height
+    }
+    ensure(110 + imgH)
     y -= 10
     page.drawLine({ start: { x: MARGIN, y }, end: { x: MARGIN + contentW, y }, thickness: 0.6, color: rgb(0.9, 0.87, 0.88) })
     y -= 6
@@ -137,15 +156,11 @@ export async function buildInfoPackPdf({ stops, legs, startName, loop, totalMete
     if (stop.name_mi && !stop.name.includes(stop.name_mi)) text(stop.name_mi, { size: 9.5, col: GREY })
     if (stop.address) text(stop.address, { size: 9.5, col: GREY, gap: 4 })
 
-    const image = images[i]
     if (image) {
       const pdfImage = await doc.embedJpg(image.bytes)
-      const w = Math.min(contentW, 360)
-      const h = Math.min(220, (w * image.height) / image.width)
-      const drawW = (h * image.width) / image.height
-      ensure(h + 14)
-      y -= h
-      page.drawImage(pdfImage, { x: MARGIN, y, width: drawW, height: h })
+      ensure(imgH + 14)
+      y -= imgH
+      page.drawImage(pdfImage, { x: MARGIN, y, width: imgW, height: imgH })
       y -= 4
       if (stop.image_credit) text(`Photo: ${stop.image_credit}`, { size: 7.5, col: GREY })
       y -= 4

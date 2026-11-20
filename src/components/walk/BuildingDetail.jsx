@@ -30,7 +30,7 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
         aria-modal="true"
         aria-labelledby="walk-detail-title"
         tabIndex={-1}
-        className="relative bg-white w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[92vh] max-h-[92dvh] overflow-hidden outline-none"
+        className="relative bg-white w-full md:max-w-2xl md:rounded-2xl rounded-t-2xl shadow-2xl flex flex-col max-h-[92vh] supports-[height:100dvh]:max-h-[92dvh] overflow-hidden outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative w-full h-44 md:h-56 flex-shrink-0 bg-slate-200">
@@ -127,25 +127,29 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
               </a>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="md:hidden px-4 py-2.5 rounded-lg text-sm font-bold text-slate-600 bg-slate-100"
-          >
-            Close
-          </button>
-          {onToggle && (
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {/* A second way out on phones, at thumb height - testers found the
+                X in the photo corner could end up out of reach. */}
             <button
               type="button"
-              onClick={() => onToggle(building.id)}
-              className="px-5 py-2.5 rounded-lg text-sm font-bold transition-colors"
-              style={selected
-                ? { color: WALK.maroon, backgroundColor: WALK.tint }
-                : { color: 'white', backgroundColor: WALK.maroon }}
+              onClick={onClose}
+              className="md:hidden px-3.5 py-2.5 rounded-lg text-sm font-bold text-slate-600 bg-slate-100 whitespace-nowrap"
             >
-              {selected ? '✓ On your route' : 'Add to route'}
+              Close
             </button>
-          )}
+            {onToggle && (
+              <button
+                type="button"
+                onClick={() => onToggle(building.id)}
+                className="px-4 md:px-5 py-2.5 rounded-lg text-sm font-bold transition-colors whitespace-nowrap"
+                style={selected
+                  ? { color: WALK.maroon, backgroundColor: WALK.tint }
+                  : { color: 'white', backgroundColor: WALK.maroon }}
+              >
+                {selected ? '✓ On your route' : 'Add to route'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

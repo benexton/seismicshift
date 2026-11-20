@@ -38,26 +38,43 @@ export default function RouteActions({ orderedPoints, stops, legs, startName, lo
 
   return (
     <div className="mb-5 print:hidden">
-      <div className="flex flex-wrap gap-2">
-        {urls.map((url, i) => (
+      <div className="flex flex-wrap items-center gap-2">
+        {urls.length === 1 ? (
           <a
-            key={url}
-            href={url}
+            href={urls[0]}
             target="_blank"
             rel="noopener noreferrer"
             className={primary}
             style={{ backgroundColor: WALK.maroon }}
-            onClick={() => window.gtag?.('event', 'full_route_opened')}
+            onClick={() => window.gtag?.('event', 'full_route_opened', { parts: 1 })}
           >
-            {urls.length > 1 ? `Google Maps route, part ${i + 1} of ${urls.length}` : 'Google Maps route'}
+            Google Maps route
           </a>
-        ))}
+        ) : (
+          <div className="inline-flex items-center gap-1.5">
+            <span className="text-sm font-bold text-slate-800 mr-1">Google Maps:</span>
+            {urls.map((url, i) => (
+              <a
+                key={url}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={primary}
+                style={{ backgroundColor: WALK.maroon }}
+                aria-label={`Google Maps route, part ${i + 1} of ${urls.length}`}
+                onClick={() => window.gtag?.('event', 'full_route_opened', { parts: urls.length, part: i + 1 })}
+              >
+                Part {i + 1}
+              </a>
+            ))}
+          </div>
+        )}
         <button type="button" onClick={makePack} disabled={busy} className={primary} style={{ backgroundColor: WALK.ink }}>
           {busy ? 'Making your PDF...' : 'Info pack (PDF)'}
         </button>
       </div>
       {urls.length > 1 && (
-        <p className="text-xs text-slate-500 mt-2">Google Maps takes about 10 stops at a time, so a long walk opens in parts. Start with part 1.</p>
+        <p className="text-xs text-slate-500 mt-2">Google Maps only takes a few stops per link on a phone, so the walk is split into {urls.length} parts. Open part 1, then the next part when you reach its last stop.</p>
       )}
       {failed && <p className="text-xs mt-2" style={{ color: WALK.red }}>Sorry, the PDF could not be made. Check your connection and try again.</p>}
     </div>
