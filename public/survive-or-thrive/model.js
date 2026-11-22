@@ -30,7 +30,9 @@
      ductility demand (Eurocode 8's N2 relation: equal displacement above
      the spectrum corner period, amplified below it). Ductility demand against capacity sets the
      damage state: none / slight (Thrive), moderate / extensive (Survive),
-     collapse (Fail).
+     collapse (Fail). In the major quake the capacity is reduced
+     (MAJOR_CAPACITY_FACTOR) for the longer, harder shaking, so most
+     conventional designs collapse there but none in the strong quake.
    - The leaderboard score weighs the damage in all three earthquakes
      (mostly the design-level one), relative to what's achievable for that
      building type, times a budget-efficiency factor. A design that
@@ -180,6 +182,16 @@
     collapse:  { key:'collapse',  label:'Collapse', tier:'fail' }
   };
   var DAMAGE_ORDER = ['none','slight','moderate','extensive','collapse'];
+
+  /* Collapse capacity in the major earthquake, as a share of the capacity
+     used for the moderate and strong ones. A ~1-in-2,500-year quake shakes
+     longer and harder, and the repeated cycles wear down a structure's
+     ability to keep deforming (cyclic degradation), so conventional
+     structures reach collapse sooner. Applies to the major quake only, so
+     no design collapses in the design-level (strong) quake. Calibrated
+     2026-11-23 so most conventional designs collapse in the major quake
+     while plywood homes, portal frames and protected designs don't. */
+  var MAJOR_CAPACITY_FACTOR = 0.75;
 
   // Protection / add-on behaviour.
   var ROOF_MASS_FACTOR = 1.25;   // roof-level mass hurts a little more than its weight alone
@@ -360,8 +372,9 @@
     // Ductility demand (Eurocode 8 N2 method): equal displacement for
     // T >= TC, amplified below it - continuous at TC.
     var mu = R <= 1 ? R : (derived.T >= TC ? R : (R-1)*TC/derived.T + 1);
-    var state = damageState(mu, derived.muCap);
-    var points = damagePoints(mu, derived.muCap);
+    var muCap = quakeKey==='major' ? derived.muCap*MAJOR_CAPACITY_FACTOR : derived.muCap;
+    var state = damageState(mu, muCap);
+    var points = damagePoints(mu, muCap);
     // An unreinforced brick chimney on a fixed-base house comes down in
     // strong shaking whatever the bracing does (Canterbury 2010-11).
     var chimneyFell = !!(d.additions && d.additions.chimney) && !derived.isolated && quakeKey!=='moderate';
@@ -370,7 +383,7 @@
       if(worse(state, forced)===forced && state!==forced){ state = forced; points = Math.min(points, CHIMNEY_POINTS[forced]); }
     }
     return {
-      quake:quakeKey, pga:q.pga, Sa:Sa, R:R, mu:mu, muCap:derived.muCap,
+      quake:quakeKey, pga:q.pga, Sa:Sa, R:R, mu:mu, muCap:muCap,
       state:state, tier:DAMAGE[state].tier, points:points, chimneyFell:chimneyFell
     };
   }
