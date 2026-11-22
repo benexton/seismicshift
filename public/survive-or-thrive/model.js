@@ -64,7 +64,7 @@
 
   var HOUSE_SYSTEMS = {
     plasterboard: { key:'plasterboard', label:'Plasterboard Linings', desc:'Standard plasterboard bracing walls.' },
-    plywood:      { key:'plywood',      label:'Plywood Linings',      desc:'Structural plywood sheathing, stronger bracing.' }
+    plywood:      { key:'plywood',      label:'Plywood Linings',      desc:'Structural plywood sheathing for stronger bracing.' }
   };
   var HOUSE_SYSTEM_ORDER = ['plasterboard','plywood'];
 
@@ -103,15 +103,15 @@
   };
 
   var HOUSE_PROTECTIONS = {
-    frontfootDampers:{ key:'frontfootDampers',label:'FrontFoot Dampers',      desc:'Dampers built into the floor slab - act like base isolation for the home.', featured:true },
-    lightweight:     { key:'lightweight',     label:'Lightweight Construction', desc:'Lighter materials mean smaller seismic forces, but require more thought vs code minimum.' },
+    frontfootDampers:{ key:'frontfootDampers',label:'FrontFoot Dampers',      desc:'Dampers built into the floor slab that act like base isolation for the home.', featured:true },
+    lightweight:     { key:'lightweight',     label:'Lightweight Construction', desc:'Lighter materials mean smaller seismic forces, but need more design thought than a code-minimum build.' },
     upspecBracing:   { key:'upspecBracing',   label:'Up-Spec Bracing (+50%)', desc:'Increases wall bracing capacity by half.' }
   };
   var HOUSE_PROTECTION_ORDER = ['frontfootDampers','lightweight','upspecBracing'];
 
   var STANDARD_PROTECTIONS = {
     // notWith: structural systems this option isn't suitable for.
-    quakeDefender: { key:'quakeDefender', label:'Quake Defender Bracing', desc:'Bracing and dampers combined - stiffer, and better damped.', featured:true, notWith:['shearwalls'] },
+    quakeDefender: { key:'quakeDefender', label:'Quake Defender Bracing', desc:'Bracing and dampers combined: stiffer and better damped.', featured:true, notWith:['shearwalls'] },
     isolation:     { key:'isolation',     label:'Base Isolation',        desc:'Lets the base slide, keeping most shaking out of the structure above.' }
   };
   var STANDARD_PROTECTION_ORDER = ['quakeDefender','isolation'];
@@ -131,7 +131,7 @@
   var STANDARD_ADDITIONS = {
     solar:     { key:'solar',     label:'Solar Array',           massPct:0.14, desc:'Energy revenue earns back well over the install cost, but the panels add weight to the roof.' },
     greenroof: { key:'greenroof', label:'Green Roof',            massPct:0.30, desc:'Amenity and stormwater value, but saturated soil is heavy, and it is all up high.' },
-    signage:   { key:'signage',   label:'Rooftop Plant & Signage', massPct:0.10, desc:'Advertising and services lease income, for a lighter appendage up top.' }
+    signage:   { key:'signage',   label:'Rooftop Plant & Signage', massPct:0.10, desc:'Lease income from advertising and services, for a lighter load up top.' }
   };
   var STANDARD_ADDITION_ORDER = ['solar','greenroof','signage'];
 

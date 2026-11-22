@@ -93,7 +93,7 @@
   .progress.show{display:block;}
   .progress-meta{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);font-weight:500;margin-bottom:7px;}
   .progress-meta b{color:var(--ink);font-weight:700;}
-  .progress-bar{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
+  .progress-bar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
   .progress-bar span{height:4px;border-radius:2px;background:var(--line);transition:background .25s;}
   .progress-bar span.on{background:var(--brand);}
 
@@ -144,7 +144,6 @@
   .budget-track{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-top:10px;}
   .budget-fill{height:100%;background:var(--brand);border-radius:3px;transition:width .25s ease;}
   .budget .breakdown{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px;}
-  .card .econ{display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);margin-top:7px;}
   .card .pills-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
   .addon-summary{font-size:13px;line-height:1.45;color:var(--ink-2);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0 0;}
   .addon-summary:empty{display:none;}
@@ -212,11 +211,6 @@
   .level-btn.selected{background:var(--ink);border-color:var(--ink);color:#fff;}
   .level-btn:disabled{opacity:.5;cursor:not-allowed;}
   .level-note{font-size:12.5px;color:var(--muted);line-height:1.45;margin:8px 2px 14px;}
-  .spec{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px 14px;margin-top:14px;}
-  .spec-line{display:flex;justify-content:space-between;gap:14px;font-size:13.5px;padding:9px 0;border-bottom:1px solid var(--soft);}
-  .spec-line:last-child{border-bottom:none;}
-  .spec-line span:first-child{color:var(--muted);flex:0 0 auto;}
-  .spec-line span:last-child{font-weight:700;text-align:right;color:var(--ink-2);}
 
   /* ---------- results ---------- */
   .result-banner{font-size:clamp(38px,11.5vw,50px);font-weight:900;letter-spacing:-.045em;line-height:1;margin:4px 0 8px;}
@@ -226,11 +220,14 @@
   .result-subtag{font-size:16px;line-height:1.45;color:var(--ink-2);margin:0 0 14px;}
   .score-hero{display:flex;align-items:baseline;gap:8px;}
   .score-hero .num{font-size:60px;font-weight:900;letter-spacing:-.05em;line-height:1;}
-  .score-hero .unit{font-size:15px;color:var(--muted);font-weight:500;}
+  .score-hero .unit{font-size:22px;color:var(--muted);font-weight:700;letter-spacing:-.02em;}
   .score-caption{font-size:12.5px;color:var(--muted);margin:4px 0 0;}
-  .profile-title{font-size:13.5px;font-weight:700;color:var(--ink-2);margin:16px 0 8px;}
+  .profile-title{font-size:13.5px;font-weight:700;color:var(--ink-2);margin:16px 0 2px;}
+  .profile-hint{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0 0 8px;}
   .profile{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-  .pf{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 11px 11px;}
+  .pf{display:block;width:100%;font-family:inherit;text-align:left;cursor:pointer;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 11px 11px;transition:border-color .15s ease, box-shadow .15s ease;}
+  .pf:hover{border-color:var(--line-2);}
+  .pf > span{display:block;}
   .pf.watched{border-color:var(--ink-2);box-shadow:0 0 0 1px var(--ink-2);}
   .pf .q{font-size:12.5px;font-weight:700;color:var(--ink-2);}
   .pf .rp{font-size:11px;color:var(--muted);}
@@ -240,10 +237,6 @@
   .pf.survive .st, .pf.survive .tr{color:var(--survive);}
   .pf.fail .st, .pf.fail .tr{color:var(--fail);}
   .narrative{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:12px;padding:14px 16px;font-size:15px;line-height:1.55;margin:16px 0 12px;}
-  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px;}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;}
-  .stat .k{font-size:12px;color:var(--muted);font-weight:500;}
-  .stat .v{font-size:17px;font-weight:900;letter-spacing:-.02em;margin-top:3px;display:flex;align-items:center;gap:4px;}
   .concept-card{background:var(--brand-tint);border-radius:16px;padding:14px 16px;}
   .concept-card .tag{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);}
   .concept-card p{font-size:14.5px;line-height:1.55;color:var(--ink-2);margin:6px 0 0;}
@@ -251,14 +244,10 @@
   .link-btn{display:flex;align-items:center;justify-content:center;text-align:center;border-radius:999px;padding:12px 10px;font-weight:700;font-size:14px;line-height:1.25;text-decoration:none;}
   .link-btn.solid{background:var(--brand);color:#fff;}
   .link-btn.ghost{background:var(--card);color:var(--ink-2);border:2px solid var(--line-2);}
-  .how-panel{display:none;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px 14px 8px;margin-top:10px;}
-  .how-panel.open{display:block;}
-  .how-note{font-size:12.5px;color:var(--muted);line-height:1.5;margin:8px 0 2px;}
 
   /* ---------- leaderboard ---------- */
   .lb-card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:18px 16px;margin-top:18px;}
   .lb-prize{background:var(--mass-bg);color:#78350f;border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.5;margin:0 0 16px;}
-  .lb-title{font-size:19px;font-weight:900;letter-spacing:-.02em;margin:0 0 4px;}
   .lb-sub{font-size:13.5px;color:var(--muted);line-height:1.5;margin:0 0 14px;}
   .field{margin-bottom:12px;}
   .field label{display:block;font-size:13px;font-weight:700;color:var(--ink-2);margin-bottom:6px;}
@@ -300,7 +289,7 @@
 
   <div class="progress" id="progress" aria-hidden="true">
     <div class="progress-meta"><b id="progress-label"></b><span id="progress-count"></span></div>
-    <div class="progress-bar" id="progress-bar"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="progress-bar" id="progress-bar"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
   </div>
 
   <!-- LANDING -->
@@ -351,48 +340,56 @@
       </svg>
     </div>
     <p class="sub">Choose a building and its structure, spend your budget on protection, then put it through an earthquake. Takes about 2 minutes.</p>
-    <p class="teaser">Finish with a score to go in the draw for a <b>$100 Prezzy card</b>.</p>
+    <p class="teaser">Score 80 or more to go in the draw for a <b>$100 Prezzy card</b>.</p>
     <div class="nav-buttons">
       <button class="btn btn-primary" id="btn-start">Start Designing</button>
     </div>
   </section>
 
-  <!-- STEP 1: CHOOSE BUILDING -->
+  <!-- STEP 1: BUILDING TYPE -->
   <section class="screen" id="screen-build">
     <h2 tabindex="-1">Choose Your Building</h2>
-    <p class="sub">Pick what you're designing today, then choose the structural system that holds it up. Costs are shown as a share of the building's base price, so they mean the same for a home or an office block.</p>
+    <p class="sub">Pick what you're designing today.</p>
 
-    <div class="group-title">Building type</div>
-    <div class="cards" id="type-cards"></div>
-
-    <div class="reveal-section" id="system-section">
-      <div class="group-title" id="system-group-title">Structural system</div>
-      <div class="cards" id="system-cards"></div>
-      <p class="flash-note" id="build-note" role="status"></p>
-    </div>
+    <div class="cards" id="type-cards" style="margin-top:16px;"></div>
 
     <div class="nav-buttons">
-      <button class="btn btn-primary" id="btn-to-additions" disabled>Continue to Add-Ons</button>
+      <button class="btn btn-primary" id="btn-to-additions" disabled>Continue to Upgrades</button>
       <button class="btn btn-secondary" id="btn-back-landing">Back</button>
     </div>
   </section>
 
-  <!-- STEP 2: ADDITIONS -->
+  <!-- STEP 2: UPGRADES (add-ons) -->
   <section class="screen" id="screen-additions">
-    <h2 tabindex="-1">Add-Ons &amp; Value</h2>
-    <p class="sub">Optional extras that cost money to install, but add more than that to the building's value. Your client will put the difference towards seismic upgrades. The catch: they add weight up high, which the earthquake will find.</p>
+    <h2 tabindex="-1">Upgrades</h2>
+    <p class="sub">Optional extras that cost money to install but add more than that to the building's value. Your client will put the difference towards seismic upgrades. The catch: they add weight up high, which the earthquake will find. Costs are shown as a share of the building's base price, so they mean the same for a home or an office block.</p>
 
     <div class="cards" id="addition-cards" style="margin-top:16px;"></div>
     <p class="addon-summary" id="addon-summary" role="status"></p>
     <p class="flash-note" id="addition-note" role="status"></p>
 
     <div class="nav-buttons">
-      <button class="btn btn-primary" id="btn-additions-to-protect">Continue to Protection</button>
-      <button class="btn btn-secondary" id="btn-back-build-from-add">Back to Design</button>
+      <button class="btn btn-primary" id="btn-additions-to-system">Continue to Structural System</button>
+      <button class="btn btn-secondary" id="btn-back-build-from-add">Back to Building Type</button>
     </div>
   </section>
 
-  <!-- STEP 3: SEISMIC PROTECTION -->
+  <!-- STEP 3: STRUCTURAL SYSTEM -->
+  <section class="screen" id="screen-system">
+    <h2 tabindex="-1">Structural System</h2>
+    <p class="sub">Choose the structural system that holds your building up.</p>
+
+    <div class="group-title" id="system-group-title">Structural system</div>
+    <div class="cards" id="system-cards"></div>
+    <p class="flash-note" id="build-note" role="status"></p>
+
+    <div class="nav-buttons">
+      <button class="btn btn-primary" id="btn-system-to-protect" disabled>Continue to Seismic Protection</button>
+      <button class="btn btn-secondary" id="btn-back-additions-from-system">Back to Upgrades</button>
+    </div>
+  </section>
+
+  <!-- STEP 4: SEISMIC PROTECTION -->
   <section class="screen" id="screen-protect">
     <h2 tabindex="-1">Add Seismic Protection</h2>
     <p class="sub">Spend what's left of your upgrade budget on technology that helps your building ride out the shake.</p>
@@ -409,11 +406,11 @@
 
     <div class="nav-buttons">
       <button class="btn btn-primary" id="btn-to-shake">Continue to Shake Test</button>
-      <button class="btn btn-secondary" id="btn-back-additions">Back to Add-Ons</button>
+      <button class="btn btn-secondary" id="btn-back-system">Back to Structural System</button>
     </div>
   </section>
 
-  <!-- STEP 4: SHAKE TEST -->
+  <!-- STEP 5: SHAKE TEST -->
   <section class="screen" id="screen-shake">
     <h2 tabindex="-1">Shake Test</h2>
     <p class="sub">Choose your earthquake, then put your building to the test.</p>
@@ -431,35 +428,27 @@
 
     <div class="group-title">Earthquake level</div>
     <div class="level-select" id="level-select"></div>
-    <p class="level-note">Watch your building in any of the three. Your score covers all three earthquakes, weighted towards Strong - the design-level quake buildings are designed for.</p>
+    <p class="level-note">Watch your building in any of the three. Your score covers all three earthquakes, weighted towards Strong, the design-level earthquake that buildings are designed for.</p>
 
     <button class="btn btn-shake" id="btn-shake" disabled>Shake It</button>
 
-    <div class="spec">
-      <div class="spec-line"><span>Building</span><span id="spec-type">-</span></div>
-      <div class="spec-line"><span>Structural system</span><span id="spec-system">-</span></div>
-      <div class="spec-line"><span>Add-ons</span><span id="spec-additions">-</span></div>
-      <div class="spec-line"><span>Protection</span><span id="spec-protection">-</span></div>
-    </div>
-
     <div class="nav-buttons">
-      <button class="btn btn-secondary" id="btn-back-protect">Back to Protection</button>
+      <button class="btn btn-secondary" id="btn-back-protect">Back to Seismic Protection</button>
     </div>
   </section>
 
-  <!-- STEP 5: RESULTS -->
+  <!-- STEP 6: RESULTS -->
   <section class="screen" id="screen-results">
     <div class="result-banner" id="result-banner" tabindex="-1" aria-live="polite">-</div>
     <p class="result-subtag" id="result-subtag"></p>
     <div id="score-block">
-      <div class="score-hero"><span class="num" id="score-num">0</span><span class="unit">points</span></div>
+      <div class="score-hero"><span class="num" id="score-num">0</span><span class="unit">/100</span></div>
       <p class="score-caption">Overall score, across all three earthquakes</p>
     </div>
     <div class="profile-title">Across all three earthquakes</div>
+    <p class="profile-hint">Tap a level to see how your building fares in it.</p>
     <div class="profile" id="profile"></div>
-    <div class="narrative" id="result-narrative"></div>
-
-    <div class="stat-grid" id="stat-grid"></div>
+    <div class="narrative" id="result-narrative" aria-live="polite"></div>
 
     <div class="concept-card" id="concept-card">
       <div class="tag">Why it matters</div>
@@ -469,27 +458,34 @@
     <div class="link-row" id="link-row"></div>
     <div id="whatif-slot"></div>
 
-    <button class="btn btn-secondary mt" id="btn-how" aria-expanded="false" aria-controls="how-panel">See How It Works</button>
-    <div class="how-panel" id="how-panel"></div>
-
-    <div class="lb-card" id="leaderboard-card"></div>
-
     <div class="nav-buttons">
-      <button class="btn btn-primary" id="btn-build-again">Build Again</button>
-      <button class="btn btn-secondary" id="btn-retest">Test This Design Again</button>
+      <button class="btn btn-primary" id="btn-to-leaderboard">Enter the Leaderboard</button>
+      <button class="btn btn-secondary" id="btn-retest">Test Again at This Earthquake Level</button>
+      <button class="btn btn-secondary" id="btn-build-again">Build Again</button>
       <button class="btn btn-secondary" id="btn-share">Share Your Result</button>
       <p class="lb-status" id="share-status" role="status" style="text-align:center;"></p>
     </div>
   </section>
 
+  <!-- STEP 7: ENTER THE LEADERBOARD -->
+  <section class="screen" id="screen-leaderboard">
+    <h2 tabindex="-1">Enter the Leaderboard</h2>
+    <div class="lb-card" id="leaderboard-card"></div>
+
+    <div class="nav-buttons">
+      <button class="btn btn-secondary" id="btn-back-results">Back to Results</button>
+      <button class="btn btn-secondary" id="btn-build-again-lb">Build Again</button>
+    </div>
+  </section>
+
   <footer class="app-footer">
-    <p>For educational purposes only - a simplified illustration of seismic design concepts, not an engineering assessment.</p>
+    <p>For educational and promotional purposes only - a simplified illustration of seismic design concepts, not an engineering assessment.</p>
     <p><a href="https://www.seismicshift.nz/" target="_blank" rel="noopener">seismicshift.nz</a></p>
   </footer>
 
 </div>
 
-<script src="/survive-or-thrive/model.js?v=2026-10-08b"></script>
+<script src="/survive-or-thrive/model.js?v=2026-11-23"></script>
 <script>
 (function(){
   "use strict";
@@ -603,7 +599,6 @@
   function budgetRemaining(){ return M.budgetRemaining(design()); }
   function budgetTotal(){ return M.budgetTotal(design()); }
   function spentDesign(){ return M.spentDesign(design()); }
-  function spentTotal(d){ return M.spentDesign(d) + M.spentProtections(d); }
 
   function rand(a,b){ return a + Math.random()*(b-a); }
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
@@ -618,9 +613,9 @@
   /* =========================================================
      NAV
   ========================================================= */
-  var screens = ['landing','build','additions','protect','shake','results'];
-  var STEP_ORDER = ['build','additions','protect','shake','results'];
-  var STEP_LABELS = { build:'Design', additions:'Add-ons', protect:'Protection', shake:'Shake test', results:'Result' };
+  var screens = ['landing','build','additions','system','protect','shake','results','leaderboard'];
+  var STEP_ORDER = ['build','additions','system','protect','shake','results','leaderboard'];
+  var STEP_LABELS = { build:'Building type', additions:'Upgrades', system:'Structural system', protect:'Seismic protection', shake:'Shake test', results:'Results', leaderboard:'Leaderboard' };
 
   function showScreen(id){
     screens.forEach(function(s){
@@ -645,12 +640,13 @@
   /* =========================================================
      BUDGET
      The upgrade budget is only shown on the Protection step, the one
-     place it can actually limit a choice. Design shows plain costs, and
-     Add-ons shows what each extra costs, what it adds in value, and the
-     difference that goes towards upgrades.
+     place it can actually limit a choice. The structural system shows
+     plain costs, and Upgrades shows what each add-on puts towards the
+     upgrade budget.
   ========================================================= */
   function syncBuildNav(){
-    document.getElementById('btn-to-additions').disabled = !(state.typeKey && state.systemKey);
+    document.getElementById('btn-to-additions').disabled = !state.typeKey;
+    document.getElementById('btn-system-to-protect').disabled = !(state.typeKey && state.systemKey);
   }
 
   function renderAddonSummary(){
@@ -660,7 +656,7 @@
     if(!keys.length){ el.textContent = ''; return; }
     var gain = keys.reduce(function(sum, k){ return sum + P.additions[k].budgetBonus; }, 0);
     var weight = Math.round(M.additionMassPct(design())*100);
-    el.textContent = 'Your add-ons put an extra ' + fmtPct(gain) + ' towards seismic upgrades, and add ' +
+    el.textContent = 'Your add-ons put an extra ' + fmtPct(gain) + ' into your upgrade budget and add ' +
       weight + '% to the building\'s weight, up high.';
   }
 
@@ -672,13 +668,14 @@
     var structure = M.spentDesign(d), protection = M.spentProtections(d);
     document.getElementById('budget-value-protect').textContent = fmtPct(rem);
     document.getElementById('budget-fill-protect').style.width = clamp(rem/total*100, 0, 100) + '%';
-    var text = "Your client's " + fmtPct(M.UPGRADE_BUDGET) + ' over the base price';
-    if(fromAddons > 0.05) text += ', plus ' + fmtPct(fromAddons) + ' from add-on value';
-    var spent = [];
-    if(structure > 0) spent.push(fmtPct(structure) + ' on the structure');
-    if(protection > 0) spent.push(fmtPct(protection) + ' on protection');
-    if(spent.length) text += ', less ' + spent.join(' and ');
-    document.getElementById('budget-breakdown').textContent = text + '.';
+    // Upgrade budget = the client's base upgrade budget + add-on value -
+    // the structural system's cost. Protection spend shows in the meter.
+    var text = "Your upgrade budget is your client's " + fmtPct(M.UPGRADE_BUDGET) + ' of the base price';
+    if(fromAddons > 0.05) text += ', plus ' + fmtPct(fromAddons) + ' from your add-ons';
+    if(structure > 0) text += ', minus ' + fmtPct(structure) + ' for your structural system';
+    text += '.';
+    if(protection > 0) text += ' You have spent ' + fmtPct(protection) + ' of it on protection.';
+    document.getElementById('budget-breakdown').textContent = text;
   }
 
   var flashNoteTimers = {};
@@ -768,10 +765,6 @@
           track('building_type_selected', { type:k });
         }
         renderTypeCards();
-        renderSystemCards();
-        document.getElementById('system-group-title').textContent =
-          pools().isHouse ? 'Structural system - bracing' : 'Structural system';
-        document.getElementById('system-section').classList.add('open');
         syncBuildNav();
       });
       wrap.appendChild(el);
@@ -783,6 +776,8 @@
     wrap.innerHTML = '';
     if(!state.typeKey) return;
     var P = pools();
+    document.getElementById('system-group-title').textContent =
+      P.isHouse ? 'Structural system - bracing' : 'Structural system';
     P.systemOrder.forEach(function(k){
       var sys = P.systems[k];
       var isCurrent = state.systemKey===k;
@@ -801,7 +796,7 @@
         '<span class="icon">'+systemIcon(k)+'</span>'+
         '<span class="body"><span class="name">'+sys.label+'</span>'+
         '<span class="desc">'+sys.desc+'</span></span>'+
-        '<span class="card-meta"><span class="pill spend">'+pricePill(sys.cost)+'</span></span>';
+        '<span class="card-meta"><span class="pill spend">Costs '+fmtPct(sys.cost)+'</span></span>';
       el.addEventListener('click', function(){
         if(!affordable){
           flashNote('build-note', 'That system won\'t fit your upgrade budget alongside your current protection - remove some protection first.');
@@ -846,8 +841,7 @@
         '<span class="check" aria-hidden="true"></span>'+
         '<span class="body"><span class="name">'+a.label+'</span>'+
         '<span class="desc">'+a.desc+'</span>'+
-        '<span class="econ">Costs '+fmtPct(a.installCost)+' to install, adds '+fmtPct(a.value)+' in value</span>'+
-        '<span class="pills-row"><span class="pill gain">+'+fmtPct(a.budgetBonus)+' to upgrades</span>'+
+        '<span class="pills-row"><span class="pill gain">+'+fmtPct(a.budgetBonus)+' to upgrade budget</span>'+
         '<span class="pill mass">+'+Math.round(a.massPct*100)+'% weight</span></span></span>';
       el.addEventListener('click', function(){
         if(blocksRemoval){
@@ -1438,16 +1432,6 @@
     if(flashEl) flashEl.style.opacity = '0';
   }
 
-  function updateSpecLine(){
-    var P = pools();
-    document.getElementById('spec-type').textContent = BUILDING_TYPES[state.typeKey].label;
-    document.getElementById('spec-system').textContent = P.systems[state.systemKey].label;
-    var adds = M.chosen(state.additions, P.additions).map(function(k){ return P.additions[k].label; });
-    document.getElementById('spec-additions').textContent = adds.length ? adds.join(', ') : 'None';
-    var prots = M.chosen(state.protections, P.protections).map(function(k){ return P.protections[k].label; });
-    document.getElementById('spec-protection').textContent = prots.length ? prots.join(', ') : 'None';
-  }
-
   function renderLevelSelect(){
     var wrap = document.getElementById('level-select');
     wrap.innerHTML = '';
@@ -1968,7 +1952,7 @@
   }
 
   function prepareShakeScreen(){
-    buildScene(); setStaticScenePose(); updateSpecLine(); renderLevelSelect();
+    buildScene(); setStaticScenePose(); renderLevelSelect();
     setShakeControls(false);
     initSeismograph();
     document.getElementById('seis-status').textContent = 'Standby';
@@ -1982,12 +1966,14 @@
     var result = runSimulation();
     state.lastRun = result;
     track('earthquake_started', { level:state.levelKey, type:state.typeKey });
+    // A 2 s pause once the shaking stops, so the player sees how the
+    // building ended up before the results replace it.
     runShakeAnimation(result, function(){
       setTimeout(function(){
         animRunning = false;
         setShakeControls(false);
         showResults(result);
-      }, reduceMotion ? 150 : 500);
+      }, 2000);
     });
   }
 
@@ -2057,45 +2043,14 @@
   function showResults(result){
     var d = result.design;
     var P = M.pools(d.typeKey);
-    var L = result.level;
-    var Q = M.QUAKES[result.levelKey];
+    // The level actually shaken - kept for the leaderboard entry, while
+    // result.levelKey / result.level follow whichever level is being viewed.
+    result.testedLevelKey = result.levelKey;
 
-    var banner = document.getElementById('result-banner');
-    banner.textContent = TIER_TITLE[L.tier];
-    banner.className = 'result-banner ' + L.tier;
-    document.getElementById('result-subtag').textContent =
-      'In a ' + Q.label.toLowerCase() + ' earthquake (about 1 in ' + fmtReturnPeriod(Q.returnPeriod) + ' years): ' + DAMAGE_COPY[L.state];
     document.getElementById('score-block').style.display = result.eligible ? '' : 'none';
     document.getElementById('score-num').textContent = result.score;
-    document.getElementById('result-narrative').textContent = buildNarrative(result);
 
-    document.getElementById('profile').innerHTML = M.QUAKE_ORDER.map(function(k){
-      var lv = result.levels[k], q = M.QUAKES[k];
-      return '<div class="pf '+lv.tier+(k===result.levelKey ? ' watched' : '')+'">'+
-        '<div class="q">'+q.label+'</div>'+
-        '<div class="rp">1 in '+fmtReturnPeriod(q.returnPeriod)+' yrs</div>'+
-        '<div class="st">'+DAMAGE_SHORT[lv.state]+'</div>'+
-        '<div class="tr">'+TIER_WORD[lv.tier]+'</div>'+
-      '</div>';
-    }).join('');
-
-    var stats = [
-      ['Damage (this quake)', DAMAGE_SHORT[L.state]],
-      ['Upgrade cost', fmtPct(spentTotal(d)) + ' of the base price']
-    ];
-    if(result.eligible){
-      stats.push(['Cost efficiency', Math.round(result.efficiency*100) + '%']);
-      stats.push(result.featured
-        ? ['Protection', P.protections[P.featuredKey].label]
-        : ['Design score', Math.round(result.performance) + ' before efficiency']);
-    }
-    document.getElementById('stat-grid').innerHTML = stats.map(function(s){
-      return '<div class="stat"><div class="k">'+s[0]+'</div><div class="v">'+s[1]+'</div></div>';
-    }).join('');
-
-    var concept = pickConcept(result);
-    document.getElementById('concept-card').querySelector('.tag').textContent = concept.tag;
-    document.getElementById('concept-text').textContent = concept.text;
+    renderResultLevel(result);
 
     var learn = P.isHouse ? LEARN_MORE.house : LEARN_MORE.standard;
     document.getElementById('link-row').innerHTML =
@@ -2108,31 +2063,64 @@
     var hasFeatured = !!d.protections[P.featuredKey];
     var canFeature = M.suitable(d.typeKey, d.systemKey, P.featuredKey);
     document.getElementById('whatif-slot').innerHTML = canFeature
-      ? '<button type="button" class="btn btn-secondary mt" id="btn-whatif">What would this look like '+
+      ? '<button type="button" class="btn btn-shake mt" id="btn-whatif">What would this look like '+
         (hasFeatured ? 'without' : 'with') + ' ' + featuredLabel + '?</button>'
       : '';
     if(canFeature) document.getElementById('btn-whatif').addEventListener('click', retestWithFeaturedToggle);
-
-    var how = document.getElementById('how-panel');
-    how.classList.remove('open');
-    document.getElementById('btn-how').setAttribute('aria-expanded', 'false');
-    document.getElementById('btn-how').textContent = 'See How It Works';
-    how.innerHTML =
-      '<div class="spec-line"><span>This earthquake</span><span>'+Q.label+', peak ground acceleration '+Q.pga.toFixed(2)+' g</span></div>'+
-      '<div class="spec-line"><span>Building period</span><span>'+result.derived.T.toFixed(2)+' s'+(result.derived.isolated ? ' (isolated)' : '')+'</span></div>'+
-      '<div class="spec-line"><span>Damping</span><span>'+Math.round(result.derived.zeta*100)+'%</span></div>'+
-      '<div class="spec-line"><span>Shaking demand vs strength</span><span>'+L.Sa.toFixed(2)+' g vs '+result.derived.Cy.toFixed(2)+' g</span></div>'+
-      '<div class="spec-line"><span>Ductility demand vs capacity</span><span>'+L.mu.toFixed(1)+' vs '+L.muCap+'</span></div>'+
-      '<p class="how-note">Demand comes from a design-style response spectrum for each earthquake. Staying below yield (ductility under 1) means no or slight damage - Thrive. Yielding means repairable to heavy damage - Survive. Past the ductility capacity, it collapses. Your score covers all three earthquakes - mostly the design-level Strong one - compared with the best design possible for your building type, then adjusted for cost: each 1% of build cost you spend takes 2% off. A simplified teaching model - not an engineering assessment.</p>';
 
     renderLeaderboardCard(result);
     document.getElementById('share-status').textContent = '';
 
     showScreen('results');
     track('result', {
-      tier: L.tier, damage: L.state, score: result.score, type: d.typeKey, system: d.systemKey,
+      tier: result.level.tier, damage: result.level.state, score: result.score, type: d.typeKey, system: d.systemKey,
       protections: d.protections, additions: d.additions, level: result.levelKey
     });
+  }
+
+  /* The parts of the results that depend on the earthquake level. All
+     three levels are assessed in every run, so switching the viewed level
+     just re-renders from result.levels - as if that level had been shaken.
+     The score covers all three, so it doesn't change. */
+  function renderResultLevel(result){
+    var L = result.level;
+    var Q = M.QUAKES[result.levelKey];
+
+    var banner = document.getElementById('result-banner');
+    banner.textContent = TIER_TITLE[L.tier];
+    banner.className = 'result-banner ' + L.tier;
+    document.getElementById('result-subtag').textContent =
+      'In a ' + Q.label.toLowerCase() + ' earthquake (about 1 in ' + fmtReturnPeriod(Q.returnPeriod) + ' years): ' + DAMAGE_COPY[L.state];
+    document.getElementById('result-narrative').textContent = buildNarrative(result);
+
+    var profile = document.getElementById('profile');
+    profile.innerHTML = '';
+    M.QUAKE_ORDER.forEach(function(k){
+      var lv = result.levels[k], q = M.QUAKES[k];
+      var viewing = k===result.levelKey;
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'pf '+lv.tier+(viewing ? ' watched' : '');
+      el.setAttribute('aria-pressed', viewing ? 'true' : 'false');
+      el.innerHTML =
+        '<span class="q">'+q.label+'</span>'+
+        '<span class="rp">1 in '+fmtReturnPeriod(q.returnPeriod)+' yrs</span>'+
+        '<span class="st">'+DAMAGE_SHORT[lv.state]+'</span>'+
+        '<span class="tr">'+TIER_WORD[lv.tier]+'</span>';
+      el.addEventListener('click', function(){
+        if(k===result.levelKey) return;
+        result.levelKey = k;
+        result.level = result.levels[k];
+        state.levelKey = k;
+        track('result_level_viewed', { level:k, tested:result.testedLevelKey, tier:result.level.tier, type:result.design.typeKey });
+        renderResultLevel(result);
+      });
+      profile.appendChild(el);
+    });
+
+    var concept = pickConcept(result);
+    document.getElementById('concept-card').querySelector('.tag').textContent = concept.tag;
+    document.getElementById('concept-text').textContent = concept.text;
   }
 
   /* Toggles the featured protection (FrontFoot Dampers / Quake Defender)
@@ -2189,26 +2177,30 @@
      LEADERBOARD
   ========================================================= */
   var TYPE_SHORT = { house:'Home', industrial:'Industrial', commercial:'Commercial' };
+  // Prize-draw threshold. Anyone with a score can join the board; only
+  // entries at or above this go in the draw (the admin draw filters on it).
+  var DRAW_MIN_SCORE = 80;
 
   function renderLeaderboardCard(result){
     var card = document.getElementById('leaderboard-card');
     if(!result.eligible){
       card.innerHTML =
-        '<div class="lb-title">Leaderboard</div>'+
         '<p class="lb-sub" style="margin:0;">This design collapses in the design-level (Strong) earthquake, so it doesn\'t meet the basic life-safety standard and can\'t go on the board. Try another design!</p>';
       return;
     }
+    var inDraw = result.score >= DRAW_MIN_SCORE;
     card.innerHTML =
-      '<p class="lb-prize">Enter your details by 12pm on the final day of PCEE to go into the draw to win a $100 Prezzy card. Winner must be present on the final afternoon of PCEE to collect their prize from Ben Exton of Seismic Shift.</p>'+
-      '<div class="lb-title">Enter the leaderboard</div>'+
-      '<p class="lb-sub">Add your name to the board with your score of <b>'+result.score+'</b> (across all three earthquakes) - every entry goes into the prize draw.</p>'+
+      '<p class="lb-prize"><b>Score ' + DRAW_MIN_SCORE + ' or more to go in the draw for a $100 Prezzy card.</b> Enter your details by 12pm on the final day of PCEE. The winner must be present on the final afternoon of PCEE to collect their prize from Ben Exton of Seismic Shift.</p>'+
+      '<p class="lb-sub">Add your name to the board with your score of <b>'+result.score+'</b> (across all three earthquakes). '+
+        (inDraw ? 'That\'s ' + DRAW_MIN_SCORE + ' or more, so your entry goes in the prize draw.'
+                : 'You can still join the board, but you need ' + DRAW_MIN_SCORE + ' or more to go in the draw. Build again to try for a higher score.')+'</p>'+
       '<div class="field"><label for="lb-name">Name</label><input type="text" id="lb-name" autocomplete="name" placeholder="Your name" maxlength="'+NAME_MAX+'"></div>'+
       '<div class="field"><label for="lb-email">Email</label><input type="email" id="lb-email" autocomplete="email" inputmode="email" placeholder="you@email.com" maxlength="254"></div>'+
       '<label class="consent"><input type="checkbox" id="lb-optin"><span>Send me occasional news and product updates from Seismic Shift (optional).</span></label>'+
       '<button type="button" class="btn btn-primary" id="btn-submit-score">Add to Leaderboard</button>'+
       '<div class="lb-status" id="lb-status" role="status"></div>'+
       '<div class="lb-board" id="lb-board" style="display:none;"></div>'+
-      '<p class="lb-privacy">Only your name is shown on the leaderboard. We use your email to contact you if you win - and, only if you tick the box above, for occasional Seismic Shift updates you can unsubscribe from at any time. One entry per person: play again with a better score and your entry updates automatically. The winner is drawn at random from valid entries; Seismic Shift\'s decision is final and there is no cash alternative.</p>';
+      '<p class="lb-privacy">Only your name is shown on the leaderboard. We use your email to contact you if you win and, only if you tick the box above, to send occasional Seismic Shift updates, which you can unsubscribe from at any time. One entry per person: play again with a better score and your entry updates automatically. The winner is drawn at random from valid entries scoring ' + DRAW_MIN_SCORE + ' or more. Seismic Shift\'s decision is final, and there is no cash alternative.</p>';
 
     document.getElementById('lb-name').value = state.entrant.name;
     document.getElementById('lb-email').value = state.entrant.email;
@@ -2275,14 +2267,20 @@
       p_name: name,
       p_email: email,
       p_design_key: result.key,
-      p_level_key: result.levelKey,
+      p_level_key: result.testedLevelKey || result.levelKey,
       p_marketing_opt_in: optEl.checked
     }).then(function(rows){
       var r = (rows && rows[0]) || {};
       var place = r.entry_rank ? ' You\'re #' + r.entry_rank + ' of ' + r.entry_total + '.' : '';
-      statusEl.textContent = (r.entry_score > result.score
-        ? 'You\'re in the draw - your best score of ' + r.entry_score + ' stays on the board.'
-        : 'You\'re on the board and in the draw - good luck!') + place;
+      // entry_score is the person's best score, which may be from an earlier game.
+      var best = Number(r.entry_score) || result.score;
+      var msg = best > result.score
+        ? 'Your best score of ' + best + ' stays on the board.'
+        : 'You\'re on the board.';
+      msg += best >= DRAW_MIN_SCORE
+        ? ' You\'re in the draw - good luck!'
+        : ' Score ' + DRAW_MIN_SCORE + ' or more to go in the draw.';
+      statusEl.textContent = msg + place;
       statusEl.className = 'lb-status ok';
       submitBtn.textContent = 'Entered';
       track('leaderboard_submitted', { score: r.entry_score, rank: r.entry_rank, opt_in: optEl.checked });
@@ -2315,7 +2313,6 @@
     resetAdditions();
     resetProtections();
     state.levelKey = 'strong';
-    document.getElementById('system-section').classList.remove('open');
     document.getElementById('system-cards').innerHTML = '';
   }
 
@@ -2331,15 +2328,22 @@
       startNewDesign();
     });
 
-    document.getElementById('btn-to-additions').addEventListener('click', function(){
+    function showAdditions(){
       renderAdditionCards(); renderAddonSummary();
       showScreen('additions');
-    });
-
-    document.getElementById('btn-additions-to-protect').addEventListener('click', function(){
+    }
+    function showSystem(){
+      renderSystemCards(); syncBuildNav();
+      showScreen('system');
+    }
+    function showProtect(){
       renderProtectionCards(); renderUpgradeBudget();
       showScreen('protect');
-    });
+    }
+
+    document.getElementById('btn-to-additions').addEventListener('click', showAdditions);
+    document.getElementById('btn-additions-to-system').addEventListener('click', showSystem);
+    document.getElementById('btn-system-to-protect').addEventListener('click', showProtect);
 
     document.getElementById('btn-to-shake').addEventListener('click', function(){
       if(!M.isValid(design())){
@@ -2349,45 +2353,45 @@
       prepareShakeScreen();
     });
 
-    document.getElementById('btn-back-build-from-add').addEventListener('click', function(){
-      renderTypeCards(); renderSystemCards();
-      if(state.typeKey) document.getElementById('system-section').classList.add('open');
-      syncBuildNav();
-      showScreen('build');
-    });
-
     document.getElementById('btn-back-landing').addEventListener('click', function(){
       showScreen('landing');
     });
 
-    document.getElementById('btn-back-additions').addEventListener('click', function(){
-      renderAdditionCards(); renderAddonSummary();
-      showScreen('additions');
+    document.getElementById('btn-back-build-from-add').addEventListener('click', function(){
+      renderTypeCards(); syncBuildNav();
+      showScreen('build');
     });
+
+    document.getElementById('btn-back-additions-from-system').addEventListener('click', showAdditions);
+    document.getElementById('btn-back-system').addEventListener('click', showSystem);
 
     document.getElementById('btn-back-protect').addEventListener('click', function(){
       if(animRunning) return;
-      renderProtectionCards(); renderUpgradeBudget();
-      showScreen('protect');
+      showProtect();
     });
 
     document.getElementById('btn-shake').addEventListener('click', startShake);
 
-    document.getElementById('btn-how').addEventListener('click', function(){
-      var how = document.getElementById('how-panel');
-      var open = how.classList.toggle('open');
-      this.setAttribute('aria-expanded', open ? 'true' : 'false');
-      this.textContent = open ? 'Hide Details' : 'See How It Works';
-    });
-
-    document.getElementById('btn-build-again').addEventListener('click', function(){
+    function buildAgain(){
       track('game_replayed', { mode:'new_design' });
       startNewDesign();
+    }
+    document.getElementById('btn-build-again').addEventListener('click', buildAgain);
+    document.getElementById('btn-build-again-lb').addEventListener('click', buildAgain);
+
+    // Opens the shake test with the level being viewed on the results
+    // already selected (the results' level boxes keep state.levelKey in step).
+    document.getElementById('btn-retest').addEventListener('click', function(){
+      track('game_replayed', { mode:'retest_design', level:state.levelKey });
+      prepareShakeScreen();
     });
 
-    document.getElementById('btn-retest').addEventListener('click', function(){
-      track('game_replayed', { mode:'retest_design' });
-      prepareShakeScreen();
+    document.getElementById('btn-to-leaderboard').addEventListener('click', function(){
+      document.getElementById('share-status').textContent = '';
+      showScreen('leaderboard');
+    });
+    document.getElementById('btn-back-results').addEventListener('click', function(){
+      showScreen('results');
     });
 
     document.getElementById('btn-share').addEventListener('click', shareResult);

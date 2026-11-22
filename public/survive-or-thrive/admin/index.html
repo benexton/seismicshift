@@ -102,7 +102,7 @@
     <div class="tools">
       <div class="panel">
         <h2>Prize draw</h2>
-        <p class="hint">Picks one entry at random from visible (not hidden) entries first made on or before the cutoff. Leave the cutoff empty to include everyone.</p>
+        <p class="hint">Picks one entry at random from visible (not hidden) entries scoring 80 or more, first made on or before the cutoff. Leave the cutoff empty to include everyone.</p>
         <div class="row">
           <div>
             <label class="lbl" for="cutoff">Entry cutoff (your local time)</label>
@@ -246,11 +246,14 @@
     });
   }
 
+  // Same threshold as DRAW_MIN_SCORE on the game page.
+  var DRAW_MIN_SCORE = 80;
+
   function eligible(){
     var cutoffVal = document.getElementById('cutoff').value;
     var cutoff = cutoffVal ? new Date(cutoffVal).getTime() : Infinity;
     return scores.filter(function(r){
-      return !r.hidden && new Date(r.created_at).getTime() <= cutoff;
+      return !r.hidden && Number(r.score) >= DRAW_MIN_SCORE && new Date(r.created_at).getTime() <= cutoff;
     });
   }
 
