@@ -131,7 +131,7 @@
   .btn-secondary{background:var(--card);color:var(--ink-2);border:2px solid var(--line-2);}
   .btn-secondary:hover:not(:disabled){border-color:#94a3b8;}
   .btn-shake{background:var(--danger);border:2px solid var(--danger);color:#fff;font-size:19px;font-weight:900;padding:18px;box-shadow:0 8px 18px -8px rgba(220,38,38,.75);}
-  /* As big and bold as the red buttons, in the calmer brand blue. */
+  /* As big and bold as the red Shake It button, in the calmer brand blue. */
   .btn-feature{background:var(--brand);border:2px solid var(--brand);color:#fff;font-size:19px;font-weight:900;padding:18px;box-shadow:0 8px 18px -8px rgba(23,99,143,.75);}
   .btn-feature:hover:not(:disabled){background:var(--brand-dark);border-color:var(--brand-dark);}
   .btn + .btn, .mt{margin-top:10px;}
@@ -450,7 +450,7 @@
 </div>
 
 <script src="/survive-or-thrive/model.js?v=2026-11-23b"></script>
-<script src="/survive-or-thrive/scene-iso.js?v=2026-11-23d"></script>
+<script src="/survive-or-thrive/scene-iso.js?v=2026-11-23e"></script>
 <script>
 (function(){
   "use strict";
@@ -1666,7 +1666,7 @@
     var hasFeatured = !!d.protections[P.featuredKey];
     var canFeature = M.suitable(d.typeKey, d.systemKey, P.featuredKey);
     document.getElementById('whatif-slot').innerHTML = canFeature
-      ? '<button type="button" class="btn btn-shake mt" id="btn-whatif">What would this look like '+
+      ? '<button type="button" class="btn btn-feature mt" id="btn-whatif">What would this look like '+
         (hasFeatured ? 'without' : 'with') + ' ' + featuredLabel + '?</button>'
       : '';
     if(canFeature) document.getElementById('btn-whatif').addEventListener('click', retestWithFeaturedToggle);
@@ -1898,27 +1898,55 @@
   /* =========================================================
      LANDING ILLUSTRATION
   ========================================================= */
-  /* Three buildings, drawn by the same isometric scene code as the shake
-  test: a home on FrontFoot dampers, a shed and an office block with
-  Quake Defender bracing. Each rocks gently on its own island. */
+  /* The landing illustration: three buildings drawn by the same isometric
+     scene code as the shake test - a home on FrontFoot dampers, a shed and
+     an office block with Quake Defender bracing - standing on one shared
+     strip of ground that runs off both sides of the frame. Buildings are
+     placed in 3D along the screen's horizontal (u), so they share one
+     consistent ground plane; v runs towards the viewer. */
   function drawHeroScene(){
     var svg = document.getElementById('hero-scene');
     if(!svg || !window.SOT_SCENE) return;
+    var S = window.SOT_SCENE, R2 = Math.SQRT1_2;
     var picks = [
-      { typeKey:'house', systemKey:'plasterboard', protections:{ frontfootDampers:true }, additions:{ solar:true } },
-      { typeKey:'industrial', systemKey:'braced', protections:{ quakeDefender:true }, additions:{} },
-      { typeKey:'commercial', systemKey:'braced', protections:{ quakeDefender:true }, additions:{ greenroof:true } }
+      { d:{ typeKey:'house', systemKey:'plasterboard', protections:{ frontfootDampers:true }, additions:{ solar:true } }, w:120, dep:74 },
+      { d:{ typeKey:'industrial', systemKey:'braced', protections:{ quakeDefender:true }, additions:{} }, w:160, dep:162 },
+      { d:{ typeKey:'commercial', systemKey:'braced', protections:{ quakeDefender:true }, additions:{ greenroof:true } }, w:120, dep:90 }
     ];
-    var parts = picks.map(function(d){ return window.SOT_SCENE.render(d, { margin:6 }); });
-    var gap = -14, x = 0, maxH = 0;
-    parts.forEach(function(p){ maxH = Math.max(maxH, p.viewBox[3]); });
-    var cls = ['sway', 'sway b2', 'sway b3'];
-    svg.innerHTML = parts.map(function(p, i){
-      var vb = p.viewBox, g = '<g transform="translate('+(x - vb[0]).toFixed(1)+','+(maxH - vb[3] - vb[1]).toFixed(1)+')"><g class="'+cls[i]+'">'+p.markup+'</g></g>';
-      x += vb[2] + gap;
-      return g;
-    }).join('');
-    svg.setAttribute('viewBox', '-6 -8 '+(x - gap + 12).toFixed(1)+' '+(maxH + 14).toFixed(1));
+    function uv(u, v, z){ return [(u+v)*R2, (v-u)*R2, z]; }
+    function pts(a){ return a.map(function(p){ var q = S.project(p); return q[0].toFixed(1)+','+q[1].toFixed(1); }).join(' '); }
+
+    // Lay the footprints side by side along u, then centre the row on u = 0.
+    var gap = 10, cursor = 0, maxHalf = 0;
+    var placed = picks.map(function(pk){
+      var half = (pk.w + pk.dep)*R2/2;
+      var cu = cursor + half;
+      cursor = cu + half + gap;
+      maxHalf = Math.max(maxHalf, half);
+      return { pk:pk, cu:cu, r:S.render(pk.d, { noIsland:true, margin:0 }) };
+    });
+    var shift = (cursor - gap)/2;
+    var minX = Infinity, maxX = -Infinity, minY = Infinity;
+    var buildings = placed.map(function(pl, i){
+      var c = uv(pl.cu - shift, 0, 0);
+      var so = S.project([c[0] - pl.pk.w/2, c[1] - pl.pk.dep/2, 0]);
+      var vb = pl.r.viewBox;
+      minX = Math.min(minX, vb[0] + so[0]); maxX = Math.max(maxX, vb[0] + vb[2] + so[0]); minY = Math.min(minY, vb[1] + so[1]);
+      return '<g transform="translate('+so[0].toFixed(1)+','+so[1].toFixed(1)+')"><g class="'+['sway','sway b2','sway b3'][i]+'">'+pl.r.markup+'</g></g>';
+    });
+
+    // The shared ground: a long strip (far wider than the frame) whose front
+    // soil face shows as a band across the bottom.
+    var Ub = (maxX - minX)*2, Vf = maxHalf + 14, Vb = maxHalf + 14;
+    var ink = '#263445', P = S.PALETTE;
+    var strip =
+      '<polygon points="'+pts([uv(-Ub,-Vb,0), uv(Ub,-Vb,0), uv(Ub,Vf,0), uv(-Ub,Vf,0)])+'" fill="'+P.grass+'"/>'+
+      '<polygon points="'+pts([uv(-Ub,Vf,0), uv(Ub,Vf,0), uv(Ub,Vf,-9), uv(-Ub,Vf,-9)])+'" fill="'+P.grassSide+'" stroke="'+ink+'" stroke-width="1.1"/>'+
+      '<polygon points="'+pts([uv(-Ub,Vf,-9), uv(Ub,Vf,-9), uv(Ub,Vf,-26), uv(-Ub,Vf,-26)])+'" fill="'+P.soil+'" stroke="'+ink+'" stroke-width="1.1"/>';
+    var bottom = S.project(uv(0, Vf, -26))[1];
+    var x0 = minX - 8, y0 = minY - 12, w = (maxX - minX) + 16, h = bottom - y0 + 1;
+    svg.setAttribute('viewBox', x0.toFixed(1)+' '+y0.toFixed(1)+' '+w.toFixed(1)+' '+h.toFixed(1));
+    svg.innerHTML = strip + buildings.join('');
   }
 
   /* =========================================================

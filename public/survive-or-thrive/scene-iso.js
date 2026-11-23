@@ -153,10 +153,13 @@
   // deep enough for a fallen tilt-up panel to land on.
   function ground(B, X, Y, isolated, isHouse, yard){
     var e = 16, ef = yard ? yard + 8 : 18;
-    var L = B.piece('ground', 'L', planeL(Y+ef)), R = B.piece('ground', 'R', planeR(X+e)), T = B.piece('ground', 'T', planeT(0));
-    L.poly(qL(-e, X+e, -22, -9, Y+ef), PAL.soil, { sw:SW*0.8 }).poly(qL(-e, X+e, -9, 0, Y+ef), PAL.grassSide, { sw:SW*0.8 });
-    R.poly(qR(-e, Y+ef, -22, -9, X+e), shade(PAL.soil,-.18), { sw:SW*0.8 }).poly(qR(-e, Y+ef, -9, 0, X+e), shade(PAL.grassSide,-.14), { sw:SW*0.8 });
-    T.poly(qT(-e, X+e, -e, Y+ef, 0), PAL.grass, { sw:SW*0.8 });
+    var T = B.piece('ground', 'T', planeT(0));
+    if(!NO_ISLAND){
+      var L = B.piece('ground', 'L', planeL(Y+ef)), R = B.piece('ground', 'R', planeR(X+e));
+      L.poly(qL(-e, X+e, -22, -9, Y+ef), PAL.soil, { sw:SW*0.8 }).poly(qL(-e, X+e, -9, 0, Y+ef), PAL.grassSide, { sw:SW*0.8 });
+      R.poly(qR(-e, Y+ef, -22, -9, X+e), shade(PAL.soil,-.18), { sw:SW*0.8 }).poly(qR(-e, Y+ef, -9, 0, X+e), shade(PAL.grassSide,-.14), { sw:SW*0.8 });
+      T.poly(qT(-e, X+e, -e, Y+ef, 0), PAL.grass, { sw:SW*0.8 });
+    }
     if(yard){
       T.poly(qT(-8, X+8, Y+4, Y+yard, 0.15), '#d4d8dc', { sw:SW*0.6 });
       for(var jx = -8 + (X+16)/5; jx < X+8; jx += (X+16)/5) T.line([jx, Y+4, 0.15], [jx, Y+yard, 0.15], '#b9c0c7', 0.7);
@@ -512,10 +515,15 @@
   }
 
   /* ---------- entry point ---------- */
+  // opts.noIsland: leave out the grass island, for scenes that put several
+  // buildings on one shared ground (the landing page).
+  var NO_ISLAND = false;
   function render(d, opts){
     opts = opts || {};
+    NO_ISLAND = !!opts.noIsland;
     var B = new Builder();
     var info = d.typeKey === 'house' ? drawHouse(B, d) : (d.typeKey === 'industrial' ? drawIndustrial(B, d) : drawCommercial(B, d));
+    NO_ISLAND = false;
     var m = opts.margin == null ? 10 : opts.margin;
     var vb = [B.minX - m, B.minY - m - (opts.headroom || 0), (B.maxX - B.minX) + 2*m, (B.maxY - B.minY) + 2*m + (opts.headroom || 0)];
     return { markup:B.markup(), viewBox:vb, pieces:B.pieces.map(function(pc){ return { key:pc.key, group:pc.group, ref:pc.ref }; }), info:info };
