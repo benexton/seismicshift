@@ -149,12 +149,18 @@
   }
 
   /* ---------- ground: grass island, foundation slab, optional isolator layer ---------- */
-  function ground(B, X, Y, isolated, isHouse){
-    var e = 16, ef = 18;
+  // yard: depth of a concrete yard along the front-left side (industrial),
+  // deep enough for a fallen tilt-up panel to land on.
+  function ground(B, X, Y, isolated, isHouse, yard){
+    var e = 16, ef = yard ? yard + 8 : 18;
     var L = B.piece('ground', 'L', planeL(Y+ef)), R = B.piece('ground', 'R', planeR(X+e)), T = B.piece('ground', 'T', planeT(0));
     L.poly(qL(-e, X+e, -22, -9, Y+ef), PAL.soil, { sw:SW*0.8 }).poly(qL(-e, X+e, -9, 0, Y+ef), PAL.grassSide, { sw:SW*0.8 });
     R.poly(qR(-e, Y+ef, -22, -9, X+e), shade(PAL.soil,-.18), { sw:SW*0.8 }).poly(qR(-e, Y+ef, -9, 0, X+e), shade(PAL.grassSide,-.14), { sw:SW*0.8 });
     T.poly(qT(-e, X+e, -e, Y+ef, 0), PAL.grass, { sw:SW*0.8 });
+    if(yard){
+      T.poly(qT(-8, X+8, Y+4, Y+yard, 0.15), '#d4d8dc', { sw:SW*0.6 });
+      for(var jx = -8 + (X+16)/5; jx < X+8; jx += (X+16)/5) T.line([jx, Y+4, 0.15], [jx, Y+yard, 0.15], '#b9c0c7', 0.7);
+    }
     // foundation slab
     var sL = B.piece('ground', 'slabL', planeL(Y+4)), sR = B.piece('ground', 'slabR', planeR(X+4)), sT = B.piece('ground', 'slabT', planeT(SLAB_H));
     sL.poly(qL(-4, X+4, 0, SLAB_H, Y+4), PAL.slabSide, { sw:SW*0.7 });
@@ -288,7 +294,9 @@
       }
     }
     nr.line([-5,Ly/2,H+r],[Lx+5,Ly/2,H+r], shade(roofCol,-.4), 2.6);
-    return { storeys:n, storeyH:h, baseZ:zb, height:n*h+r, span:Lx, depth:Ly };
+    // The chimney's front base edge (it topples forward about this line).
+    var chim = A.chimney ? { x0:80, x1:92, y:32, z:H + r - 9 } : null;
+    return { storeys:n, storeyH:h, baseZ:zb, height:n*h+r, span:Lx, depth:Ly, chimney:chim };
   }
 
   /* =========================================================
@@ -304,12 +312,20 @@
     var Lx = 160, Ly = 100, Hw = 56, r = 18, bay = 32;
     var P = d.protections || {}, A = d.additions || {}, sys = d.systemKey;
     var isolated = !!P.isolation;
-    var zb = ground(B, Lx, Ly, isolated, false);
+    var zb = ground(B, Lx, Ly, isolated, false, Hw + 6);
     var H = zb + Hw, apex = H + r;
     var tilt = sys === 'shearwalls', qd = !!P.quakeDefender;
     var wallCol = tilt ? PAL.conc : PAL.clad, wallR = shade(wallCol,-.16);
     var roofCol = A.greenroof ? PAL.green : PAL.iron;
     function zr(y){ return H + r*(1-Math.abs(y-Ly/2)/(Ly/2)); }
+
+    // Tilt-up only: the inside of the shed (floor, back wall, far gable),
+    // hidden at rest, seen once the front panels fall away in a collapse.
+    if(tilt){
+      B.piece('in', 'floor', planeT(zb+0.2)).poly(qT(0,Lx,0,Ly,zb+0.2), '#d9d4cc', { sw:SW*0.5 });
+      B.piece('in', 'back', planeL(0)).poly([[0,0,zb],[Lx,0,zb],[Lx,0,H],[0,0,H]], shade(PAL.conc,-.3), { sw:SW*0.6 });
+      B.piece('in', 'end', planeR(0)).poly([[0,0,zb],[0,Ly,zb],[0,Ly,H],[0,Ly/2,apex],[0,0,H]], shade(PAL.conc,-.2), { sw:SW*0.6 });
+    }
 
     // far slope (faces -y)
     function F(t, x){ return [x, Ly/2 - t*(Ly/2+5), apex - t*(r + r*5/(Ly/2))]; }
@@ -375,17 +391,28 @@
     }
 
     // long side wall (front-left face, y = Ly): where the lateral system lives
+    if(tilt){
+      // Tilt-up: each concrete panel is its own group ('tp0'..'tp4'), so in a
+      // collapse they can break their connections and fall outward one by one.
+      for(var k = 0; k < Lx/bay; k++){
+        var px = k*bay, tp = B.piece('tp'+k, 'L', planeL(Ly));
+        tp.poly(qL(px,px+bay,zb,H,Ly), wallCol, { sw:SW*0.9 });
+        if(px <= 74 && px+bay >= 88) tp.poly(qL(74,88,zb,zb+26,Ly), PAL.rollDoor, { sw:SW*0.8 });
+        tp.line([px,Ly,H],[px+bay,Ly,H], INK, 1.2);
+        tp.pl([[px+bay*.3,Ly,zb+2],[px+bay*.38,Ly,zb+Hw*.25],[px+bay*.32,Ly,zb+Hw*.45]], '#dc2626', 1.1, { 'class':'crack', 'data-stage':'1', 'data-i':0, opacity:0 });
+        tp.pl([[px+3,Ly,zb+Hw*.75],[px+bay*.5,Ly,zb+Hw*.42],[px+bay-4,Ly,zb+3]], '#dc2626', 1.6, { 'class':'crack', 'data-stage':'2', 'data-i':0, opacity:0 });
+      }
+      return { storeys:1, storeyH:Hw, baseZ:zb, height:Hw+r, span:Lx, depth:Ly, panels:Lx/bay, bay:bay };
+    }
     var L = B.piece('s0', 'L', planeL(Ly));
     L.poly(qL(0,Lx,zb,H,Ly), wallCol);
-    if(tilt){
-      for(var jx = bay; jx < Lx; jx += bay) L.line([jx,Ly,zb],[jx,Ly,H], PAL.concJoint, 1.2);
-    } else {
+    {
       for(var x = 6; x < Lx; x += 6) L.line([x,Ly,zb+1],[x,Ly,H-1], PAL.rib, 0.7);
       L.poly(qL(bay+4,Lx-bay-4,H-19,H-12,Ly), PAL.glass, { sw:SW*0.6 });
       for(var w = bay*2; w < Lx-bay; w += bay) L.line([w,Ly,H-19],[w,Ly,H-12], PAL.frame, 1.1);
     }
     L.poly(qL(74,88,zb,zb+26,Ly), PAL.rollDoor, { sw:SW*0.8 });
-    if(!tilt){
+    {
       for(var cx = 0; cx <= Lx; cx += bay) L.line([cx,Ly,zb],[cx,Ly,H], PAL.steel, cx === 0 || cx === Lx ? 3 : 2.2);
       // X-braced end bays: a portal-frame shed always relies on wall bracing
       // along its length, so every steel option shows it - plain rods, or
@@ -494,5 +521,5 @@
     return { markup:B.markup(), viewBox:vb, pieces:B.pieces.map(function(pc){ return { key:pc.key, group:pc.group, ref:pc.ref }; }), info:info };
   }
 
-  root.SOT_SCENE = { render:render, project:proj, PALETTE:PAL };
+  root.SOT_SCENE = { render:render, project:proj, PALETTE:PAL, SLAB_H:SLAB_H, ISO_H:ISO_H };
 })(globalThis);
