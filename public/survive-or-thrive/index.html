@@ -301,46 +301,7 @@
     <h1>Survive or<br><span class="accent">Thrive?</span></h1>
     <p class="lede">Most buildings are designed to survive a big earthquake. Can you design one that thrives?</p>
     <div class="hero-art" aria-hidden="true">
-      <svg viewBox="0 0 400 176">
-        <rect x="0" y="132" width="400" height="44" fill="#e7e5e4"/>
-        <line x1="0" y1="132" x2="400" y2="132" stroke="#a8a29e" stroke-width="1.2"/>
-        <polyline id="hero-wave" fill="none" stroke="#17638f" stroke-opacity="0.7" stroke-width="1.6" points=""/>
-        <!-- home on FrontFoot dampers -->
-        <g class="sway">
-          <rect x="44" y="128" width="72" height="4" rx="1" fill="#17638f"/>
-          <polygon points="38,94 80,66 122,94" fill="#8796a5" stroke="#475569" stroke-width="1.2" stroke-linejoin="round"/>
-          <rect x="46" y="94" width="68" height="34" fill="#fff" stroke="#475569" stroke-width="1.4"/>
-          <rect x="54" y="102" width="16" height="12" fill="#cfe0ea" stroke="#475569" stroke-width="0.8"/>
-          <rect x="88" y="106" width="14" height="22" fill="#94a3b8" stroke="#475569" stroke-width="0.8"/>
-        </g>
-        <!-- braced industrial portal frame -->
-        <g class="sway b2">
-          <polygon points="146,90 200,74 254,90" fill="#8796a5" stroke="#475569" stroke-width="1.2" stroke-linejoin="round"/>
-          <rect x="146" y="90" width="108" height="42" fill="#fff" stroke="#475569" stroke-width="1.4"/>
-          <line x1="152" y1="90" x2="182" y2="132" stroke="#334155" stroke-width="1.1"/>
-          <line x1="182" y1="90" x2="152" y2="132" stroke="#334155" stroke-width="1.1"/>
-          <line x1="218" y1="90" x2="248" y2="132" stroke="#334155" stroke-width="1.1"/>
-          <line x1="248" y1="90" x2="218" y2="132" stroke="#334155" stroke-width="1.1"/>
-          <rect x="188" y="102" width="24" height="30" fill="#e2e8f0" stroke="#475569" stroke-width="0.8"/>
-        </g>
-        <!-- commercial block with Quake Defender dampers -->
-        <g class="sway b3">
-          <rect x="282" y="36" width="76" height="96" fill="#fff" stroke="#475569" stroke-width="1.4"/>
-          <line x1="282" y1="60" x2="358" y2="60" stroke="#475569" stroke-opacity="0.4"/>
-          <line x1="282" y1="84" x2="358" y2="84" stroke="#475569" stroke-opacity="0.4"/>
-          <line x1="282" y1="108" x2="358" y2="108" stroke="#475569" stroke-opacity="0.4"/>
-          <g fill="#cfe0ea" stroke="#475569" stroke-width="0.7">
-            <rect x="290" y="43" width="12" height="11"/><rect x="314" y="43" width="12" height="11"/><rect x="338" y="43" width="12" height="11"/>
-            <rect x="290" y="67" width="12" height="11"/><rect x="338" y="67" width="12" height="11"/>
-            <rect x="290" y="91" width="12" height="11"/><rect x="314" y="91" width="12" height="11"/><rect x="338" y="91" width="12" height="11"/>
-            <rect x="290" y="115" width="12" height="11"/><rect x="338" y="115" width="12" height="11"/>
-          </g>
-          <line x1="308" y1="84" x2="332" y2="60" stroke="#17638f" stroke-width="1.6"/>
-          <rect x="314" y="68" width="12" height="7" rx="1.5" fill="#d9e8f1" stroke="#17638f" stroke-width="1.1" transform="rotate(-45 320 71.5)"/>
-          <line x1="308" y1="132" x2="332" y2="108" stroke="#17638f" stroke-width="1.6"/>
-          <rect x="314" y="116" width="12" height="7" rx="1.5" fill="#d9e8f1" stroke="#17638f" stroke-width="1.1" transform="rotate(-45 320 119.5)"/>
-        </g>
-      </svg>
+      <svg id="hero-scene" viewBox="0 0 400 176"></svg>
     </div>
     <p class="sub">Choose a building and its structure, spend your budget on protection, then put it through an earthquake. Takes about 2 minutes.</p>
     <p class="teaser">Score 80 or more to go in the draw for a <b>$100 Prezzy card</b>.</p>
@@ -1937,13 +1898,27 @@
   /* =========================================================
      LANDING ILLUSTRATION
   ========================================================= */
-  function drawHeroWave(){
-    var pts = [];
-    for(var x=0; x<=400; x+=4){
-      var y = 154 + Math.sin(x*0.045)*7*Math.sin(x*0.008) + Math.sin(x*0.11)*3;
-      pts.push(x+','+y.toFixed(1));
-    }
-    document.getElementById('hero-wave').setAttribute('points', pts.join(' '));
+  /* Three buildings, drawn by the same isometric scene code as the shake
+  test: a home on FrontFoot dampers, a shed and an office block with
+  Quake Defender bracing. Each rocks gently on its own island. */
+  function drawHeroScene(){
+    var svg = document.getElementById('hero-scene');
+    if(!svg || !window.SOT_SCENE) return;
+    var picks = [
+      { typeKey:'house', systemKey:'plasterboard', protections:{ frontfootDampers:true }, additions:{ solar:true } },
+      { typeKey:'industrial', systemKey:'braced', protections:{ quakeDefender:true }, additions:{} },
+      { typeKey:'commercial', systemKey:'braced', protections:{ quakeDefender:true }, additions:{ greenroof:true } }
+    ];
+    var parts = picks.map(function(d){ return window.SOT_SCENE.render(d, { margin:6 }); });
+    var gap = -14, x = 0, maxH = 0;
+    parts.forEach(function(p){ maxH = Math.max(maxH, p.viewBox[3]); });
+    var cls = ['sway', 'sway b2', 'sway b3'];
+    svg.innerHTML = parts.map(function(p, i){
+      var vb = p.viewBox, g = '<g transform="translate('+(x - vb[0]).toFixed(1)+','+(maxH - vb[3] - vb[1]).toFixed(1)+')"><g class="'+cls[i]+'">'+p.markup+'</g></g>';
+      x += vb[2] + gap;
+      return g;
+    }).join('');
+    svg.setAttribute('viewBox', '-6 -8 '+(x - gap + 12).toFixed(1)+' '+(maxH + 14).toFixed(1));
   }
 
   /* =========================================================
@@ -2043,7 +2018,7 @@
      BOOT
   ========================================================= */
   function init(){
-    drawHeroWave();
+    drawHeroScene();
     wireEvents();
   }
   if(document.readyState === 'loading'){
