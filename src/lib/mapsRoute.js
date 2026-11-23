@@ -30,6 +30,37 @@ const place = (p) => {
   return `${p.lat},${p.lng}`
 }
 
+// Whether the walk is running as an installed home-screen app on an iPhone or
+// iPad. There, iOS doesn't hand google.com/maps links to the Google Maps app
+// (it shows Google's web page in an overlay instead), and a "new tab" can't
+// reach anything the page made itself, like the PDF.
+export function isIosStandalone() {
+  if (typeof window === 'undefined') return false
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  const standalone = navigator.standalone === true || window.matchMedia?.('(display-mode: standalone)').matches
+  return ios && standalone
+}
+
+// Click handler for every Google Maps link on the walk. The links themselves
+// are plain https://www.google.com/maps/dir/?api=1 links with target="_blank",
+// which Google documents as "open the Google Maps app if it's installed,
+// otherwise the browser" - that's what happens in Safari, Chrome and on
+// Android. Only the installed iPhone app needs help: try the Google Maps
+// app's own link (comgooglemapsurl://), and if the app hasn't taken over
+// within a moment (not installed), open the web version in a new tab.
+export function openMapsLink(event, url) {
+  if (!isIosStandalone()) return // the plain link does the right thing
+  event.preventDefault()
+  let left = false
+  const onHide = () => { if (document.visibilityState === 'hidden') left = true }
+  document.addEventListener('visibilitychange', onHide)
+  window.location.href = url.replace(/^https:\/\//, 'comgooglemapsurl://')
+  setTimeout(() => {
+    document.removeEventListener('visibilitychange', onHide)
+    if (!left && document.visibilityState === 'visible') window.open(url, '_blank', 'noopener')
+  }, 800)
+}
+
 // `points` are the ordered walk points, start first. When `loop` is set the
 // walk returns to the first point.
 export function mapsRouteUrls(points, loop, waypointLimit = MAX_WAYPOINTS) {

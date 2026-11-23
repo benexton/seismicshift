@@ -2,6 +2,7 @@ import { useState } from 'react'
 import AccessBadge from './AccessBadge'
 import { formatDistance, formatDuration, walkMinutes } from '../../lib/geo'
 import { WALK, stopColor } from './theme'
+import { openMapsLink } from '../../lib/mapsRoute'
 
 function directionsUrl(from, to) {
   const origin = `${from.lat},${from.lng}`
@@ -20,7 +21,7 @@ function LegLine({ fromPoint, toPoint, meters, printMode }) {
           rel="noopener noreferrer"
           className="underline print:hidden"
           style={{ color: WALK.maroon }}
-          onClick={() => window.gtag?.('event', 'directions_opened')}
+          onClick={(e) => { window.gtag?.('event', 'directions_opened'); openMapsLink(e, directionsUrl(fromPoint, toPoint)) }}
         >
           Open in maps
         </a>

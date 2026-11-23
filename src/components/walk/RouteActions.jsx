@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { mapsRouteUrls } from '../../lib/mapsRoute'
+import { mapsRouteUrls, openMapsLink, isIosStandalone } from '../../lib/mapsRoute'
 import { WALK } from './theme'
 import regularFontUrl from '../../assets/fonts/NotoSans-Regular.ttf?url'
 import boldFontUrl from '../../assets/fonts/NotoSans-Bold.ttf?url'
@@ -13,14 +13,34 @@ const primary = 'px-4 py-2.5 rounded-lg font-bold text-sm text-white transition-
 export default function RouteActions({ orderedPoints, stops, legs, startName, loop, totalMeters }) {
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
+  // A finished PDF waiting for a second tap (installed iPhone app only - see below).
+  const [ready, setReady] = useState(null)
   const urls = mapsRouteUrls(orderedPoints, loop)
 
+  /* The PDF opens in a new tab, so the walk stays where it was. The tab has to
+     be opened during the tap itself (browsers block pop-ups opened later), so
+     it shows "Making your info pack..." until the PDF is ready. Two exceptions:
+     - Android browsers don't show PDFs in a tab, so it downloads there, which
+       doesn't replace the page either.
+     - In the installed iPhone app a new tab can't reach the PDF, so the button
+       becomes "Open your info pack", which brings up the share sheet (Books,
+       Files, Save to Files...). The share sheet needs its own tap. */
   const makePack = async () => {
     setBusy(true)
     setFailed(false)
+    setReady(null)
+    const iosApp = isIosStandalone()
+    const android = /Android/i.test(navigator.userAgent)
+    const tab = !iosApp && !android ? window.open('', '_blank') : null
+    if (tab) {
+      try {
+        tab.document.title = 'Seismic Walk info pack'
+        tab.document.body.innerHTML = '<p style="font:16px/1.5 system-ui,sans-serif;padding:24px;color:#1c1517">Making your info pack...</p>'
+      } catch { /* the tab still works without the message */ }
+    }
     try {
-      const { downloadInfoPack } = await import('../../lib/infoPackPdf')
-      await downloadInfoPack({
+      const { buildInfoPackPdf, downloadPdf } = await import('../../lib/infoPackPdf')
+      const bytes = await buildInfoPackPdf({
         stops,
         legs,
         startName,
@@ -28,11 +48,30 @@ export default function RouteActions({ orderedPoints, stops, legs, startName, lo
         totalMeters,
         fontUrls: { regular: regularFontUrl, bold: boldFontUrl },
       })
+      const blob = new Blob([bytes], { type: 'application/pdf' })
+      if (tab && !tab.closed) {
+        const url = URL.createObjectURL(blob)
+        tab.location.href = url
+        setTimeout(() => URL.revokeObjectURL(url), 10 * 60 * 1000)
+      } else if (iosApp) {
+        setReady(new File([blob], 'seismic-walk-info-pack.pdf', { type: 'application/pdf' }))
+      } else {
+        downloadPdf(blob)
+      }
       window.gtag?.('event', 'info_pack_downloaded', { count: stops.length })
     } catch {
+      if (tab && !tab.closed) tab.close()
       setFailed(true)
     } finally {
       setBusy(false)
+    }
+  }
+
+  const openReady = async () => {
+    if (navigator.canShare?.({ files: [ready] })) {
+      try { await navigator.share({ files: [ready], title: 'Seismic Walk info pack' }) } catch { /* closed the sheet */ }
+    } else {
+      window.open(URL.createObjectURL(ready), '_blank')
     }
   }
 
@@ -46,7 +85,7 @@ export default function RouteActions({ orderedPoints, stops, legs, startName, lo
             rel="noopener noreferrer"
             className={primary}
             style={{ backgroundColor: WALK.maroon }}
-            onClick={() => window.gtag?.('event', 'full_route_opened', { parts: 1 })}
+            onClick={(e) => { window.gtag?.('event', 'full_route_opened', { parts: 1 }); openMapsLink(e, urls[0]) }}
           >
             Google Maps route
           </a>
@@ -62,16 +101,22 @@ export default function RouteActions({ orderedPoints, stops, legs, startName, lo
                 className={primary}
                 style={{ backgroundColor: WALK.maroon }}
                 aria-label={`Google Maps route, part ${i + 1} of ${urls.length}`}
-                onClick={() => window.gtag?.('event', 'full_route_opened', { parts: urls.length, part: i + 1 })}
+                onClick={(e) => { window.gtag?.('event', 'full_route_opened', { parts: urls.length, part: i + 1 }); openMapsLink(e, url) }}
               >
                 Part {i + 1}
               </a>
             ))}
           </div>
         )}
-        <button type="button" onClick={makePack} disabled={busy} className={primary} style={{ backgroundColor: WALK.ink }}>
-          {busy ? 'Making your PDF...' : 'Info pack (PDF)'}
-        </button>
+        {ready ? (
+          <button type="button" onClick={openReady} className={primary} style={{ backgroundColor: WALK.ink }}>
+            Open your info pack
+          </button>
+        ) : (
+          <button type="button" onClick={makePack} disabled={busy} className={primary} style={{ backgroundColor: WALK.ink }}>
+            {busy ? 'Making your PDF...' : 'Info pack (PDF)'}
+          </button>
+        )}
       </div>
       <p className="text-xs text-slate-500 mt-2">
         <span className="font-semibold text-slate-700">On a phone, install the Google Maps app first.</span>{' '}

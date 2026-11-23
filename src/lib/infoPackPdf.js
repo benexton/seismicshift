@@ -8,8 +8,11 @@
 // draw macrons (Ōtautahi, Tūranga), which this content is full of.
 import { formatDistance, formatDuration, walkMinutes } from './geo'
 
-const A4 = [595.28, 841.89]
-const MARGIN = 44
+// A phone-shaped page (9:16), so a phone's PDF viewer shows each page at
+// close to full screen width and the text reads at a normal size without
+// zooming. On an A4 page the same text came out at a third of the size.
+const PAGE = [300, 534]
+const MARGIN = 18
 const MAROON = [0.396, 0.141, 0.192]
 const RED = [0.71, 0.196, 0.196]
 const INK = [0.11, 0.082, 0.09]
@@ -99,18 +102,18 @@ export async function buildInfoPackPdf({ stops, legs, startName, loop, totalMete
   const images = await Promise.all(stops.map((s) => (s.image ? loadImageJpeg(s.image) : null)))
 
   const color = (c) => rgb(c[0], c[1], c[2])
-  const contentW = A4[0] - MARGIN * 2
+  const contentW = PAGE[0] - MARGIN * 2
   let page
   let y
 
   const newPage = () => {
-    page = doc.addPage(A4)
-    y = A4[1] - MARGIN
+    page = doc.addPage(PAGE)
+    y = PAGE[1] - MARGIN
   }
   const ensure = (h) => {
-    if (y - h < MARGIN + 18) newPage()
+    if (y - h < MARGIN + 12) newPage()
   }
-  const text = (str, { font = regular, size = 10, col = INK, gap = 0, width = contentW, lead = 1.45, x = MARGIN } = {}) => {
+  const text = (str, { font = regular, size = 10.5, col = INK, gap = 0, width = contentW, lead = 1.42, x = MARGIN } = {}) => {
     const lines = wrap(str, font, size, width)
     for (const line of lines) {
       ensure(size * lead)
@@ -121,15 +124,15 @@ export async function buildInfoPackPdf({ stops, legs, startName, loop, totalMete
   }
 
   newPage()
-  page.drawRectangle({ x: 0, y: A4[1] - 96, width: A4[0], height: 96, color: color(MAROON) })
-  page.drawText('PCEE 2027  |  PACIFIC CONFERENCE ON EARTHQUAKE ENGINEERING', { x: MARGIN, y: A4[1] - 34, size: 8, font: bold, color: rgb(1, 1, 1) })
-  page.drawText('Seismic Walk info pack', { x: MARGIN, y: A4[1] - 66, size: 24, font: bold, color: rgb(1, 1, 1) })
-  y = A4[1] - 96 - 14
+  page.drawRectangle({ x: 0, y: PAGE[1] - 70, width: PAGE[0], height: 70, color: color(MAROON) })
+  page.drawText('PCEE 2027', { x: MARGIN, y: PAGE[1] - 24, size: 8, font: bold, color: rgb(1, 1, 1) })
+  page.drawText('Seismic Walk info pack', { x: MARGIN, y: PAGE[1] - 50, size: 19, font: bold, color: rgb(1, 1, 1) })
+  y = PAGE[1] - 70 - 8
   const summary = `${stops.length} stop${stops.length === 1 ? '' : 's'}`
     + (totalMeters ? `  |  ${formatDistance(totalMeters)}  |  ${formatDuration(walkMinutes(totalMeters))} walking` : '')
   text(summary, { font: bold, size: 11, col: MAROON })
-  text(`Starting from ${startName}${loop ? ', returning to the start' : ''}. Walking time only: allow time at each stop.`, { size: 9.5, col: GREY, gap: 6 })
-  text('Use Google Maps for directions and this pack to read as you walk. Self-guided, at your own risk: watch for traffic, follow road rules, and respect private property and opening hours.', { size: 9, col: GREY, gap: 8 })
+  text(`Starting from ${startName}${loop ? ', returning to the start' : ''}. Walking time only: allow time at each stop.`, { size: 9.5, col: GREY, gap: 5 })
+  text('Use Google Maps for directions and this pack to read as you walk. Self-guided, at your own risk: watch for traffic, follow road rules, and respect private property and opening hours.', { size: 9.5, col: GREY, gap: 6 })
 
   for (let i = 0; i < stops.length; i += 1) {
     const stop = stops[i]
@@ -138,40 +141,39 @@ export async function buildInfoPackPdf({ stops, legs, startName, loop, totalMete
     // rather than being stranded at the bottom of the previous one.
     let imgH = 0
     let imgW = 0
+    // Every stop starts on a new page, with its photo across the full width.
     if (image) {
-      const w = Math.min(contentW, 360)
-      imgH = Math.min(220, (w * image.height) / image.width)
+      imgW = contentW
+      imgH = Math.min(190, (imgW * image.height) / image.width)
       imgW = (imgH * image.width) / image.height
     }
-    ensure(110 + imgH)
-    y -= 10
-    page.drawLine({ start: { x: MARGIN, y }, end: { x: MARGIN + contentW, y }, thickness: 0.6, color: rgb(0.9, 0.87, 0.88) })
-    y -= 6
+    if (i > 0) newPage()
+    else { ensure(90 + imgH); y -= 6 }
 
     const leg = legs[i]
     if (leg?.meters != null) {
-      text(`${formatDistance(leg.meters)}  |  ${formatDuration(walkMinutes(leg.meters))} walk from ${i === 0 ? startName : stops[i - 1].name}`, { size: 8.5, col: GREY })
+      text(`${formatDistance(leg.meters)}  |  ${formatDuration(walkMinutes(leg.meters))} walk from ${i === 0 ? startName : stops[i - 1].name}`, { size: 9, col: GREY })
     }
-    text(`${i + 1}. ${stop.name}`, { font: bold, size: 16, col: MAROON, lead: 1.3 })
-    if (stop.name_mi && !stop.name.includes(stop.name_mi)) text(stop.name_mi, { size: 9.5, col: GREY })
-    if (stop.address) text(stop.address, { size: 9.5, col: GREY, gap: 4 })
+    text(`${i + 1}. ${stop.name}`, { font: bold, size: 16, col: MAROON, lead: 1.25 })
+    if (stop.name_mi && !stop.name.includes(stop.name_mi)) text(stop.name_mi, { size: 10, col: GREY })
+    if (stop.address) text(stop.address, { size: 10, col: GREY, gap: 4 })
 
     if (image) {
       const pdfImage = await doc.embedJpg(image.bytes)
       ensure(imgH + 14)
-      y -= imgH
+      y -= imgH + 2
       page.drawImage(pdfImage, { x: MARGIN, y, width: imgW, height: imgH })
-      y -= 4
+      y -= 2
       if (stop.image_credit) text(`Photo: ${stop.image_credit}`, { size: 7.5, col: GREY })
       y -= 4
     }
 
     const badges = [ACCESS_LABELS[stop.access_level], stop.step_free ? 'Step-free' : null].filter(Boolean).join('  |  ')
-    if (badges) text(badges, { font: bold, size: 9, col: RED })
-    if (stop.access_notes) text(stop.access_notes, { size: 9, col: GREY, gap: 4 })
+    if (badges) text(badges, { font: bold, size: 9.5, col: RED })
+    if (stop.access_notes) text(stop.access_notes, { size: 9.5, col: GREY, gap: 4 })
 
     const story = (stop.story || stop.summary || '').split(/\r?\n\s*\r?\n/).map((p) => p.trim()).filter(Boolean)
-    story.forEach((para) => text(para, { size: 10, gap: 5 }))
+    story.forEach((para) => text(para, { size: 10.5, gap: 5 }))
 
     const facts = [
       stop.year_built && `Built: ${stop.year_built}`,
@@ -180,22 +182,22 @@ export async function buildInfoPackPdf({ stops, legs, startName, loop, totalMete
       stop.architect && `Architect: ${stop.architect}`,
       stop.storeys && `Storeys: ${stop.storeys}`,
     ].filter(Boolean)
-    if (facts.length) text(facts.join('   |   '), { size: 8.5, col: GREY, gap: 4 })
-    if (stop.external_url) text(`Further reading: ${stop.external_url}`, { size: 8.5, col: MAROON, gap: 4 })
-    y -= 6
+    if (facts.length) text(facts.join('  |  '), { size: 9, col: GREY, gap: 4 })
+    if (stop.external_url) text(`Further reading: ${stop.external_url}`, { size: 9, col: MAROON, gap: 4 })
   }
 
   const pages = doc.getPages()
   pages.forEach((p, n) => {
-    p.drawText(`seismicshift.nz/walk   |   Page ${n + 1} of ${pages.length}`, { x: MARGIN, y: 22, size: 8, font: regular, color: color(GREY) })
+    p.drawText(`seismicshift.nz/walk  |  Page ${n + 1} of ${pages.length}`, { x: MARGIN, y: 12, size: 7, font: regular, color: color(GREY) })
   })
 
   return doc.save()
 }
 
-export async function downloadInfoPack(args) {
-  const bytes = await buildInfoPackPdf(args)
-  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }))
+// Saves the PDF as a download - used where a new tab can't show it (Android)
+// or a pop-up was blocked. A download never replaces the walk page.
+export function downloadPdf(blob) {
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = 'seismic-walk-info-pack.pdf'

@@ -3,6 +3,7 @@ import TagChip from './TagChip'
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock'
 import { useDialog } from '../../lib/useDialog'
 import { WALK, isContextSite, isRefreshment } from './theme'
+import { openMapsLink } from '../../lib/mapsRoute'
 
 function Fact({ label, value }) {
   if (!value) return null
@@ -110,6 +111,7 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
               href={`https://www.google.com/maps/dir/?api=1&destination=${building.lat},${building.lng}&travelmode=walking`}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={(e) => openMapsLink(e, `https://www.google.com/maps/dir/?api=1&destination=${building.lat},${building.lng}&travelmode=walking`)}
               className="underline underline-offset-2"
               style={{ color: WALK.maroon }}
             >
