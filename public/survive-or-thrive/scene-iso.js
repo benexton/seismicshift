@@ -116,15 +116,28 @@
     B.piece(group, name+'T', planeT(z1), cls).poly(qT(x0,x1,y0,y1,z1), shade(col,.18));
   }
 
-  /* A Quake Defender damper brace on a front-left face, from foot (x0,z0) to head (x1,z1):
-     brand blue with a thin white edge so it reads against any wall. */
-  function damperL(face, y, x0, z0, x1, z1, sw){
-    var a = [x0,y,z0], b = [x1,y,z1];
-    face.line(a, b, '#ffffff', sw*2.6).line(a, b, PAL.brand, sw*1.5, { 'class':'damper' });
-    var dx = x1-x0, dz = z1-z0, len = Math.hypot(dx, dz), nx = -dz/len*4.2, nz = dx/len*4.2;
-    function p(t, o){ return [x0+dx*t+nx*o, y, z0+dz*t+nz*o]; }
-    face.poly([p(.36,-1),p(.64,-1),p(.64,1),p(.36,1)], PAL.brandFill, { stroke:PAL.brand, sw:sw*0.9, 'class':'damper' });
-    face.line(p(.44,-1), p(.44,1), PAL.brand, 0.9).line(p(.56,-1), p(.56,1), PAL.brand, 0.9);
+  /* An X-braced bay of DonoBrace tension-only rods on a front-left face, as
+     the brace classes the animation colours (tension red / compression blue).
+     With Quake Defender, each rod carries a device in line near its bottom
+     anchor, as the QD methodology (V26.10) installs it: QD in series with
+     tension-only X bracing in the wall bracing bays. */
+  function xBraceL(face, y, x0, x1, zBot, zTop, i, sw, qd){
+    face.line([x0,y,zTop],[x1,y,zBot], PAL.member, sw, { 'class':'brace', 'data-i':i, 'data-dir':'back' });
+    face.line([x1,y,zTop],[x0,y,zBot], PAL.member, sw, { 'class':'brace', 'data-i':i, 'data-dir':'fwd' });
+    if(!qd) return;
+    qdDevice(face, y, [x1,zBot], [x0,zTop]);
+    qdDevice(face, y, [x0,zBot], [x1,zTop]);
+  }
+  // A Quake Defender device on a rod, starting just above its bottom anchor:
+  // brand blue with a thin white edge so it reads against any wall.
+  function qdDevice(face, y, bot, top){
+    var dx = top[0]-bot[0], dz = top[1]-bot[1], len = Math.hypot(dx, dz), ux = dx/len, uz = dz/len, nx = -uz*2.8, nz = ux*2.8;
+    var s0 = Math.min(5, len*0.08), s1 = s0 + Math.min(17, len*0.3);
+    function p(s, o){ return [bot[0]+ux*s+nx*o, y, bot[1]+uz*s+nz*o]; }
+    face.poly([p(s0-1,-1.45),p(s1+1,-1.45),p(s1+1,1.45),p(s0-1,1.45)], '#ffffff', { stroke:null });
+    face.poly([p(s0,-1),p(s1,-1),p(s1,1),p(s0,1)], PAL.brandFill, { stroke:PAL.brand, sw:1.1, 'class':'damper' });
+    face.poly([p(s0,-1),p(s0+2.4,-1),p(s0+2.4,1),p(s0,1)], PAL.brand, { stroke:null, 'class':'damper' });
+    face.line(p((s0+s1)/2,-1), p((s0+s1)/2,1), PAL.brand, 0.8);
   }
 
   function crackSets(face, y, x0, w, zb, h, i){
@@ -276,110 +289,115 @@
   }
 
   /* =========================================================
-     INDUSTRIAL - 1 tall storey, portal frames across x, gable end
-     (roller door) on the front-left face, ridge along y
+     INDUSTRIAL - 1 tall storey. Portal frames span across y (the gable
+     end, with the roller door, is the front-right face); the shaking runs
+     along the building's length (x). In that direction the portal frames
+     do little: the long side walls resist it through X-braced end bays of
+     DonoBrace tension-only rods - where Quake Defender devices go, per the
+     V26.10 methodology - or through tilt-up concrete panels, or through
+     moment-connected column heads.
   ========================================================= */
   function drawIndustrial(B, d){
-    var Wx = 110, Ly = 150, Hw = 62, r = 20;
+    var Lx = 160, Ly = 100, Hw = 56, r = 18, bay = 32;
     var P = d.protections || {}, A = d.additions || {}, sys = d.systemKey;
     var isolated = !!P.isolation;
-    var zb = ground(B, Wx, Ly, isolated, false);
+    var zb = ground(B, Lx, Ly, isolated, false);
     var H = zb + Hw, apex = H + r;
-    var tilt = sys === 'shearwalls';
-    var wallCol = tilt ? PAL.conc : PAL.clad;
+    var tilt = sys === 'shearwalls', qd = !!P.quakeDefender;
+    var wallCol = tilt ? PAL.conc : PAL.clad, wallR = shade(wallCol,-.16);
     var roofCol = A.greenroof ? PAL.green : PAL.iron;
-    function zr(x){ return H + r*(1-Math.abs(x-Wx/2)/(Wx/2)); }
+    function zr(y){ return H + r*(1-Math.abs(y-Ly/2)/(Ly/2)); }
 
-    // far slope (faces -x)
-    function F(t, y){ return [Wx/2 - t*(Wx/2+5), y, apex - t*(r + r*5/(Wx/2))]; }
-    var fs = B.piece('roof', 'F', [F(0,0), F(0,10), F(1,0)]);
-    fs.poly([F(0,-4),F(0,Ly),F(1,Ly),F(1,-4)], shade(roofCol,-.24));
+    // far slope (faces -y)
+    function F(t, x){ return [x, Ly/2 - t*(Ly/2+5), apex - t*(r + r*5/(Ly/2))]; }
+    B.piece('roof', 'F', [F(0,0), F(0,10), F(1,0)]).poly([F(0,-4),F(0,Lx+4),F(1,Lx+4),F(1,-4)], shade(roofCol,-.24));
 
-    // long side (front-right face, x = Wx)
-    var R = B.piece('s0', 'R', planeR(Wx));
-    R.poly(qR(0,Ly,zb,H,Wx), shade(wallCol,-.16));
+    // gable end (front-right face, x = Lx): roller door, portal frame outline
+    var R = B.piece('s0', 'R', planeR(Lx));
+    R.poly([[Lx,0,zb],[Lx,Ly,zb],[Lx,Ly,H],[Lx,Ly/2,apex],[Lx,0,H]], wallR);
+    var d0 = 32, d1 = 68, dTop = zb + 42;
     if(tilt){
-      for(var py = 30; py < Ly; py += 30) R.line([Wx,py,zb],[Wx,py,H], shade(PAL.concJoint,-.1), 1);
+      [d0, d1].forEach(function(y){ R.line([Lx,y,zb],[Lx,y,zr(y)], shade(PAL.concJoint,-.1), 1.1); });
     } else {
-      for(var ry = 6; ry < Ly; ry += 6) R.line([Wx,ry,zb+1],[Wx,ry,H-1], shade(PAL.rib,-.14), 0.6);
-      R.poly(qR(8,Ly-8,H-14,H-7,Wx), shade(PAL.glass,-.14), { sw:SW*0.6 });
-      for(var cy = 0; cy <= Ly; cy += 30) R.line([Wx,cy,zb],[Wx,cy,H], PAL.steel, cy === 0 || cy === Ly ? 2.6 : 1.8);
+      for(var ry = 6; ry < Ly; ry += 6) R.line([Lx,ry,zb+1],[Lx,ry,zr(ry)-1.5], shade(PAL.rib,-.14), 0.6);
+      R.poly(qR(d0-4,d1+4,dTop+5,dTop+11,Lx), shade(PAL.glass,-.14), { sw:SW*0.6 });
     }
-    R.poly(qR(104,118,zb,zb+28,Wx), shade(PAL.rollDoor,-.14), { sw:SW*0.8 });
+    R.poly(qR(d0,d1,zb,dTop,Lx), shade(PAL.rollDoor,-.12), { sw:SW });
+    for(var s = 1; s < 7; s++) R.line([Lx,d0+1,zb+s*(dTop-zb)/7],[Lx,d1-1,zb+s*(dTop-zb)/7], INK, 0.6, { 'stroke-opacity':0.45 });
+    if(!tilt){
+      R.line([Lx,0,zb],[Lx,0,H], PAL.steel, 3).line([Lx,Ly,zb],[Lx,Ly,H], PAL.steel, 3);
+      R.line([Lx,0,H],[Lx,Ly/2,apex], PAL.steel, 2.6).line([Lx,Ly/2,apex],[Lx,Ly,H], PAL.steel, 2.6);
+    }
 
-    // near slope (faces +x): roof finish, solar, signage
-    function N(t, y){ return [Wx/2 + t*(Wx/2+5), y, apex - t*(r + r*5/(Wx/2))]; }
+    // near slope (faces +y): roof finish, solar, rooftop plant and signage
+    function N(t, x){ return [x, Ly/2 + t*(Ly/2+6), apex - t*(r + r*6/(Ly/2))]; }
+    function zSlope(y){ return apex - (y-Ly/2)/(Ly/2+6)*(r + r*6/(Ly/2)); }
     var ns = B.piece('roof', 'N', [N(0,0), N(0,10), N(1,0)]);
-    ns.poly([N(0,-4),N(0,Ly),N(1,Ly),N(1,-4)], roofCol);
+    ns.poly([N(0,-4),N(0,Lx+4),N(1,Lx+4),N(1,-4)], roofCol);
     if(A.greenroof){
-      for(var gy = 8; gy < Ly; gy += 12) for(var gt = 0.12; gt < 1; gt += 0.2){ var g0 = N(gt, gy); ns.line(g0, [g0[0], g0[1], g0[2]+3], PAL.tuft, 0.9); }
+      for(var gx = 6; gx < Lx; gx += 11) for(var gt = 0.12; gt < 1; gt += 0.19){ var g0 = N(gt, gx); ns.line(g0, [g0[0], g0[1], g0[2]+3], PAL.tuft, 0.9); }
     } else {
-      for(var yy = 4; yy < Ly; yy += 8) ns.line(N(0.03,yy), N(0.97,yy), shade(roofCol,-.16), 0.6);
+      for(var rx = 4; rx < Lx; rx += 8) ns.line(N(0.03,rx), N(0.97,rx), shade(roofCol,-.16), 0.6);
     }
     if(A.solar){
-      for(var c = 0; c < 5; c++){
-        var y0 = 8 + c*28, y1 = y0 + 23;
-        ns.poly([N(.12,y0),N(.12,y1),N(.46,y1),N(.46,y0)], PAL.solar, { sw:SW*0.55 });
-        ns.poly([N(.54,y0),N(.54,y1),N(.88,y1),N(.88,y0)], PAL.solar, { sw:SW*0.55 });
-        ns.line(N(.29,y0+1), N(.29,y1-1), PAL.solarLine, 0.6); ns.line(N(.71,y0+1), N(.71,y1-1), PAL.solarLine, 0.6);
+      // panels kept to the right-hand part of the slope, clear of the plant platform
+      for(var c = 0; c < 4; c++){
+        var x0 = 52 + c*27, x1 = x0 + 23;
+        ns.poly([N(.12,x0),N(.12,x1),N(.46,x1),N(.46,x0)], PAL.solar, { sw:SW*0.55 });
+        ns.poly([N(.54,x0),N(.54,x1),N(.88,x1),N(.88,x0)], PAL.solar, { sw:SW*0.55 });
+        ns.line(N(.29,x0+1), N(.29,x1-1), PAL.solarLine, 0.6).line(N(.71,x0+1), N(.71,x1-1), PAL.solarLine, 0.6);
       }
     }
-    ns.line([Wx/2,-4,apex],[Wx/2,Ly,apex], shade(roofCol,-.42), 2.4);
+    ns.line([-4,Ly/2,apex],[Lx+4,Ly/2,apex], shade(roofCol,-.42), 2.4);
     if(A.signage){
-      // billboard on posts astride the ridge, facing front-left, and a plant unit on the near slope
-      var sy = 40, sz0 = apex + 6, sz1 = sz0 + 16;
+      // billboard on two posts along the ridge, at the gable end
+      var sy = Ly/2, sz0 = apex + 7, sz1 = sz0 + 16;
       var sg = B.piece('roof', 'sign', planeL(sy));
-      sg.line([Wx/2-12,sy,apex-1],[Wx/2-12,sy,sz0], PAL.steel, 1.8).line([Wx/2+12,sy,apex-1],[Wx/2+12,sy,sz0], PAL.steel, 1.8);
-      sg.poly(qL(Wx/2-26,Wx/2+26,sz0,sz1,sy), PAL.sign, { stroke:PAL.brand, sw:SW });
-      sg.line([Wx/2-20,sy,sz0+10],[Wx/2+14,sy,sz0+10], '#ffffff', 1.4, { 'stroke-opacity':0.75 }).line([Wx/2-20,sy,sz0+5],[Wx/2+4,sy,sz0+5], '#ffffff', 1.4, { 'stroke-opacity':0.75 });
-      var px0 = 70, px1 = 88, pz0 = zr(88) - 1;
-      box(B, 'roof', 'plant', px0, px1, 96, 116, pz0, pz0 + 12, PAL.plant);
+      sg.line([112,sy,apex],[112,sy,sz0], PAL.steel, 1.8).line([140,sy,apex],[140,sy,sz0], PAL.steel, 1.8);
+      sg.poly(qL(102,150,sz0,sz1,sy), PAL.sign, { stroke:PAL.brand, sw:SW });
+      sg.line([108,sy,sz0+10],[142,sy,sz0+10], '#ffffff', 1.4, { 'stroke-opacity':0.75 }).line([108,sy,sz0+5],[130,sy,sz0+5], '#ffffff', 1.4, { 'stroke-opacity':0.75 });
+      // plant unit on a level steel platform at the other end of the slope
+      var py0 = Ly/2 + 8, py1 = Ly/2 + 30, px0 = 8, px1 = 36, deck = zSlope(py0) + 1.5;
+      var legs = B.piece('roof', 'legs', planeL(py1));
+      [px0+1, px1-1].forEach(function(x){ legs.line([x,py1,zSlope(py1)],[x,py1,deck], PAL.steel, 1.6); });
+      legs.poly(qL(px0,px1,deck-2,deck,py1), shade(PAL.steel,.25), { sw:SW*0.6 });
+      B.piece('roof', 'legsR', planeR(px1)).poly(qR(py0,py1,deck-2,deck,px1), shade(PAL.steel,.1), { sw:SW*0.6 })
+        .line([px1,py0+1,zSlope(py0+1)],[px1,py0+1,deck-2], PAL.steel, 1.2);
+      B.piece('roof', 'deck', planeT(deck)).poly(qT(px0,px1,py0,py1,deck), shade(PAL.steel,.45), { sw:SW*0.6 });
+      box(B, 'roof', 'plant', px0+4, px1-4, py0+3, py1-3, deck, deck+12, PAL.plant);
+      var fan = []; for(var k = 0; k < 14; k++){ var a = 2*Math.PI*k/14; fan.push([(px0+px1)/2 + 6*Math.cos(a), (py0+py1)/2 + 6*Math.sin(a), deck+12]); }
+      B.piece('roof', 'plantT', planeT(deck+12)).poly(fan, shade(PAL.plant,-.25), { sw:0.8 });
     }
 
-    // gable end (front-left face, y = Ly)
+    // long side wall (front-left face, y = Ly): where the lateral system lives
     var L = B.piece('s0', 'L', planeL(Ly));
-    var dL = 38, dR = 72, dTop = zb + 44;
-    L.poly([[0,Ly,zb],[Wx,Ly,zb],[Wx,Ly,H],[Wx/2,Ly,apex],[0,Ly,H]], wallCol);
+    L.poly(qL(0,Lx,zb,H,Ly), wallCol);
     if(tilt){
-      [dL, dR].forEach(function(x){ L.line([x,Ly,zb],[x,Ly,zr(x)], PAL.concJoint, 1.2); });
-      L.line([dL,Ly,dTop+2],[dR,Ly,dTop+2], PAL.concJoint, 1.2);
+      for(var jx = bay; jx < Lx; jx += bay) L.line([jx,Ly,zb],[jx,Ly,H], PAL.concJoint, 1.2);
     } else {
-      for(var x = 6; x < Wx; x += 6) L.line([x,Ly,zb+1],[x,Ly,zr(x)-1.5], PAL.rib, 0.7);
+      for(var x = 6; x < Lx; x += 6) L.line([x,Ly,zb+1],[x,Ly,H-1], PAL.rib, 0.7);
+      L.poly(qL(bay+4,Lx-bay-4,H-19,H-12,Ly), PAL.glass, { sw:SW*0.6 });
+      for(var w = bay*2; w < Lx-bay; w += bay) L.line([w,Ly,H-19],[w,Ly,H-12], PAL.frame, 1.1);
     }
-    L.poly(qL(dL,dR,zb,dTop,Ly), PAL.rollDoor, { sw:SW });
-    for(var s = 1; s < 7; s++) L.line([dL+1,Ly,zb+s*(dTop-zb)/7],[dR-1,Ly,zb+s*(dTop-zb)/7], INK, 0.6, { 'stroke-opacity':0.45 });
+    L.poly(qL(74,88,zb,zb+26,Ly), PAL.rollDoor, { sw:SW*0.8 });
     if(!tilt){
-      L.poly(qL(dL-4,dR+4,dTop+5,dTop+12,Ly), PAL.glass, { sw:SW*0.7 });
-      for(var m = 1; m < 4; m++) L.line([dL-4+m*(dR-dL+8)/4,Ly,dTop+5],[dL-4+m*(dR-dL+8)/4,Ly,dTop+12], PAL.frame, 1.1);
-    }
-
-    // lateral system in the two bays either side of the door
-    var bays = [[6, dL-6], [dR+6, Wx-6]];
-    if(P.quakeDefender){
-      // Quake Defender damper braces, leaning in towards the door as a symmetric pair
-      damperL(L, Ly, bays[0][0], zb+1, bays[0][1], H-2, 1.2);
-      damperL(L, Ly, bays[1][1], zb+1, bays[1][0], H-2, 1.2);
-    } else if(sys === 'braced'){
-      bays.forEach(function(b){
-        L.line([b[0],Ly,H-1],[b[1],Ly,zb+1], PAL.member, 1.8, { 'class':'brace', 'data-i':0, 'data-dir':'back' });
-        L.line([b[1],Ly,H-1],[b[0],Ly,zb+1], PAL.member, 1.8, { 'class':'brace', 'data-i':0, 'data-dir':'fwd' });
-      });
-    }
-    if(!tilt){
-      // steel portal frame at the gable: columns and rafters
-      L.line([0,Ly,zb],[0,Ly,H], PAL.steel, 3.6).line([Wx,Ly,zb],[Wx,Ly,H], PAL.steel, 3.6);
-      L.line([0,Ly,H],[Wx/2,Ly,apex], PAL.steel, 3).line([Wx/2,Ly,apex],[Wx,Ly,H], PAL.steel, 3);
-      if(sys === 'moment'){
-        var hz = 12;
-        L.poly([[0,Ly,H-hz],[0,Ly,H],[hz,Ly,H+r*hz/(Wx/2)]], PAL.member, { stroke:null, 'class':'haunch', 'data-i':0 });
-        L.poly([[Wx,Ly,H-hz],[Wx,Ly,H],[Wx-hz,Ly,H+r*hz/(Wx/2)]], PAL.member, { stroke:null, 'class':'haunch', 'data-i':0 });
-        L.poly([[Wx/2-9,Ly,apex-r*9/(Wx/2)-5],[Wx/2,Ly,apex],[Wx/2+9,Ly,apex-r*9/(Wx/2)-5]], PAL.member, { stroke:null, 'class':'haunch', 'data-i':0 });
+      for(var cx = 0; cx <= Lx; cx += bay) L.line([cx,Ly,zb],[cx,Ly,H], PAL.steel, cx === 0 || cx === Lx ? 3 : 2.2);
+      // X-braced end bays (DonoBrace rods; Quake Defender devices in line when chosen)
+      if(sys === 'braced' || qd){
+        xBraceL(L, Ly, 3, bay-3, zb+1, H-2, 0, 1.6, qd);
+        xBraceL(L, Ly, Lx-bay+3, Lx-3, zb+1, H-2, 0, 1.6, qd);
       }
-    } else {
-      L.line([0,Ly,H],[Wx/2,Ly,apex], INK, 1.2).line([Wx/2,Ly,apex],[Wx,Ly,H], INK, 1.2);
+      // moment-connected column heads glow with demand
+      if(sys === 'moment'){
+        for(var hx = 0; hx <= Lx; hx += bay){
+          if(hx > 0) L.poly([[hx,Ly,H],[hx-6,Ly,H],[hx,Ly,H-6]], PAL.member, { stroke:null, 'class':'haunch', 'data-i':0 });
+          if(hx < Lx) L.poly([[hx,Ly,H],[hx+6,Ly,H],[hx,Ly,H-6]], PAL.member, { stroke:null, 'class':'haunch', 'data-i':0 });
+        }
+      }
     }
-    crackSets(L, Ly, 0, Wx, zb, Hw, 0);
-    return { storeys:1, storeyH:Hw, baseZ:zb, height:Hw+r, span:Wx, depth:Ly };
+    L.line([0,Ly,H],[Lx,Ly,H], INK, 1.2);
+    crackSets(L, Ly, 0, Lx, zb, Hw, 0);
+    return { storeys:1, storeyH:Hw, baseZ:zb, height:Hw+r, span:Lx, depth:Ly };
   }
 
   /* =========================================================
@@ -427,11 +445,7 @@
       cols.forEach(function(x){ if(!(shear && x === 0)) L.poly(qL(x,x+4,a0,a1,Ly), moment ? shade(PAL.column,-.15) : PAL.column, { sw:SW*0.5 }); });
       L.poly(qL(0,Lx,a1-4,a1,Ly), PAL.floorBand, { sw:SW*0.5 });
       // lateral system in the centre bay
-      if(P.quakeDefender) damperL(L, Ly, 42, a0+1, 78, a1-5, 1.1);
-      else if(sys === 'braced'){
-        L.line([42,Ly,a1-4],[78,Ly,a0+1], PAL.member, 1.6, { 'class':'brace', 'data-i':j, 'data-dir':'back' });
-        L.line([78,Ly,a1-4],[42,Ly,a0+1], PAL.member, 1.6, { 'class':'brace', 'data-i':j, 'data-dir':'fwd' });
-      }
+      if(P.quakeDefender || sys === 'braced') xBraceL(L, Ly, 42, 78, a0+1, a1-5, j, 1.5, !!P.quakeDefender);
       if(moment) cols.forEach(function(x){ L.poly(qL(x-1,x+5,a1-7,a1,Ly), PAL.member, { sw:0.4, 'class':'haunch', 'data-i':j }); });
       crackSets(L, Ly, 0, Lx, a0, h, j);
     }
