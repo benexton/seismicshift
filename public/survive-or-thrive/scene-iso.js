@@ -197,7 +197,7 @@
     // far roof slope (faces -y)
     function F(t, x){ return [x, Ly/2 - t*(Ly/2+5), H+r - t*(r + r*5/(Ly/2))]; }
     var fr = B.piece('roof', 'F', [F(0,0), F(0,10), F(1,0)]);
-    fr.poly([F(0,-5),F(0,Lx+5),F(1,Lx+5),F(1,-5)], shade(roofCol,-.25));
+    fr.poly([F(0,-5),F(0,Lx),F(1,Lx),F(1,-5)], shade(roofCol,-.25));
 
     // brick chimney on the far slope just behind the ridge, clear of any solar
     // panels (its own group, so it can topple)
@@ -242,6 +242,9 @@
     }
     B.piece('roof', 'R', planeR(Lx)).poly([[Lx,0,H],[Lx,Ly,H],[Lx,Ly/2,H+r]], wallR)
       .poly(ngonR(Ly/2, H+r*0.42, 3.4, Lx, 10), shade(PAL.glass,-.12), { sw:SW*0.7 });
+    // The far slope's overhang past the gable sits in front of the gable wall,
+    // so it's drawn after it (otherwise the wall cuts a notch in the roof line).
+    B.piece('roof', 'Fv', [F(0,0), F(0,10), F(1,0)]).poly([F(0,Lx),F(0,Lx+5),F(1,Lx+5),F(1,Lx)], shade(roofCol,-.25));
 
     // front-left face per storey
     for(var j = 0; j < n; j++){
@@ -310,7 +313,7 @@
 
     // far slope (faces -y)
     function F(t, x){ return [x, Ly/2 - t*(Ly/2+5), apex - t*(r + r*5/(Ly/2))]; }
-    B.piece('roof', 'F', [F(0,0), F(0,10), F(1,0)]).poly([F(0,-4),F(0,Lx+4),F(1,Lx+4),F(1,-4)], shade(roofCol,-.24));
+    B.piece('roof', 'F', [F(0,0), F(0,10), F(1,0)]).poly([F(0,-4),F(0,Lx),F(1,Lx),F(1,-4)], shade(roofCol,-.24));
 
     // gable end (front-right face, x = Lx): roller door, portal frame outline
     var R = B.piece('s0', 'R', planeR(Lx));
@@ -328,6 +331,8 @@
       R.line([Lx,0,zb],[Lx,0,H], PAL.steel, 3).line([Lx,Ly,zb],[Lx,Ly,H], PAL.steel, 3);
       R.line([Lx,0,H],[Lx,Ly/2,apex], PAL.steel, 2.6).line([Lx,Ly/2,apex],[Lx,Ly,H], PAL.steel, 2.6);
     }
+    // far slope's overhang past the gable, drawn in front of the gable wall
+    B.piece('roof', 'Fv', [F(0,0), F(0,10), F(1,0)]).poly([F(0,Lx),F(0,Lx+4),F(1,Lx+4),F(1,Lx)], shade(roofCol,-.24));
 
     // near slope (faces +y): roof finish, solar, rooftop plant and signage
     function N(t, x){ return [x, Ly/2 + t*(Ly/2+6), apex - t*(r + r*6/(Ly/2))]; }
@@ -382,8 +387,10 @@
     L.poly(qL(74,88,zb,zb+26,Ly), PAL.rollDoor, { sw:SW*0.8 });
     if(!tilt){
       for(var cx = 0; cx <= Lx; cx += bay) L.line([cx,Ly,zb],[cx,Ly,H], PAL.steel, cx === 0 || cx === Lx ? 3 : 2.2);
-      // X-braced end bays (DonoBrace rods; Quake Defender devices in line when chosen)
-      if(sys === 'braced' || qd){
+      // X-braced end bays: a portal-frame shed always relies on wall bracing
+      // along its length, so every steel option shows it - plain rods, or
+      // with Quake Defender devices in line when chosen.
+      {
         xBraceL(L, Ly, 3, bay-3, zb+1, H-2, 0, 1.6, qd);
         xBraceL(L, Ly, Lx-bay+3, Lx-3, zb+1, H-2, 0, 1.6, qd);
       }
