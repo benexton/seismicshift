@@ -131,6 +131,9 @@
   .btn-secondary{background:var(--card);color:var(--ink-2);border:2px solid var(--line-2);}
   .btn-secondary:hover:not(:disabled){border-color:#94a3b8;}
   .btn-shake{background:var(--danger);border:2px solid var(--danger);color:#fff;font-size:19px;font-weight:900;padding:18px;box-shadow:0 8px 18px -8px rgba(220,38,38,.75);}
+  /* As big and bold as the red buttons, in the calmer brand blue. */
+  .btn-feature{background:var(--brand);border:2px solid var(--brand);color:#fff;font-size:19px;font-weight:900;padding:18px;box-shadow:0 8px 18px -8px rgba(23,99,143,.75);}
+  .btn-feature:hover:not(:disabled){background:var(--brand-dark);border-color:var(--brand-dark);}
   .btn + .btn, .mt{margin-top:10px;}
   .nav-buttons{margin-top:auto;padding-top:24px;}
 
@@ -459,7 +462,7 @@
     <div id="whatif-slot"></div>
 
     <div class="nav-buttons">
-      <button class="btn btn-primary" id="btn-to-leaderboard">Enter the Leaderboard</button>
+      <button class="btn btn-feature" id="btn-to-leaderboard">Enter the Leaderboard</button>
       <button class="btn btn-secondary" id="btn-retest">Test Again at This Earthquake Level</button>
       <button class="btn btn-secondary" id="btn-build-again">Build Again</button>
       <button class="btn btn-secondary" id="btn-share">Share Your Result</button>
