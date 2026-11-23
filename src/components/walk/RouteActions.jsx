@@ -1,10 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { mapsRouteUrls, openMapsLink, isIosStandalone } from '../../lib/mapsRoute'
 import { WALK } from './theme'
 import regularFontUrl from '../../assets/fonts/NotoSans-Regular.ttf?url'
 import boldFontUrl from '../../assets/fonts/NotoSans-Bold.ttf?url'
 
 const primary = 'px-4 py-2.5 rounded-lg font-bold text-sm text-white transition-opacity hover:opacity-90 disabled:opacity-60'
+
+// What the two buttons do on this device, shown under them.
+const OPENS_NOTE = {
+  tab: 'Google Maps opens in the Maps app or a new tab, and the info pack opens in a new tab, so this page stays where it is.',
+  download: 'Google Maps opens in the Maps app or a new tab, and the info pack downloads to your phone. This page stays where it is.',
+  share: 'Google Maps opens in the Maps app or a new window. When your info pack is ready, tap "Open your info pack" to open it in Books or Files. This page stays where it is.',
+}
 
 // The two outputs of a planned route: the whole walk in Google Maps for
 // directions (and automatic rerouting if people wander), and a PDF of every
@@ -15,6 +22,14 @@ export default function RouteActions({ orderedPoints, stops, legs, startName, lo
   const [failed, setFailed] = useState(false)
   // A finished PDF waiting for a second tap (installed iPhone app only - see below).
   const [ready, setReady] = useState(null)
+  // Where the PDF ends up on this device (see makePack), so the note under
+  // the buttons can say what will happen. Worked out after mount: the page
+  // is pre-rendered without a browser.
+  const [pdfOpens, setPdfOpens] = useState('tab')
+  useEffect(() => {
+    if (isIosStandalone()) setPdfOpens('share')
+    else if (/Android/i.test(navigator.userAgent)) setPdfOpens('download')
+  }, [])
   const urls = mapsRouteUrls(orderedPoints, loop)
 
   /* The PDF opens in a new tab, so the walk stays where it was. The tab has to
@@ -87,7 +102,7 @@ export default function RouteActions({ orderedPoints, stops, legs, startName, lo
             style={{ backgroundColor: WALK.maroon }}
             onClick={(e) => { window.gtag?.('event', 'full_route_opened', { parts: 1 }); openMapsLink(e, urls[0]) }}
           >
-            Google Maps route
+            Google Maps route <span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span>
           </a>
         ) : (
           <div className="inline-flex items-center gap-1.5">
@@ -100,10 +115,10 @@ export default function RouteActions({ orderedPoints, stops, legs, startName, lo
                 rel="noopener noreferrer"
                 className={primary}
                 style={{ backgroundColor: WALK.maroon }}
-                aria-label={`Google Maps route, part ${i + 1} of ${urls.length}`}
+                aria-label={`Google Maps route, part ${i + 1} of ${urls.length} (opens in a new tab)`}
                 onClick={(e) => { window.gtag?.('event', 'full_route_opened', { parts: urls.length, part: i + 1 }); openMapsLink(e, url) }}
               >
-                Part {i + 1}
+                Part {i + 1} <span aria-hidden="true">↗</span>
               </a>
             ))}
           </div>
@@ -114,11 +129,12 @@ export default function RouteActions({ orderedPoints, stops, legs, startName, lo
           </button>
         ) : (
           <button type="button" onClick={makePack} disabled={busy} className={primary} style={{ backgroundColor: WALK.ink }}>
-            {busy ? 'Making your PDF...' : 'Info pack (PDF)'}
+            {busy ? 'Making your PDF...' : <>Info pack (PDF) <span aria-hidden="true">{pdfOpens === 'download' ? '↓' : '↗'}</span>{pdfOpens === 'tab' && <span className="sr-only"> (opens in a new tab)</span>}</>}
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-500 mt-2">
+      <p className="text-xs text-slate-600 mt-2 font-semibold">{OPENS_NOTE[pdfOpens]}</p>
+      <p className="text-xs text-slate-500 mt-1">
         <span className="font-semibold text-slate-700">On a phone, install the Google Maps app first.</span>{' '}
         Opened in a phone browser instead, Google Maps may not show every stop.
         {urls.length > 1 && ` Google takes about 10 stops per link, so this walk is split into ${urls.length} parts: open part 1, then the next part when you reach its last stop.`}
