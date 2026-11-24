@@ -478,8 +478,8 @@
 
 </div>
 
-<script src="/survive-or-thrive/model.js?v=2026-11-25"></script>
-<script src="/survive-or-thrive/scene-iso.js?v=2026-11-24"></script>
+<script src="/survive-or-thrive/model.js?v=2026-11-25b"></script>
+<script src="/survive-or-thrive/scene-iso.js?v=2026-11-25b"></script>
 <script>
 (function(){
   "use strict";
@@ -1491,6 +1491,13 @@
           (function(k){
             var c = clamp((fracX - (sched.collapse + 0.045*order.indexOf(k)))/0.17, 0, 1), b = 1.45*c*c, cb = Math.cos(b), sb = Math.sin(b);
             maps['tp'+k] = function(p){ return s0([p[0], Ly + (p[1]-Ly)*cb + (p[2]-zb)*sb, zb - (p[1]-Ly)*sb + (p[2]-zb)*cb]); };
+            // Standing, a panel sits behind the roof's eave; once it tips
+            // outward it's in front of the roof, so bring it forward (the
+            // scene is rebuilt before every shake, so this never carries over).
+            if(c > 0 && !landed['front'+k]){
+              landed['front'+k] = true;
+              SCENE.pieces.forEach(function(pc){ if(pc.group==='tp'+k) SCENE.cam.insertBefore(pc.el, SCENE.fx); });
+            }
             if(c >= 1 && !landed['tp'+k]){
               landed['tp'+k] = true;
               var pts = []; for(var x=k*info.bay; x<=(k+1)*info.bay; x+=8) pts.push(maps['tp'+k]([x, Ly, zb+h]));
@@ -1681,7 +1688,7 @@
     var derived = result.derived;
     var prot = result.design.protections;
     var qName = M.QUAKES[result.levelKey].label.toLowerCase();
-    var chimney = L.chimneyFell ? ' The brick chimney came down - a classic life-safety hazard.' : '';
+    var chimney = L.chimneyFell ? ' The brick chimney still came down - a serious hazard to anyone inside or below it.' : '';
     if(L.state==='collapse'){
       if(derived.massFactor > 1.2) return 'The extra weight up on the roof was never part of the structural design. In a '+qName+' earthquake it pushed the structure past what it could take, and it collapsed.' + chimney;
       return 'The '+qName+' earthquake asked the structure to deform further than it could, and it collapsed.' + chimney;
@@ -1692,7 +1699,9 @@
           ? "The FrontFoot dampers in the floor slab kept most of the ground's motion from ever reaching the home above."
           : "Base isolation kept most of the ground's motion from ever reaching the structure above.";
       }
-      if(!derived.isHouse && prot.quakeDefender) return "Quake Defender soaked up the shaking's energy and kept the structure elastic - it's back in use straight away.";
+      if(!derived.isHouse && prot.quakeDefender) return L.state==='none'
+        ? "Quake Defender soaked up the shaking's energy and kept the structure elastic - it's back in use straight away."
+        : "Quake Defender soaked up the shaking's energy and kept the structure elastic - just some cosmetic cracking to patch.";
       return L.state==='none'
         ? 'Your structure stayed elastic - no damage at all.'
         : 'Your structure stayed elastic - just some cosmetic cracking to patch.';
@@ -1701,7 +1710,12 @@
     if(derived.isolated) return 'The isolators kept most of the shaking out, but the structure above still yielded - repairable damage.' + chimney;
     var what = SYSTEM_DAMAGE[result.design.systemKey];
     if(L.state==='moderate') return 'Your building rode it out with repairable damage - '+what+". Expect weeks of repairs before it's fully back in use." + chimney;
-    return 'Everyone got out safely - which is what building codes design for - but the damage is heavy: '+what+'. After the 2011 Christchurch earthquake, many buildings like this were demolished rather than repaired.' + chimney;
+    // The code's life-safety target is the design-level (strong) quake; in
+    // the major one, getting everyone out is beyond what it asks. The
+    // Christchurch demolition point is left to the concept card below.
+    return (result.levelKey===M.DESIGN_QUAKE
+      ? 'Everyone got out safely - which is what building codes design for - but the damage is heavy: '
+      : 'Everyone got out safely, even in an earthquake beyond what the code designs for, but the damage is heavy: ')+what+'.' + chimney;
   }
 
   function pickConcept(result){
@@ -1972,9 +1986,7 @@
     var kx = S.project(uv(1,0,0))[0] - S.project(uv(0,0,0))[0];
     var placed = picks.map(function(pk){
       maxHalf = Math.max(maxHalf, (pk.w + pk.dep)*R2/2);
-      // The landing shed is drawn without the concrete yard and the long
-      // wall's window strip (the shake test keeps both).
-      var r = S.render(pk.d, { noIsland:true, noYard:true, noWallWindow:true, margin:0 });
+      var r = S.render(pk.d, { noIsland:true, margin:0 });
       var c0 = uv(0, 0, 0);
       var so0 = S.project([c0[0] - pk.w/2, c0[1] - pk.dep/2, 0]);
       // Drawn left/right edges on screen when the footprint centre is at u = 0.

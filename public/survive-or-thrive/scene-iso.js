@@ -149,20 +149,16 @@
   }
 
   /* ---------- ground: grass island, foundation slab, optional isolator layer ---------- */
-  // yard: depth of a concrete yard along the front-left side (industrial),
-  // deep enough for a fallen tilt-up panel to land on.
-  function ground(B, X, Y, isolated, isHouse, yard){
-    var e = 16, ef = yard ? yard + 8 : 18;
+  // apron: extra depth of grass along the front-left side, for a fallen
+  // tilt-up panel to land on (plain grass, no concrete).
+  function ground(B, X, Y, isolated, isHouse, apron){
+    var e = 16, ef = apron ? apron + 8 : 18;
     var T = B.piece('ground', 'T', planeT(0));
     if(!NO_ISLAND){
       var L = B.piece('ground', 'L', planeL(Y+ef)), R = B.piece('ground', 'R', planeR(X+e));
       L.poly(qL(-e, X+e, -22, -9, Y+ef), PAL.soil, { sw:SW*0.8 }).poly(qL(-e, X+e, -9, 0, Y+ef), PAL.grassSide, { sw:SW*0.8 });
       R.poly(qR(-e, Y+ef, -22, -9, X+e), shade(PAL.soil,-.18), { sw:SW*0.8 }).poly(qR(-e, Y+ef, -9, 0, X+e), shade(PAL.grassSide,-.14), { sw:SW*0.8 });
       T.poly(qT(-e, X+e, -e, Y+ef, 0), PAL.grass, { sw:SW*0.8 });
-    }
-    if(yard){
-      T.poly(qT(-8, X+8, Y+4, Y+yard, 0.15), '#d4d8dc', { sw:SW*0.6 });
-      for(var jx = -8 + (X+16)/5; jx < X+8; jx += (X+16)/5) T.line([jx, Y+4, 0.15], [jx, Y+yard, 0.15], '#b9c0c7', 0.7);
     }
     // foundation slab
     var sL = B.piece('ground', 'slabL', planeL(Y+4)), sR = B.piece('ground', 'slabR', planeR(X+4)), sT = B.piece('ground', 'slabT', planeT(SLAB_H));
@@ -308,16 +304,15 @@
      along the building's length (x). In that direction the portal frames
      do little: the long side walls resist it through X-braced end bays of
      DonoBrace tension-only rods - where Quake Defender devices go, per the
-     V26.10 methodology - or through tilt-up concrete panels, or through
-     moment-connected column heads.
+     V26.10 methodology - or through tilt-up concrete panels.
   ========================================================= */
   function drawIndustrial(B, d){
     var Lx = 160, Ly = 100, Hw = 56, r = 18, bay = 32;
     var P = d.protections || {}, A = d.additions || {}, sys = d.systemKey;
     var isolated = !!P.isolation;
-    var zb = ground(B, Lx, Ly, isolated, false, NO_YARD ? 0 : Hw + 6);
-    var H = zb + Hw, apex = H + r;
     var tilt = sys === 'shearwalls', qd = !!P.quakeDefender;
+    var zb = ground(B, Lx, Ly, isolated, false, tilt ? Hw + 6 : 0);
+    var H = zb + Hw, apex = H + r;
     var wallCol = tilt ? PAL.conc : PAL.clad, wallR = shade(wallCol,-.16);
     var roofCol = A.greenroof ? PAL.green : PAL.iron;
     function zr(y){ return H + r*(1-Math.abs(y-Ly/2)/(Ly/2)); }
@@ -353,44 +348,48 @@
     // far slope's overhang past the gable, drawn in front of the gable wall
     B.piece('roof', 'Fv', [F(0,0), F(0,10), F(1,0)]).poly([F(0,Lx),F(0,Lx+4),F(1,Lx+4),F(1,Lx)], shade(roofCol,-.24));
 
-    // near slope (faces +y): roof finish, solar, rooftop plant and signage
-    function N(t, x){ return [x, Ly/2 + t*(Ly/2+6), apex - t*(r + r*6/(Ly/2))]; }
-    function zSlope(y){ return apex - (y-Ly/2)/(Ly/2+6)*(r + r*6/(Ly/2)); }
-    var ns = B.piece('roof', 'N', [N(0,0), N(0,10), N(1,0)]);
-    ns.poly([N(0,-4),N(0,Lx+4),N(1,Lx+4),N(1,-4)], roofCol);
-    if(A.greenroof){
-      for(var gx = 6; gx < Lx; gx += 11) for(var gt = 0.12; gt < 1; gt += 0.19){ var g0 = N(gt, gx); ns.line(g0, [g0[0], g0[1], g0[2]+3], PAL.tuft, 0.9); }
-    } else {
-      for(var rx = 4; rx < Lx; rx += 8) ns.line(N(0.03,rx), N(0.97,rx), shade(roofCol,-.16), 0.6);
-    }
-    if(A.solar){
-      // panels kept to the right-hand part of the slope, clear of the plant platform
-      for(var c = 0; c < 4; c++){
-        var x0 = 52 + c*27, x1 = x0 + 23;
-        ns.poly([N(.12,x0),N(.12,x1),N(.46,x1),N(.46,x0)], PAL.solar, { sw:SW*0.55 });
-        ns.poly([N(.54,x0),N(.54,x1),N(.88,x1),N(.88,x0)], PAL.solar, { sw:SW*0.55 });
-        ns.line(N(.29,x0+1), N(.29,x1-1), PAL.solarLine, 0.6).line(N(.71,x0+1), N(.71,x1-1), PAL.solarLine, 0.6);
+    // near slope (faces +y): roof finish, solar, rooftop plant and signage.
+    // Drawn after the long wall, so the eave overhang sits in front of the
+    // wall top (as on the home) instead of the wall painting over it.
+    function nearRoof(){
+      function N(t, x){ return [x, Ly/2 + t*(Ly/2+6), apex - t*(r + r*6/(Ly/2))]; }
+      function zSlope(y){ return apex - (y-Ly/2)/(Ly/2+6)*(r + r*6/(Ly/2)); }
+      var ns = B.piece('roof', 'N', [N(0,0), N(0,10), N(1,0)]);
+      ns.poly([N(0,-4),N(0,Lx+4),N(1,Lx+4),N(1,-4)], roofCol);
+      if(A.greenroof){
+        for(var gx = 6; gx < Lx; gx += 11) for(var gt = 0.12; gt < 1; gt += 0.19){ var g0 = N(gt, gx); ns.line(g0, [g0[0], g0[1], g0[2]+3], PAL.tuft, 0.9); }
+      } else {
+        for(var rx = 4; rx < Lx; rx += 8) ns.line(N(0.03,rx), N(0.97,rx), shade(roofCol,-.16), 0.6);
       }
-    }
-    ns.line([-4,Ly/2,apex],[Lx+4,Ly/2,apex], shade(roofCol,-.42), 2.4);
-    if(A.signage){
-      // billboard on two posts along the ridge, at the gable end
-      var sy = Ly/2, sz0 = apex + 7, sz1 = sz0 + 16;
-      var sg = B.piece('roof', 'sign', planeL(sy));
-      sg.line([112,sy,apex],[112,sy,sz0], PAL.steel, 1.8).line([140,sy,apex],[140,sy,sz0], PAL.steel, 1.8);
-      sg.poly(qL(102,150,sz0,sz1,sy), PAL.sign, { stroke:PAL.brand, sw:SW });
-      sg.line([108,sy,sz0+10],[142,sy,sz0+10], '#ffffff', 1.4, { 'stroke-opacity':0.75 }).line([108,sy,sz0+5],[130,sy,sz0+5], '#ffffff', 1.4, { 'stroke-opacity':0.75 });
-      // plant unit on a level steel platform at the other end of the slope
-      var py0 = Ly/2 + 8, py1 = Ly/2 + 30, px0 = 8, px1 = 36, deck = zSlope(py0) + 1.5;
-      var legs = B.piece('roof', 'legs', planeL(py1));
-      [px0+1, px1-1].forEach(function(x){ legs.line([x,py1,zSlope(py1)],[x,py1,deck], PAL.steel, 1.6); });
-      legs.poly(qL(px0,px1,deck-2,deck,py1), shade(PAL.steel,.25), { sw:SW*0.6 });
-      B.piece('roof', 'legsR', planeR(px1)).poly(qR(py0,py1,deck-2,deck,px1), shade(PAL.steel,.1), { sw:SW*0.6 })
-        .line([px1,py0+1,zSlope(py0+1)],[px1,py0+1,deck-2], PAL.steel, 1.2);
-      B.piece('roof', 'deck', planeT(deck)).poly(qT(px0,px1,py0,py1,deck), shade(PAL.steel,.45), { sw:SW*0.6 });
-      box(B, 'roof', 'plant', px0+4, px1-4, py0+3, py1-3, deck, deck+12, PAL.plant);
-      var fan = []; for(var k = 0; k < 14; k++){ var a = 2*Math.PI*k/14; fan.push([(px0+px1)/2 + 6*Math.cos(a), (py0+py1)/2 + 6*Math.sin(a), deck+12]); }
-      B.piece('roof', 'plantT', planeT(deck+12)).poly(fan, shade(PAL.plant,-.25), { sw:0.8 });
+      if(A.solar){
+        // panels kept to the right-hand part of the slope, clear of the plant platform
+        for(var c = 0; c < 4; c++){
+          var x0 = 52 + c*27, x1 = x0 + 23;
+          ns.poly([N(.12,x0),N(.12,x1),N(.46,x1),N(.46,x0)], PAL.solar, { sw:SW*0.55 });
+          ns.poly([N(.54,x0),N(.54,x1),N(.88,x1),N(.88,x0)], PAL.solar, { sw:SW*0.55 });
+          ns.line(N(.29,x0+1), N(.29,x1-1), PAL.solarLine, 0.6).line(N(.71,x0+1), N(.71,x1-1), PAL.solarLine, 0.6);
+        }
+      }
+      ns.line([-4,Ly/2,apex],[Lx+4,Ly/2,apex], shade(roofCol,-.42), 2.4);
+      if(A.signage){
+        // billboard on two posts along the ridge, at the gable end
+        var sy = Ly/2, sz0 = apex + 7, sz1 = sz0 + 16;
+        var sg = B.piece('roof', 'sign', planeL(sy));
+        sg.line([112,sy,apex],[112,sy,sz0], PAL.steel, 1.8).line([140,sy,apex],[140,sy,sz0], PAL.steel, 1.8);
+        sg.poly(qL(102,150,sz0,sz1,sy), PAL.sign, { stroke:PAL.brand, sw:SW });
+        sg.line([108,sy,sz0+10],[142,sy,sz0+10], '#ffffff', 1.4, { 'stroke-opacity':0.75 }).line([108,sy,sz0+5],[130,sy,sz0+5], '#ffffff', 1.4, { 'stroke-opacity':0.75 });
+        // plant unit on a level steel platform at the other end of the slope
+        var py0 = Ly/2 + 8, py1 = Ly/2 + 30, px0 = 8, px1 = 36, deck = zSlope(py0) + 1.5;
+        var legs = B.piece('roof', 'legs', planeL(py1));
+        [px0+1, px1-1].forEach(function(x){ legs.line([x,py1,zSlope(py1)],[x,py1,deck], PAL.steel, 1.6); });
+        legs.poly(qL(px0,px1,deck-2,deck,py1), shade(PAL.steel,.25), { sw:SW*0.6 });
+        B.piece('roof', 'legsR', planeR(px1)).poly(qR(py0,py1,deck-2,deck,px1), shade(PAL.steel,.1), { sw:SW*0.6 })
+          .line([px1,py0+1,zSlope(py0+1)],[px1,py0+1,deck-2], PAL.steel, 1.2);
+        B.piece('roof', 'deck', planeT(deck)).poly(qT(px0,px1,py0,py1,deck), shade(PAL.steel,.45), { sw:SW*0.6 });
+        box(B, 'roof', 'plant', px0+4, px1-4, py0+3, py1-3, deck, deck+12, PAL.plant);
+        var fan = []; for(var k = 0; k < 14; k++){ var a = 2*Math.PI*k/14; fan.push([(px0+px1)/2 + 6*Math.cos(a), (py0+py1)/2 + 6*Math.sin(a), deck+12]); }
+        B.piece('roof', 'plantT', planeT(deck+12)).poly(fan, shade(PAL.plant,-.25), { sw:0.8 });
+      }
     }
 
     // long side wall (front-left face, y = Ly): where the lateral system lives
@@ -405,17 +404,12 @@
         tp.pl([[px+bay*.3,Ly,zb+2],[px+bay*.38,Ly,zb+Hw*.25],[px+bay*.32,Ly,zb+Hw*.45]], '#dc2626', 1.1, { 'class':'crack', 'data-stage':'1', 'data-i':0, opacity:0 });
         tp.pl([[px+3,Ly,zb+Hw*.75],[px+bay*.5,Ly,zb+Hw*.42],[px+bay-4,Ly,zb+3]], '#dc2626', 1.6, { 'class':'crack', 'data-stage':'2', 'data-i':0, opacity:0 });
       }
+      nearRoof();
       return { storeys:1, storeyH:Hw, baseZ:zb, height:Hw+r, span:Lx, depth:Ly, panels:Lx/bay, bay:bay };
     }
     var L = B.piece('s0', 'L', planeL(Ly));
     L.poly(qL(0,Lx,zb,H,Ly), wallCol);
-    {
-      for(var x = 6; x < Lx; x += 6) L.line([x,Ly,zb+1],[x,Ly,H-1], PAL.rib, 0.7);
-      if(!NO_WALL_WINDOW){
-        L.poly(qL(bay+4,Lx-bay-4,H-19,H-12,Ly), PAL.glass, { sw:SW*0.6 });
-        for(var w = bay*2; w < Lx-bay; w += bay) L.line([w,Ly,H-19],[w,Ly,H-12], PAL.frame, 1.1);
-      }
-    }
+    for(var x = 6; x < Lx; x += 6) L.line([x,Ly,zb+1],[x,Ly,H-1], PAL.rib, 0.7);
     L.poly(qL(74,88,zb,zb+26,Ly), PAL.rollDoor, { sw:SW*0.8 });
     {
       for(var cx = 0; cx <= Lx; cx += bay) L.line([cx,Ly,zb],[cx,Ly,H], PAL.steel, cx === 0 || cx === Lx ? 3 : 2.2);
@@ -426,16 +420,10 @@
         xBraceL(L, Ly, 3, bay-3, zb+1, H-2, 0, 1.6, qd);
         xBraceL(L, Ly, Lx-bay+3, Lx-3, zb+1, H-2, 0, 1.6, qd);
       }
-      // moment-connected column heads glow with demand
-      if(sys === 'moment'){
-        for(var hx = 0; hx <= Lx; hx += bay){
-          if(hx > 0) L.poly([[hx,Ly,H],[hx-6,Ly,H],[hx,Ly,H-6]], PAL.member, { stroke:null, 'class':'haunch', 'data-i':0 });
-          if(hx < Lx) L.poly([[hx,Ly,H],[hx+6,Ly,H],[hx,Ly,H-6]], PAL.member, { stroke:null, 'class':'haunch', 'data-i':0 });
-        }
-      }
     }
     L.line([0,Ly,H],[Lx,Ly,H], INK, 1.2);
     crackSets(L, Ly, 0, Lx, zb, Hw, 0);
+    nearRoof();
     return { storeys:1, storeyH:Hw, baseZ:zb, height:Hw+r, span:Lx, depth:Ly };
   }
 
@@ -519,15 +507,13 @@
   /* ---------- entry point ---------- */
   // opts.noIsland: leave out the grass island, for scenes that put several
   // buildings on one shared ground (the landing page).
-  // opts.noYard / opts.noWallWindow: leave out the industrial shed's concrete
-  // yard and the window strip on its long wall (the landing page).
-  var NO_ISLAND = false, NO_YARD = false, NO_WALL_WINDOW = false;
+  var NO_ISLAND = false;
   function render(d, opts){
     opts = opts || {};
-    NO_ISLAND = !!opts.noIsland; NO_YARD = !!opts.noYard; NO_WALL_WINDOW = !!opts.noWallWindow;
+    NO_ISLAND = !!opts.noIsland;
     var B = new Builder();
     var info = d.typeKey === 'house' ? drawHouse(B, d) : (d.typeKey === 'industrial' ? drawIndustrial(B, d) : drawCommercial(B, d));
-    NO_ISLAND = false; NO_YARD = false; NO_WALL_WINDOW = false;
+    NO_ISLAND = false;
     var m = opts.margin == null ? 10 : opts.margin;
     var vb = [B.minX - m, B.minY - m - (opts.headroom || 0), (B.maxX - B.minX) + 2*m, (B.maxY - B.minY) + 2*m + (opts.headroom || 0)];
     return { markup:B.markup(), viewBox:vb, pieces:B.pieces.map(function(pc){ return { key:pc.key, group:pc.group, ref:pc.ref }; }), info:info };

@@ -76,6 +76,10 @@
     shearwalls: { key:'shearwalls', label:'Shear Walls',   desc:'Solid walls give strong lateral resistance.' }
   };
   var STANDARD_SYSTEM_ORDER = ['moment','braced','shearwalls'];
+  // The industrial building is assessed along its length, where a real
+  // portal-frame shed is held by wall bracing or tilt-up panels - the
+  // portals themselves only act across it - so a moment frame isn't offered.
+  var INDUSTRIAL_SYSTEM_ORDER = ['braced','shearwalls'];
 
   /* Structural behaviour of each system, per building type, as designed
      (before protection options and add-ons):
@@ -93,7 +97,6 @@
       plywood:       { T:0.20, Cy:0.85, zeta:0.10, muCap:8 }
     },
     industrial: {
-      moment:     { T:0.60, Cy:0.32, zeta:0.05, muCap:8 },
       braced:     { T:0.35, Cy:0.55, zeta:0.05, muCap:6 },
       shearwalls: { T:0.20, Cy:0.90, zeta:0.05, muCap:4 }
     },
@@ -146,7 +149,7 @@
   var PRICES = {
     house:      { plasterboard:0, plywood:0.5,
                   frontfootDampers:2, lightweight:1, upspecBracing:0.5 },
-    industrial: { moment:0, braced:0.5, shearwalls:3,
+    industrial: { braced:0, shearwalls:2.5,
                   quakeDefender:1.5, isolation:8 },
     commercial: { moment:1.5, braced:0, shearwalls:1,
                   quakeDefender:2, isolation:5 }
@@ -190,7 +193,7 @@
      structures reach collapse sooner. Applies to the major quake only, so
      no design collapses in the design-level (strong) quake. Calibrated
      2026-11-23 so most conventional designs collapse in the major quake
-     while plywood homes, portal frames and protected designs don't. */
+     while plywood homes and protected designs don't. */
   var MAJOR_CAPACITY_FACTOR = 0.75;
 
   // Protection / add-on behaviour.
@@ -203,9 +206,9 @@
   // Copy of a set of option definitions with this type's prices attached:
   // `cost` for systems and protections; `installCost`, `value` and the
   // net `budgetBonus` for add-ons.
-  function priced(defs, typeKey, isAddon){
+  function priced(defs, typeKey, isAddon, order){
     var out = {};
-    Object.keys(defs).forEach(function(k){
+    (order || Object.keys(defs)).forEach(function(k){
       var o = {};
       Object.keys(defs[k]).forEach(function(f){ o[f] = defs[k][f]; });
       if(isAddon){
@@ -226,10 +229,11 @@
   function pools(typeKey){
     if(poolCache[typeKey]) return poolCache[typeKey];
     var isHouse = BUILDING_TYPES[typeKey].category==='house';
+    var systemOrder = isHouse ? HOUSE_SYSTEM_ORDER : (typeKey==='industrial' ? INDUSTRIAL_SYSTEM_ORDER : STANDARD_SYSTEM_ORDER);
     return (poolCache[typeKey] = {
       isHouse: isHouse,
-      systems: priced(isHouse ? HOUSE_SYSTEMS : STANDARD_SYSTEMS, typeKey, false),
-      systemOrder: isHouse ? HOUSE_SYSTEM_ORDER : STANDARD_SYSTEM_ORDER,
+      systems: priced(isHouse ? HOUSE_SYSTEMS : STANDARD_SYSTEMS, typeKey, false, systemOrder),
+      systemOrder: systemOrder,
       protections: priced(isHouse ? HOUSE_PROTECTIONS : STANDARD_PROTECTIONS, typeKey, false),
       protectionOrder: isHouse ? HOUSE_PROTECTION_ORDER : STANDARD_PROTECTION_ORDER,
       additions: priced(isHouse ? HOUSE_ADDITIONS : STANDARD_ADDITIONS, typeKey, true),
@@ -471,6 +475,16 @@
   ========================================================= */
   var MIN_SURVIVOR_SCORE = 5;
   var OTHER_SCORE_CAP = 84;
+  // Non-featured scores above SOFT_CAP_FROM are compressed into
+  // SOFT_CAP_FROM..OTHER_SCORE_CAP rather than cut off at the cap, so a
+  // better design still outranks a worse one and 80+ stays 80+.
+  var SOFT_CAP_FROM = 80;
+  function softCap(x){
+    return x <= SOFT_CAP_FROM ? x : SOFT_CAP_FROM + (OTHER_SCORE_CAP-SOFT_CAP_FROM)*(Math.min(x,100)-SOFT_CAP_FROM)/(100-SOFT_CAP_FROM);
+  }
+  // Upgrade ladders: a later system is a straight upgrade on an earlier one
+  // (same building otherwise). Other systems are alternatives, not upgrades.
+  var SYSTEM_LADDER = { house:['plasterboard','plywood'] };
   var FEATURED_MIN = 85, FEATURED_MAX = 100;
 
   /* Cost efficiency: every 1% of build cost spent on the structure and
@@ -491,6 +505,20 @@
     var derived = derive(d);
     var levels = {};
     QUAKE_ORDER.forEach(function(k){ levels[k] = assess(d, derived, k); });
+    // Add-ons only ever add weight up high, so they never make a building
+    // perform better. (Without this, a heavier roof could lengthen the
+    // period into a calmer part of the spectrum, or a Quake Defender sized
+    // for the heavier building could come out slightly ahead.) Each quake's
+    // result is held to no better than the same design without add-ons.
+    if(chosen(d.additions, pools(d.typeKey).additions).length){
+      var bare = { typeKey:d.typeKey, systemKey:d.systemKey, protections:d.protections, additions:{} };
+      var bd = derive(bare);
+      QUAKE_ORDER.forEach(function(k){
+        var b = assess(bare, bd, k), L = levels[k];
+        if(b.points < L.points) L.points = b.points;
+        if(DAMAGE_ORDER.indexOf(b.state) > DAMAGE_ORDER.indexOf(L.state)){ L.state = b.state; L.tier = DAMAGE[b.state].tier; }
+      });
+    }
     return { derived:derived, levels:levels, raw:rawScore(levels) };
   }
 
@@ -517,10 +545,10 @@
   function perfOf(raw, lo, hi){ return hi > lo ? 100*clamp((raw-lo)/(hi-lo), 0, 1) : 100; }
   function efficiencyOf(d){ return computeEfficiency(spentDesign(d)+spentProtections(d)); }
 
-  /* Everything the results screen and the leaderboard need. */
-  function evaluate(d){
+  // The score from this design's own performance and spend.
+  function ownScore(d, a){
     var P = pools(d.typeKey);
-    var a = assessAll(d);
+    a = a || assessAll(d);
     var featured = !!(d.protections && d.protections[P.featuredKey]);
     var rng = typeRanges(d.typeKey);
     var performance = perfOf(a.raw, rng.lo, rng.hi);
@@ -530,7 +558,50 @@
     if(eligible){
       score = featured
         ? clamp(Math.round(FEATURED_MAX * performance*efficiency / rng.fbest), FEATURED_MIN, FEATURED_MAX)
-        : clamp(Math.round(performance*efficiency), MIN_SURVIVOR_SCORE, OTHER_SCORE_CAP);
+        : clamp(Math.round(softCap(performance*efficiency)), MIN_SURVIVOR_SCORE, OTHER_SCORE_CAP);
+    }
+    return { featured:featured, performance:performance, efficiency:efficiency, eligible:eligible, score:score };
+  }
+
+  /* The same building with fewer upgrades: any subset of its protections,
+     on its own system or one lower down its upgrade ladder. */
+  function lesserDesigns(d){
+    var P = pools(d.typeKey);
+    var prot = chosen(d.protections, P.protections);
+    var ladder = SYSTEM_LADDER[d.typeKey] || [d.systemKey];
+    var top = ladder.indexOf(d.systemKey);
+    var systems = top < 0 ? [d.systemKey] : ladder.slice(0, top+1);
+    var out = [];
+    systems.forEach(function(sk){
+      for(var mask = 0; mask < (1<<prot.length); mask++){
+        var pm = {};
+        prot.forEach(function(k, i){ if(mask & (1<<i)) pm[k] = true; });
+        var ld = { typeKey:d.typeKey, systemKey:sk, protections:pm, additions:d.additions };
+        if(designKey(ld) !== designKey(d) && isValid(ld)) out.push(ld);
+      }
+    });
+    return out;
+  }
+
+  /* Everything the results screen and the leaderboard need. An upgrade
+     never lowers the score: a design scores at least as well as the same
+     building with fewer upgrades. Spending on something that doesn't help
+     just earns nothing (unspent budget still counts between different
+     routes, through the efficiency factor). */
+  var scoreCache = {};
+  function evaluate(d){
+    var a = assessAll(d);
+    var own = ownScore(d, a);
+    var featured = own.featured, performance = own.performance, efficiency = own.efficiency, eligible = own.eligible;
+    var score = own.score;
+    var key = designKey(d);
+    if(eligible){
+      if(scoreCache[key] == null){
+        var best = score;
+        lesserDesigns(d).forEach(function(ld){ best = Math.max(best, ownScore(ld).score); });
+        scoreCache[key] = best;
+      }
+      score = scoreCache[key];
     }
     return {
       derived:a.derived, levels:a.levels, raw:a.raw,
