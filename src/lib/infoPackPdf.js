@@ -7,6 +7,7 @@
 // taps the button. Noto Sans is embedded because the built-in PDF fonts cannot
 // draw macrons (Ōtautahi, Tūranga), which this content is full of.
 import { formatDistance, formatDuration, walkMinutes } from './geo'
+import { loadFont, wrap, saveBlob } from './pdfText'
 
 // A phone-shaped page (9:16), so a phone's PDF viewer shows each page at
 // close to full screen width and the text reads at a normal size without
@@ -23,12 +24,6 @@ const ACCESS_LABELS = {
   foyer_only: 'Foyer only',
   exterior_only: 'Exterior only',
   by_arrangement: 'By arrangement',
-}
-
-async function loadFont(url) {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error('font fetch failed')
-  return res.arrayBuffer()
 }
 
 // Photos are webp; PDF can only embed JPEG/PNG, so redraw through a canvas.
@@ -53,37 +48,6 @@ async function loadImageJpeg(src) {
   } catch {
     return null
   }
-}
-
-function clean(text) {
-  return String(text ?? '').replace(/\r/g, '').replace(/\t/g, ' ')
-}
-
-function wrap(text, font, size, maxWidth) {
-  const lines = []
-  for (const para of clean(text).split('\n')) {
-    let line = ''
-    for (let word of para.split(/\s+/).filter(Boolean)) {
-      // A single word wider than the column (long URLs) is broken by
-      // character so it can't run off the page.
-      while (font.widthOfTextAtSize(word, size) > maxWidth) {
-        if (line) { lines.push(line); line = '' }
-        let n = word.length - 1
-        while (n > 1 && font.widthOfTextAtSize(word.slice(0, n), size) > maxWidth) n -= 1
-        lines.push(word.slice(0, n))
-        word = word.slice(n)
-      }
-      const test = line ? `${line} ${word}` : word
-      if (font.widthOfTextAtSize(test, size) <= maxWidth) {
-        line = test
-      } else {
-        if (line) lines.push(line)
-        line = word
-      }
-    }
-    lines.push(line)
-  }
-  return lines
 }
 
 // stops: ordered stop objects; legs[i]: { meters } arriving at stops[i] or null.
@@ -197,12 +161,5 @@ export async function buildInfoPackPdf({ stops, legs, startName, loop, totalMete
 // Saves the PDF as a download - used where a new tab can't show it (Android)
 // or a pop-up was blocked. A download never replaces the walk page.
 export function downloadPdf(blob) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'seismic-walk-info-pack.pdf'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 10000)
+  saveBlob(blob, 'seismic-walk-info-pack.pdf')
 }

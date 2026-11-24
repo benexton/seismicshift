@@ -16,6 +16,9 @@ import {
   hazardC,
   hazardCs,
 } from '../lib/qdSizing'
+// Noto Sans for the summary PDF: the built-in PDF fonts can't draw μ, φ, Δ or θ.
+import regularFontUrl from '../assets/fonts/NotoSans-Regular.ttf?url'
+import boldFontUrl from '../assets/fonts/NotoSans-Bold.ttf?url'
 
 const BRAND = '#17638f'
 const EQ = '#c07c1c'
@@ -697,52 +700,203 @@ function AdrsChart({ s, input }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Calc sheet (plain text, ported from the reference prototype)
+// Summary PDF content. The layout lives in lib/qdSummaryPdf.js; this decides
+// what goes in it, from the same result the page shows. Noto Sans has no ≤ or
+// ≥, so limits are written as "max" and "min".
 // ─────────────────────────────────────────────────────────────────────────────
 
-function calcSheet(r) {
-  const { selected: R, input: inp, basis: B, donoBrace: db } = r
-  const u = R.uls
-  const c = R.cals
-  const L = []
-  L.push('QUAKE DEFENDER SIZING CALCULATOR - STEP 4 SIZING ONLY')
-  L.push('seismicshift.nz/quake-defender/sizing-calculator/')
-  L.push('Quake Defender Indicative NZ Single-Storey Design Methodology V26.10; NZS 1170.5:2004')
-  L.push('For sizing only. The real configuration is checked in your full structural model: re-run it with the selected size and complete the full design in your own calculations.')
-  L.push('')
-  L.push('INITIAL MODEL (DonoBrace only)')
-  L.push(`Brace ${inp.braceModel}; angle to direction of loading ${f(inp.angle, 1)} deg; elastic period T,e = ${f(inp.Te, 3)} s`)
-  L.push(`0.1g equivalent static case: critical brace force ${f(inp.Fe)} kN; axial elongation ${f(inp.ee, 2)} mm; roof displacement ${f(inp.De, 2)} mm`)
-  L.push(`Storey shear taken by other elements ${pct(inp.pShare, 0)}; h = ${f(inp.h, 2)} m`)
-  L.push(`Hazard Z = ${inp.Z}; soil ${inp.soil === 'AB' ? 'A/B' : inp.soil}; R,u = ${inp.R}; fault distance ${inp.faultD} km; wind brace force ${f(inp.wind)} kN; S,p = ${inp.Sp}; spectrum x ${spText(inp)} (${SP_METHOD_LABEL[inp.spMethod ?? 'marriott']}); R,s = ${inp.Rs}; lambda = ${inp.lamC}; k,dm = ${inp.kdm}`)
-  L.push(`Model check: load case V/W from T,e and roof displacement = ${f(B.SaM, 3)} g vs 0.1 g applied (ratio ${f(B.loadRatio, 2)}); brace share of roof displacement ${pct(B.phi, 0)}`)
-  L.push('')
-  L.push('SIZE COMPARISON (locking, ULS, CALS as demand / limit; mu actual)')
-  for (const s of QD_SIZES) {
-    const x = r.all[s]
-    L.push(`${label(s)}${s === r.modelSize ? ' (model)' : ' (estimated)'}: T,e ${f(x.Te, 3)} s; locking ${f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)}; ULS ${f(x.op.uls.ratio, 2)}; CALS ${f(x.op.cals.ratio, 2)}; mu ${x.uls ? f(x.uls.mu, 2) : '> ' + f(x.muStop, 2)}; ${x.pass ? 'PASS' : 'FAIL'}`)
+const PAGE_URL = 'seismicshift.nz/quake-defender/sizing-calculator/'
+const BASIS_LINE = 'Quake Defender Indicative NZ Single-Storey Design Methodology V26.10; NZS 1170.5:2004'
+const SOIL_LABEL = Object.fromEntries(SOIL_OPTIONS)
+
+function inputRows(inp) {
+  const num = (key, d) => [NUMERIC[key].label, f(inp[key], d)]
+  return [
+    ['DonoBrace size used in the initial elastic model', inp.braceModel],
+    num('angle', 1),
+    num('Te', 3),
+    num('Fe', 2),
+    num('ee', 2),
+    num('De', 2),
+    [NUMERIC.pShare.label, f(inp.pShare * 100, 0)],
+    num('h', 2),
+    [NUMERIC.Z.label, String(inp.Z)],
+    ['Site subsoil class', SOIL_LABEL[inp.soil] ?? inp.soil],
+    [NUMERIC.R.label, String(inp.R)],
+    [NUMERIC.faultD.label, String(inp.faultD)],
+    num('wind', 1),
+    ['S,p on the demand spectrum', `${SP_METHOD_LABEL[inp.spMethod ?? 'marriott']}: ${spText(inp)}`],
+    // The S,p field is hidden and unused with the S,p = 1.0 option.
+    [NUMERIC.Sp.label, (inp.spMethod ?? 'marriott') === 'unity' ? 'not used with the S,p = 1.0 option' : String(inp.Sp)],
+    [NUMERIC.Rs.label, String(inp.Rs)],
+    [NUMERIC.lamC.label, String(inp.lamC)],
+    [NUMERIC.kdm.label, String(inp.kdm)],
+    ['Show results for', inp.size === 'auto' ? 'Smallest size that passes' : label(inp.size)],
+  ]
+}
+
+const okCell = (ok, pass = 'Pass', fail = 'Fail') => ({ text: ok ? pass : fail, tone: ok ? 'ok' : 'bad', bold: true })
+
+function summaryModel(r, { project, when }) {
+  const s = r.selected
+  const u = s.uls
+  const c = s.cals
+  const B = r.basis
+  const inp = r.input
+  const db4 = r.donoBrace
+  const db3 = r.donoBraceCat3
+  const hd = headline(r)
+  const blocks = []
+
+  blocks.push({ type: 'banner', ok: hd.pass, big: hd.big, sub: hd.sub })
+  blocks.push({ type: 'stats', items: summaryStats(r).map((st) => ({ k: st.k, v: String(st.v), unit: st.unit })) })
+  blocks.push({ type: 'callout', title: 'For sizing only.', text: SIZING_ONLY })
+  if (r.messages.length) blocks.push({ type: 'messages', items: r.messages.map((m) => ({ level: m.level, text: m.text })) })
+
+  blocks.push({ type: 'h', eyebrow: 'Inputs', text: 'Your initial model, hazard and factors' })
+  blocks.push({ type: 'table', head: ['Input', 'Value'], widths: [0.62, 0.38], rows: inputRows(inp) })
+
+  blocks.push({ type: 'h', eyebrow: 'Your model', text: 'What the calculator reads from it' })
+  blocks.push({
+    type: 'table',
+    widths: [0.8, 0.2],
+    rows: [
+      ['Load case V/W, from T,e and the roof displacement', `${f(B.SaM, 3)} g`],
+      ['÷ the 0.1 g applied, 1.00 when the period, seismic weight and displacement are consistent', f(B.loadRatio, 2)],
+      ['Share of roof displacement from brace axial elongation, (axial elongation ÷ cos θ) ÷ roof displacement', pct(B.phi, 0)],
+      ['Storey shear taken by the braces', pct(1 - B.p, 0)],
+    ],
+  })
+
+  const sizeRows = [
+    ['T,e (s)', (x) => f(x.Te, 3)],
+    ['Locking', (x) => f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)],
+    ['ULS', (x) => f(x.op.uls.ratio, 2)],
+    ['CALS', (x) => f(x.op.cals.ratio, 2)],
+    ['μ at ULS', (x) => (x.uls ? f(x.uls.mu, 2) : `> ${f(x.muStop, 2)}`)],
+    ['δ at ULS (mm)', (x) => (x.uls ? f(x.uls.dqd) : '-')],
+    ['δ at CALS (mm)', (x) => (x.cals ? f(x.cals.dqd) : 'past stop')],
+  ]
+  blocks.push({ type: 'h', eyebrow: 'Sizes', text: 'All sizes compared' })
+  blocks.push({
+    type: 'table',
+    head: ['Size', ...QD_SIZES.map((z) => label(z))],
+    widths: [0.36, ...QD_SIZES.map(() => 0.64 / QD_SIZES.length)],
+    rows: [
+      ['Basis', ...QD_SIZES.map((z) => (z === r.modelSize ? 'your model' : 'estimated'))],
+      ...sizeRows.map(([n, get]) => [n, ...QD_SIZES.map((z) => get(r.all[z]))]),
+      ['Result', ...QD_SIZES.map((z) => okCell(r.all[z].pass))],
+    ],
+  })
+  blocks.push({ type: 'p', small: true, text: `Locking, ULS and CALS are demand ÷ limit, passing at 1.00 or less. μ is the actual displacement ductility at the ULS performance point; Category 2 (S,p = 0.7) needs μ above 1.25. Sizes other than your model’s are estimated by scaling the brace stiffness; re-run your model with the size you choose. The rest of this summary is for ${label(s.size)}.` })
+
+  blocks.push({ type: 'h', eyebrow: 'Step 3', text: `Locking checks for ${label(s.size)}` })
+  blocks.push({
+    type: 'table',
+    head: ['Locking', 'Brace force kN', 'F,slip kN', 'Ratio', ''],
+    widths: [0.36, 0.17, 0.17, 0.15, 0.15],
+    rows: [
+      ['SLS earthquake, F,b,SLS', f(s.lockSLS.F), `${f(s.lockSLS.cap)} LBH`, f(s.lockSLS.ratio, 2), okCell(s.lockSLS.ratio <= 1)],
+      ['1.3 × ULS wind, 1.3 F,b,wind', f(s.lockWind.F), `${f(s.lockWind.cap)} nominal`, f(s.lockWind.ratio, 2), okCell(s.lockWind.ratio <= 1)],
+    ],
+  })
+
+  blocks.push({ type: 'h', eyebrow: 'Step 4', text: `One-point checks for ${label(s.size)}` })
+  blocks.push({ type: 'p', text: `Governing ULS limit: ${s.limGov.label}, Δ,lim = ${f(s.Dlim)} mm. Activation at Δ,y = ${f(s.Dy)} mm; hard stop at Δ,stop = ${f(s.Dstop)} mm.` })
+  const opRow = (name, op, lam, kind) => [name, f(lam, 2), f(op.D), f(op.T, 3), pct(op.xi), f(op.Sd), `${kind} ${f(op.D)}`, okCell(op.pass)]
+  blocks.push({
+    type: 'table',
+    head: ['Check', 'λ', 'Δ mm', 'T s', 'ξ', 'S,d mm', 'Limit', ''],
+    widths: [0.3, 0.07, 0.09, 0.09, 0.09, 0.1, 0.14, 0.12],
+    rows: [
+      opRow('ULS, at Δ,lim', s.op.uls, 1, 'max'),
+      opRow('ULS, device at 33 mm', s.op.dev33, 1, 'max'),
+      opRow('CALS, at δ,stop', s.op.cals, inp.lamC, 'max'),
+      opRow('Ductility μ > 1.25, at 1.25 Δ,y', s.op.duct, 1, 'min'),
+    ],
+  })
+
+  blocks.push({ type: 'h', eyebrow: 'Preliminary Step 7', text: `Performance points for ${label(s.size)}` })
+  const pp = (x, name) => (x
+    ? [name, f(x.D), f(x.dqd), f(x.F), f(x.Sa, 3), f(x.T, 3), pct(x.xi)]
+    : [name, { text: 'Past the hard stop', tone: 'bad' }, '', '', '', '', ''])
+  blocks.push({
+    type: 'table',
+    head: ['Performance point', 'Δ mm', 'δ mm', 'Brace kN', 'V/W', 'T,eff s', 'ξ,eff'],
+    widths: [0.28, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12],
+    rows: [
+      pp(s.sls, s.sls.locked ? 'SLS (QD locked)' : 'SLS (QD slipping)'),
+      pp(u, 'ULS'),
+      pp(c, `CALS (λ = ${f(inp.lamC, 2)})`),
+    ],
+  })
+  blocks.push({ type: 'p', small: true, text: `From the estimated backbone, with the spectrum reduced by ${spText(inp)} (${SP_METHOD_LABEL[inp.spMethod ?? 'marriott']}). Confirm with the cyclic pushover of your model (Steps 5 to 7).` })
+  if (u) {
+    blocks.push({
+      type: 'p',
+      text: `ULS drift × k,dm = ${pct(u.driftKdm / 100, 2)} (limit ${DRIFT_LIMIT}%); stability coefficient θ = ${f(u.theta, 3)}, so P-delta analysis is ${s.pdelta?.exempt ? `not required (NZS 1170.5 cl 6.5.2(${s.pdelta.exempt}))` : 'required (NZS 1170.5 cl 6.5.2)'}; ${s.brace} utilisation ${f(u.util, 2)}. Recentring (preliminary Step 9): restoring V/W ${f(s.recentre.restoring, 4)} against the P-delta demand Δ,y,UBH ÷ h = ${f(s.recentre.pdelta, 4)}, a ratio of ${f(s.recentre.ratio, 2)}${s.recentre.ratio >= 1 ? ', so the line recentres.' : ', so the line may not recentre.'}`,
+    })
   }
-  L.push('')
-  L.push(`SELECTED: ${label(R.size)}`)
-  const oc = (n, op, cmp) => `${n}: Delta = ${f(op.D)} mm, T = ${f(op.T, 3)} s, xi = ${pct(op.xi)}, S,d = ${f(op.Sd)} mm ${cmp} ${f(op.D)} mm -> ${op.pass ? 'PASS' : 'FAIL'}`
-  L.push(`Locking: SLS ${f(R.lockSLS.F)} kN vs F,slip,LBH ${f(R.lockSLS.cap)} kN; wind 1.3 x ${f(R.windF)} kN vs F,slip,nominal ${f(R.lockWind.cap)} kN`)
-  L.push(`Delta,y = ${f(R.Dy)} mm; Delta,stop = ${f(R.Dstop)} mm; Delta,lim = ${f(R.Dlim)} mm (${R.limGov.label})`)
-  L.push(oc('ULS at Delta,lim', R.op.uls, '<='))
-  L.push(oc('ULS device 33 mm', R.op.dev33, '<='))
-  L.push(oc('CALS at stop', R.op.cals, '<='))
-  L.push(oc('Ductility (mu > 1.25) at 1.25 Delta,y', R.op.duct, '>='))
-  if (u) L.push(`ULS point: Delta ${f(u.D)} mm; delta ${f(u.dqd)} mm; brace ${f(u.F)} kN; V/W ${f(u.Sa, 3)}; mu ${f(u.mu, 2)}; drift x k,dm ${pct(u.driftKdm / 100, 2)}`)
-  L.push(`SLS point: Delta ${f(R.sls.D)} mm; delta ${f(R.sls.dqd, 2)} mm; brace ${f(R.sls.F)} kN; ${R.sls.locked ? 'QD locked' : 'QD slipping'}`)
-  if (c) L.push(`CALS point: Delta ${f(c.D)} mm; delta ${f(c.dqd)} mm; brace ${f(c.F)} kN`)
-  L.push(`F,max = ${f(R.cap.Fmax)} kN (optional DonoBrace overstrength ${f(R.cap.os)} kN)`)
-  L.push('')
-  for (const d of [db, r.donoBraceCat3]) L.push(`DONOBRACE ALONE, CATEGORY ${d.category} (mu ${f(d.mu, 2)}, S,p 0.9, k,mu ${f(d.kmu, 2)}, C,s ${f(d.Cs, 1)}): ${d.brace}; brace force ${f(d.Nstar)} kN; V/W ${f(d.Vs, 3)} (C,d ${f(d.V, 3)}); connection ${f(d.Nconn)} kN (overstrength capped ${f(d.osCapped)} kN); drift x k,dm ${pct(d.driftKdm / 100, 2)} (limit ${DRIFT_LIMIT}%); P-delta ${d.pdelta.exempt ? 'not required, cl 6.5.2(' + d.pdelta.exempt + ')' : 'required'}; CALS ${f(d.Dcals)} mm, brace stress ${f(d.calsStress, 0)} of ${DB_FU} MPa${d.ok ? "" : " (FAILS)"}`)
-  if (r.messages.length) {
-    L.push('')
-    L.push('MESSAGES')
-    for (const m of r.messages) L.push('- ' + m.text)
+
+  blocks.push({ type: 'h', eyebrow: 'Device', text: `${s.size} forces` })
+  const bounds = [s.dL, s.dev, s.dU]
+  const fr = (name, get) => [name, ...bounds.map((d) => f(get(d)))]
+  blocks.push({
+    type: 'table',
+    head: ['kN', 'LBH', 'Nominal', 'UBH'],
+    widths: [0.46, 0.18, 0.18, 0.18],
+    rows: [
+      fr('F,slip at 1 mm', (d) => d.Fslip),
+      fr('F,ult at 50 mm', (d) => d.Fult),
+      fr('F,restoring', (d) => d.Frest),
+      fr('F,residual', (d) => d.Fres),
+      fr('F at 33 mm', (d) => d.fLoad(D_ULS)),
+    ],
+  })
+  blocks.push({ type: 'p', small: true, text: `F,max for capacity design is the UBH force at 50 mm: ${f(s.cap.Fmax)} kN (${f(s.cap.Fmax * B.c)} kN along the direction of loading). Optional DonoBrace overstrength for the end connections: ${f(s.cap.os)} kN.` })
+
+  blocks.push({ type: 'h', eyebrow: 'Comparison', text: 'The same line with DonoBrace alone' })
+  const capBasis = (d) => (d.cappedC ? '1.25 φN,t, (4)(c)' : d.os <= d.elasticCap ? '1.3 N,t' : `elastic cap, S,p = ${d.category === 3 ? '0.9' : '1.0'}`)
+  const dbCals = (d) => ({ text: `${f(d.Dcals)} mm`, sub: `${f(d.calsStress, 0)} of ${DB_FU} MPa`, tone: d.okCals ? undefined : 'bad' })
+  const pdText = (pd) => (pd.exempt ? `not required, cl 6.5.2(${pd.exempt})` : 'required, cl 6.5.2')
+  blocks.push({
+    type: 'table',
+    head: ['', label(s.size), `${db4.brace} alone, Cat 4`, `${db3.brace} alone, Cat 3`],
+    widths: [0.31, 0.23, 0.23, 0.23],
+    rows: [
+      ['ULS brace force', u ? `${f(u.F)} kN` : '-', { text: `${f(db4.Nstar)} kN`, sub: `of φN,t ${f(db4.phiNt)}`, tone: db4.okUls ? undefined : 'bad' }, { text: `${f(db3.Nstar)} kN`, sub: `of φN,t ${f(db3.phiNt)}`, tone: db3.okUls ? undefined : 'bad' }],
+      ['ULS base shear coefficient V/W', u ? f(u.Sa, 3) : '-', { text: f(db4.Vs, 3), sub: `C,s ${f(db4.Cs, 1)} × C,d ${f(db4.V, 3)}` }, { text: f(db3.Vs, 3), sub: `C,s ${f(db3.Cs, 1)} × C,d ${f(db3.V, 3)}` }],
+      ['Load path (method basis)', { text: `${f(s.cap.Fmax)} kN`, sub: 'F,max' }, { text: `${f(db4.Nconn)} kN`, sub: 'elastic, S,p = 1.0' }, { text: `${f(db3.Nconn)} kN`, sub: capBasis(db3) }],
+      ['End connections (overstrength)', `${f(s.cap.os)} kN`, { text: `${f(db4.osCapped)} kN`, sub: capBasis(db4) }, { text: `${f(db3.osCapped)} kN`, sub: capBasis(db3) }],
+      ['ULS drift with k,dm', { text: u ? pct(u.driftKdm / 100, 2) : '-', sub: `limit ${DRIFT_LIMIT}%` }, ...[db4, db3].map((d) => ({ text: pct(d.driftKdm / 100, 2), sub: `limit ${DRIFT_LIMIT}%`, tone: d.okDrift ? undefined : 'bad' }))],
+      ['SLS drift', pct(s.sls.D / (inp.h * 1000), 2), pct(db4.driftSls / 100, 2), pct(db3.driftSls / 100, 2)],
+      ['P-delta analysis (NZS 1170.5)', s.pdelta ? { text: `θ ${f(s.pdelta.theta, 3)}`, sub: pdText(s.pdelta) } : '-', ...[db4, db3].map((d) => ({ text: `θ ${f(d.pdelta.theta, 3)}`, sub: pdText(d.pdelta) }))],
+      ['CALS', c ? { text: `${f(c.D)} mm`, sub: `δ ${f(c.dqd)} of 50 mm` } : 'past stop', dbCals(db4), dbCals(db3)],
+      ['Result', okCell(s.pass), okCell(db4.ok), okCell(db3.ok)],
+    ],
+  })
+  blocks.push({ type: 'p', small: true, text: `Both DonoBrace-only designs use S,p = 0.9 to NZS 3404. Category 4 is elastic (μ = 1.0, C,s = 1.0). Category 3 is nominally ductile (μ = 1.25, design action ÷ k,μ = ${f(db3.kmu, 2)}, C,s = 1.1 for a 1 to 2 storey tension-braced frame, NZS 3404 cl 12.12.6.3.2). Overstrength actions are 1.3 N,t, capped at the elastic response per NZS 3404 cl 12.9.1.2.2(4)(b) and (c).` })
+
+  const date = when.toLocaleDateString('en-NZ', { day: 'numeric', month: 'long', year: 'numeric' })
+  const time = when.toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' })
+  return {
+    kicker: 'SEISMIC SHIFT  |  QUAKE DEFENDER',
+    title: 'Quake Defender sizing summary',
+    subject: BASIS_LINE,
+    meta: [
+      ...(project ? [`Project: ${project}`] : []),
+      `Generated ${date}, ${time}, from ${PAGE_URL}`,
+      `Basis: ${BASIS_LINE}. Step 4 sizing only.`,
+    ],
+    footer: `${PAGE_URL}  |  For sizing only, not the design`,
+    blocks,
   }
-  return L.join('\n')
+}
+
+function summaryFilename(r, project, when) {
+  const slug = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40)
+  const d = `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')}`
+  return ['qd-sizing', project ? slug(project) : null, slug(r.selected.size), d].filter(Boolean).join('-') + '.pdf'
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -810,11 +964,9 @@ function SizeTable({ r }) {
   )
 }
 
-function Summary({ r }) {
+// The pass / fail headline, shared by the page and the summary PDF.
+function headline(r) {
   const s = r.selected
-  const u = s.uls
-  const c = s.cals
-  const db = r.donoBrace
   const auto = r.input.size === 'auto'
   let big
   let sub
@@ -838,15 +990,30 @@ function Summary({ r }) {
       r.recommended ? ` ${label(r.recommended)} is the smallest size that passes.` : ' No standard QD size passes.'
     }`
   }
-  const pass = auto ? !!r.recommended : s.pass
+  return { big, sub, pass: auto ? !!r.recommended : s.pass }
+}
 
-  const stats = [
+// The stat tiles under the headline, shared by the page and the summary PDF.
+function summaryStats(r) {
+  const s = r.selected
+  const u = s.uls
+  const c = s.cals
+  const db = r.donoBrace
+  return [
     { k: 'QD travel at ULS', v: u ? f(u.dqd) : '-', unit: 'of 33 mm' },
     { k: 'QD travel at CALS', v: c ? f(c.dqd) : 'past stop', unit: c ? 'of 50 mm' : '' },
     { k: 'Ductility μ at ULS', v: u ? f(u.mu, 2) : '-', unit: '' },
     { k: 'Brace force at ULS', v: u ? f(u.F) : '-', unit: 'kN' },
     { k: 'DonoBrace alone, Cat 4 / Cat 3', v: `${db.brace} / ${r.donoBraceCat3.brace}`, unit: '' },
   ]
+}
+
+// The "For sizing only" note, shared by the page and the summary PDF.
+const SIZING_ONLY = 'These checks select a QD and DonoBrace size from your initial model; they are not the design. The real configuration, with the selected QD and DonoBrace in every braced bay, is checked in your full structural model: re-run it with the selected size and complete the full design (Steps 5 to 9 of the methodology) in your own calculations.'
+
+function Summary({ r }) {
+  const { big, sub, pass } = headline(r)
+  const stats = summaryStats(r)
 
   return (
     <div className="bg-slate-50 border border-slate-100 rounded-2xl p-3 sm:p-5 md:p-6">
@@ -1195,8 +1362,10 @@ export default function QdSizingCalculator() {
   const [errors, setErrors] = useState({})
   const [result, setResult] = useState(() => runQdSizing(WORKED_EXAMPLE))
   const [evalFailed, setEvalFailed] = useState(false)
-  const [copyStatus, setCopyStatus] = useState('')
-  const [fallbackText, setFallbackText] = useState(null)
+  const [status, setStatus] = useState({ text: '', error: false })
+  const [project, setProject] = useState('')
+  const [pdfBusy, setPdfBusy] = useState(false)
+  const projectId = useId()
   const termsRef = useRef(null)
   const onTerms = () => termsRef.current?.showModal()
 
@@ -1231,30 +1400,38 @@ export default function QdSizingCalculator() {
 
   function loadExample() {
     recalc(exampleForm())
-    setFallbackText(null)
-    setCopyStatus('Worked example loaded.')
+    setStatus({ text: 'Worked example loaded.', error: false })
     track('qd_sizing_load_example')
-  }
-
-  function copySheet() {
-    const text = calcSheet(result)
-    track('qd_sizing_copy_calc_sheet')
-    const showFallback = () => {
-      setFallbackText(text)
-      setCopyStatus('Select all and copy the text below.')
-    }
-    try {
-      navigator.clipboard.writeText(text).then(() => {
-        setFallbackText(null)
-        setCopyStatus('Calc sheet copied.')
-      }, showFallback)
-    } catch {
-      showFallback()
-    }
   }
 
   const stale = Object.keys(errors).length > 0 || evalFailed
   const s = result.selected
+
+  // Builds the summary PDF in the browser and downloads it. Refuses while the
+  // inputs are invalid, so a PDF never shows a result that no longer matches
+  // the form.
+  async function downloadSummary() {
+    if (pdfBusy) return
+    if (stale) {
+      setStatus({ text: 'Fix the highlighted inputs first: the summary must match the inputs shown.', error: true })
+      return
+    }
+    setPdfBusy(true)
+    setStatus({ text: 'Making your PDF...', error: false })
+    try {
+      const when = new Date()
+      const name = project.trim()
+      const [{ buildQdSummaryPdf }, { saveBlob }] = await Promise.all([import('../lib/qdSummaryPdf'), import('../lib/pdfText')])
+      const bytes = await buildQdSummaryPdf(summaryModel(result, { project: name, when }), { regular: regularFontUrl, bold: boldFontUrl })
+      saveBlob(new Blob([bytes], { type: 'application/pdf' }), summaryFilename(result, name, when))
+      setStatus({ text: 'Summary PDF downloaded.', error: false })
+      track('qd_sizing_download_pdf', { size: result.selected.size })
+    } catch {
+      setStatus({ text: 'Sorry, the PDF could not be made. Check your connection and try again.', error: true })
+    } finally {
+      setPdfBusy(false)
+    }
+  }
 
   return (
     <div className="rounded-3xl border border-slate-100 shadow-sm bg-white overflow-hidden p-4 sm:p-6 md:p-9">
@@ -1263,13 +1440,27 @@ export default function QdSizingCalculator() {
           <p className="text-sm mb-5"><TermsButton onOpen={onTerms} /></p>
           <Inputs form={form} errors={errors} onChange={onChange} onSize={onSize} onSpMethod={onSpMethod} />
 
-          <div className="flex flex-wrap gap-3 mt-8">
+          <div className="mt-8">
+            <label htmlFor={projectId} className={LABEL_CLASS}>Project or reference (optional)</label>
+            <input
+              id={projectId}
+              type="text"
+              value={project}
+              maxLength={80}
+              onChange={(e) => setProject(e.target.value)}
+              aria-describedby={`${projectId}-help`}
+              className={FIELD_CLASS}
+            />
+            <p id={`${projectId}-help`} className="text-xs mt-1.5 text-slate-400">Printed on the summary PDF. The PDF is made in your browser; nothing is sent anywhere.</p>
+          </div>
+          <div className="flex flex-wrap gap-3 mt-4">
             <button
               type="button"
-              onClick={copySheet}
-              className={`font-bold text-sm px-5 py-2.5 rounded-full text-white bg-[#17638f] hover:bg-[#0f4c6e] transition motion-reduce:transition-none ${BUTTON_FOCUS}`}
+              onClick={downloadSummary}
+              disabled={pdfBusy}
+              className={`font-bold text-sm px-5 py-2.5 rounded-full text-white bg-[#17638f] hover:bg-[#0f4c6e] disabled:opacity-60 transition motion-reduce:transition-none ${BUTTON_FOCUS}`}
             >
-              Copy calc sheet
+              {pdfBusy ? 'Making PDF...' : 'Download summary PDF'}
             </button>
             <button
               type="button"
@@ -1279,16 +1470,7 @@ export default function QdSizingCalculator() {
               Load worked example
             </button>
           </div>
-          <p role="status" className="text-sm font-bold mt-3 min-h-[1.25rem]" style={{ color: BRAND }}>{copyStatus}</p>
-          {fallbackText !== null && (
-            <textarea
-              readOnly
-              value={fallbackText}
-              aria-label="Calc sheet text"
-              onFocus={(e) => e.target.select()}
-              className={`${FIELD_CLASS} h-48 text-xs font-mono mt-2`}
-            />
-          )}
+          <p role="status" className={`text-sm font-bold mt-3 min-h-[1.25rem] ${status.error ? 'text-red-600' : ''}`} style={status.error ? undefined : { color: BRAND }}>{status.text}</p>
           <p className="text-xs text-slate-400 leading-relaxed mt-3">
             Opens with the methodology worked example: a DB20 model of one 7.5 × 6.0 m bay, Z = 0.3, soil D.
           </p>
@@ -1297,7 +1479,7 @@ export default function QdSizingCalculator() {
         <div className="min-w-0 space-y-10" aria-live="polite">
           <div className="space-y-4">
             <div className="border border-[#c07c1c]/40 bg-[#fdf6ec] rounded-2xl p-5 text-sm text-slate-700 leading-relaxed">
-              <strong style={{ color: EQ }}>For sizing only.</strong> These checks select a QD and DonoBrace size from your initial model; they are not the design. The real configuration, with the selected QD and DonoBrace in every braced bay, is checked in your full structural model: re-run it with the selected size and complete the full design (Steps 5 to 9 of the methodology) in your own calculations. <TermsButton onOpen={onTerms} />
+              <strong style={{ color: EQ }}>For sizing only.</strong> {SIZING_ONLY} <TermsButton onOpen={onTerms} />
             </div>
             {stale && (
               <p className="border border-red-200 bg-red-50 text-red-700 rounded-xl px-4 py-2.5 text-sm font-bold">
