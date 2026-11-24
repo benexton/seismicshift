@@ -58,8 +58,8 @@ const stats = [
 
         <dl class="mt-8 grid grid-cols-3 gap-px rounded-xl overflow-hidden bg-white/15">
           {stats.map((s) => (
-            <div class="bg-[#4a1724]/70 backdrop-blur px-4 py-3">
-              <dt class="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">{s.label}</dt>
+            <div class="bg-[#4a1724]/70 backdrop-blur px-2.5 sm:px-4 py-3 min-w-0 flex flex-col justify-between">
+              <dt class="text-[11px] sm:text-[10px] font-bold sm:uppercase tracking-normal sm:tracking-[0.16em] leading-snug text-white/60">{s.label}</dt>
               <dd class="mt-1 text-xl md:text-2xl font-extrabold tabular-nums whitespace-nowrap">{s.value}</dd>
             </div>
           ))}

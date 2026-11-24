@@ -13,8 +13,6 @@ import StartPointPicker from './StartPointPicker'
 import RouteItinerary from './RouteItinerary'
 import RouteMap from './RouteMap'
 import BuildingDetail from './BuildingDetail'
-import ShareButton from './ShareButton'
-import PrintButton from './PrintButton'
 import InstallPrompt from './InstallPrompt'
 import RouteActions from './RouteActions'
 import ConferenceVenueCard from './ConferenceVenueCard'
@@ -309,8 +307,6 @@ export default function TourApp() {
               <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">Your route</h2>
             </div>
             <div className="flex flex-wrap gap-2 print:hidden">
-              <ShareButton ids={[...selectedIds]} startId={startId} loop={loop} />
-              <PrintButton />
               <InstallPrompt />
             </div>
           </div>
