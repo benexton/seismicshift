@@ -379,8 +379,13 @@
     // strong shaking whatever the bracing does (Canterbury 2010-11).
     var chimneyFell = !!(d.additions && d.additions.chimney) && !derived.isolated && quakeKey!=='moderate';
     if(chimneyFell){
+      // The cap applies whatever the structure's own damage: capping only
+      // when the chimney made things worse let a weaker house (already in
+      // the forced band) outscore a stronger one, so adding protection
+      // could lower the score.
       var forced = quakeKey==='strong' ? 'moderate' : 'extensive';
-      if(worse(state, forced)===forced && state!==forced){ state = forced; points = Math.min(points, CHIMNEY_POINTS[forced]); }
+      state = worse(state, forced);
+      points = Math.min(points, CHIMNEY_POINTS[forced]);
     }
     return {
       quake:quakeKey, pga:q.pga, Sa:Sa, R:R, mu:mu, muCap:muCap,

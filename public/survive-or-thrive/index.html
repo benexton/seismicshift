@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700;9..40,900&display=swap">
 <!-- Google Analytics - same property as the main site. UTM tags on the QR
-     link and the share link are picked up automatically. -->
+     link are picked up automatically. -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME4SZWK0H4"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -113,10 +113,6 @@
   /* ---------- landing illustration ---------- */
   .hero-art{background:linear-gradient(180deg,#e8f1f7 0%,#f6f9fb 100%);border:1px solid var(--line);border-radius:20px;overflow:hidden;margin:24px 0 18px;}
   .hero-art svg{display:block;width:100%;height:auto;}
-  .sway{transform-box:fill-box;transform-origin:50% 100%;animation:sway 2.6s ease-in-out infinite;}
-  .sway.b2{animation-duration:2.1s;animation-delay:-.4s;}
-  .sway.b3{animation-duration:3.2s;animation-delay:-1.1s;}
-  @keyframes sway{0%,100%{transform:rotate(-.9deg);}50%{transform:rotate(.9deg);}}
 
   /* ---------- buttons ---------- */
   .btn{
@@ -151,6 +147,24 @@
   .addon-summary{font-size:13px;line-height:1.45;color:var(--ink-2);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:10px 0 0;}
   .addon-summary:empty{display:none;}
 
+  /* ---------- info pop-up (same look as the Seismic Walk safety notice) ---------- */
+  .info-link{display:inline;background:none;border:none;padding:0;margin:0;font-size:14.5px;font-weight:700;color:var(--brand);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+  .modal{position:fixed;inset:0;z-index:50;display:none;align-items:flex-end;justify-content:center;background:rgba(28,21,23,.7);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);}
+  .modal.open{display:flex;}
+  .modal-sheet{position:relative;background:#fff;width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;border-radius:16px 16px 0 0;box-shadow:0 25px 50px -12px rgba(0,0,0,.25);outline:none;animation:sheetUp .25s ease;}
+  @keyframes sheetUp{from{transform:translateY(24px);opacity:0;}to{transform:none;opacity:1;}}
+  .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:28px 28px 16px;border-bottom:1px solid var(--soft);}
+  .modal-kicker{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--brand);margin:0 0 6px;}
+  .modal-title{font-size:24px;font-weight:800;letter-spacing:-.025em;color:var(--ink);margin:0;}
+  .modal-close{flex:0 0 32px;width:32px;height:32px;border-radius:999px;border:none;background:var(--soft);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .modal-close:hover{background:var(--line);}
+  .modal-body{overflow-y:auto;padding:20px 28px calc(24px + env(safe-area-inset-bottom));}
+  .modal-body p{font-size:14.5px;line-height:1.6;color:var(--ink-2);margin:0;}
+  @media (min-width:560px){
+    .modal{align-items:center;padding:24px;}
+    .modal-sheet{border-radius:16px;}
+  }
+
   /* ---------- choice cards ---------- */
   .group-title{font-size:13.5px;font-weight:700;color:var(--ink-2);margin:20px 0 8px;}
   .cards{display:flex;flex-direction:column;gap:8px;}
@@ -171,6 +185,7 @@
   .card .body{flex:1;min-width:0;}
   .card .name{display:block;font-weight:700;font-size:15.5px;letter-spacing:-.01em;}
   .card .desc{display:block;font-size:13px;color:var(--muted);margin-top:3px;line-height:1.45;}
+  .card .impact{display:block;font-size:13px;font-weight:700;color:var(--brand);margin-top:3px;line-height:1.4;}
   .badge{display:inline-block;font-size:11px;font-weight:700;color:var(--brand);background:var(--brand-tint);border-radius:999px;padding:3px 9px;margin-bottom:6px;}
   .badge.muted{color:var(--ink-2);background:var(--soft);}
   .card-meta{flex:0 0 auto;display:flex;flex-direction:column;gap:5px;align-items:flex-end;}
@@ -186,7 +201,7 @@
     margin:0;padding:0 12px;max-height:0;overflow:hidden;opacity:0;
     transition:max-height .25s ease, opacity .25s ease, padding .25s ease, margin .25s ease;
   }
-  .flash-note.show{max-height:90px;opacity:1;padding:10px 12px;margin-top:10px;}
+  .flash-note.show{max-height:140px;opacity:1;padding:10px 12px;margin-top:10px;}
   .reveal-section{max-height:0;overflow:hidden;opacity:0;transition:max-height .4s ease, opacity .3s ease .05s;}
   .reveal-section.open{max-height:2400px;opacity:1;}
   /* room for the selected card's outline inside the clipped reveal box */
@@ -279,7 +294,6 @@
 
   @media (prefers-reduced-motion: reduce){
     .screen{animation:none;}
-    .sway{animation:none;}
   }
 </style>
 </head>
@@ -299,11 +313,11 @@
   <section class="screen active" id="screen-landing">
     <p class="kicker">A Seismic Shift challenge</p>
     <h1>Survive or<br><span class="accent">Thrive?</span></h1>
-    <p class="lede">Most buildings are designed to survive a big earthquake. Can you design one that thrives?</p>
+    <p class="lede">Most buildings are designed to survive a big earthquake. Can you design one that thrives? (Approximately 2 minutes of your time)</p>
     <div class="hero-art" aria-hidden="true">
       <svg id="hero-scene" viewBox="0 0 400 176"></svg>
     </div>
-    <p class="sub">Choose a building and its structure, spend your budget on protection, then put it through an earthquake. Takes about 2 minutes.</p>
+    <p class="sub">Choose a building and its structure, spend your budget on protection, then put it through an earthquake.</p>
     <p class="teaser">Score 80 or more to go in the draw for a <b>$100 Prezzy card</b>.</p>
     <div class="nav-buttons">
       <button class="btn btn-primary" id="btn-start">Start Designing</button>
@@ -326,7 +340,7 @@
   <!-- STEP 2: UPGRADES (add-ons) -->
   <section class="screen" id="screen-additions">
     <h2 tabindex="-1">Upgrades</h2>
-    <p class="sub">Optional extras that cost money to install but add more than that to the building's value. Your client will put the difference towards seismic upgrades. The catch: they add weight up high, which the earthquake will find. Costs are shown as a share of the building's base price, so they mean the same for a home or an office block.</p>
+    <p class="sub"><button type="button" class="info-link" id="btn-upgrades-info" aria-haspopup="dialog">See more information</button></p>
 
     <div class="cards" id="addition-cards" style="margin-top:16px;"></div>
     <p class="addon-summary" id="addon-summary" role="status"></p>
@@ -356,7 +370,7 @@
   <!-- STEP 4: SEISMIC PROTECTION -->
   <section class="screen" id="screen-protect">
     <h2 tabindex="-1">Add Seismic Protection</h2>
-    <p class="sub">Spend what's left of your upgrade budget on technology that helps your building ride out the shake.</p>
+    <p class="sub">Spend what's left of your upgrade budget on technology/changes that helps your building ride out the shake. Unspent budget will contribute positively towards your final score.</p>
 
     <div class="budget">
       <div class="label">Upgrade budget left</div>
@@ -419,15 +433,11 @@
       <p id="concept-text"></p>
     </div>
 
-    <div class="link-row" id="link-row"></div>
-    <div id="whatif-slot"></div>
-
     <div class="nav-buttons">
-      <button class="btn btn-feature" id="btn-to-leaderboard">Enter the Leaderboard</button>
-      <button class="btn btn-secondary" id="btn-retest">Test Again at This Earthquake Level</button>
-      <button class="btn btn-secondary" id="btn-build-again">Build Again</button>
-      <button class="btn btn-secondary" id="btn-share">Share Your Result</button>
-      <p class="lb-status" id="share-status" role="status" style="text-align:center;"></p>
+      <button class="btn btn-secondary" id="btn-retest">Shake again</button>
+      <div id="whatif-slot"></div>
+      <div class="link-row" id="link-row"></div>
+      <button class="btn btn-feature" id="btn-to-leaderboard" style="margin-top:12px;">Enter the Leaderboard</button>
     </div>
   </section>
 
@@ -442,6 +452,25 @@
     </div>
   </section>
 
+  <!-- Upgrades information pop-up: opens the first time the Upgrades step is
+       shown, and again from "See more information". -->
+  <div class="modal" id="upgrades-info">
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="upgrades-info-title" tabindex="-1">
+      <div class="modal-head">
+        <div>
+          <p class="modal-kicker">How upgrades work</p>
+          <h2 class="modal-title" id="upgrades-info-title">Upgrades</h2>
+        </div>
+        <button type="button" class="modal-close" aria-label="Close">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="2" y1="2" x2="12" y2="12"/><line x1="12" y1="2" x2="2" y2="12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Optional extras that cost money to install but add more than that to the building's value. Your client will put the difference towards seismic upgrades. The catch: they add weight up high, which the earthquake will find. Costs are shown as a share of the building's base price, so they mean the same for a home or an office block.</p>
+      </div>
+    </div>
+  </div>
+
   <footer class="app-footer">
     <p>For educational and promotional purposes only - a simplified illustration of seismic design concepts, not an engineering assessment.</p>
     <p><a href="https://www.seismicshift.nz/" target="_blank" rel="noopener">seismicshift.nz</a></p>
@@ -449,8 +478,8 @@
 
 </div>
 
-<script src="/survive-or-thrive/model.js?v=2026-11-23b"></script>
-<script src="/survive-or-thrive/scene-iso.js?v=2026-11-23e"></script>
+<script src="/survive-or-thrive/model.js?v=2026-11-24"></script>
+<script src="/survive-or-thrive/scene-iso.js?v=2026-11-24"></script>
 <script>
 (function(){
   "use strict";
@@ -507,7 +536,6 @@
     standard: { url:'https://www.seismicshift.nz/quake-defender/', label:'Learn about Quake Defender' }
   };
   var CONTACT_URL = 'https://www.seismicshift.nz/contact/';
-  var SHARE_URL = 'https://www.seismicshift.nz/survive-or-thrive/?utm_source=share&utm_medium=social&utm_campaign=survive_or_thrive';
 
   // Leaderboard backend: the former Kumamoto Supabase project, repurposed
   // (see supabase/schema.sql's STATUS note in seismicshift-pipeline). The
@@ -650,7 +678,8 @@
     note.textContent = msg;
     note.classList.add('show');
     if(flashNoteTimers[id]) clearTimeout(flashNoteTimers[id]);
-    flashNoteTimers[id] = setTimeout(function(){ note.classList.remove('show'); }, 3600);
+    // Longer notes stay up a little longer, so there's time to read them.
+    flashNoteTimers[id] = setTimeout(function(){ note.classList.remove('show'); }, Math.max(3600, msg.length*45));
   }
 
   /* =========================================================
@@ -761,7 +790,7 @@
         '<span class="icon">'+systemIcon(k)+'</span>'+
         '<span class="body"><span class="name">'+sys.label+'</span>'+
         '<span class="desc">'+sys.desc+'</span></span>'+
-        '<span class="card-meta"><span class="pill spend">Costs '+fmtPct(sys.cost)+'</span></span>';
+        '<span class="card-meta"><span class="pill spend">'+pricePill(sys.cost)+'</span></span>';
       el.addEventListener('click', function(){
         if(!affordable){
           flashNote('build-note', 'That system won\'t fit your upgrade budget alongside your current protection - remove some protection first.');
@@ -786,6 +815,37 @@
   function resetAdditions(){ state.additions = {}; }
 
   /* =========================================================
+     INFO POP-UP
+     A dismissable sheet like the Seismic Walk safety notice: the X, a
+     tap on the dimmed backdrop or Escape closes it, and focus goes back
+     to wherever it was.
+  ========================================================= */
+  var modalReturnFocus = null;
+  function openModal(id){
+    var m = document.getElementById(id);
+    if(!m || m.classList.contains('open')) return;
+    modalReturnFocus = document.activeElement;
+    m.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    try{ m.querySelector('.modal-sheet').focus({ preventScroll:true }); }catch(e){}
+  }
+  function closeModal(m){
+    if(!m.classList.contains('open')) return;
+    m.classList.remove('open');
+    document.body.style.overflow = '';
+    if(modalReturnFocus){ try{ modalReturnFocus.focus({ preventScroll:true }); }catch(e){} }
+    modalReturnFocus = null;
+  }
+  function wireModal(id){
+    var m = document.getElementById(id);
+    m.querySelector('.modal-close').addEventListener('click', function(){ closeModal(m); });
+    m.addEventListener('click', function(e){ if(e.target === m) closeModal(m); });
+    m.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeModal(m); });
+  }
+  // The Upgrades information opens by itself the first time that step is shown.
+  var upgradesInfoShown = false;
+
+  /* =========================================================
      STEP 2 - ADDITIONS
   ========================================================= */
   function renderAdditionCards(){
@@ -805,8 +865,9 @@
       el.innerHTML =
         '<span class="check" aria-hidden="true"></span>'+
         '<span class="body"><span class="name">'+a.label+'</span>'+
+        '<span class="impact">Cost impact: +'+fmtPct(a.value)+' in building value, -'+fmtPct(a.installCost)+' in upgrade cost</span>'+
         '<span class="desc">'+a.desc+'</span>'+
-        '<span class="pills-row"><span class="pill gain">+'+fmtPct(a.budgetBonus)+' to upgrade budget</span>'+
+        '<span class="pills-row"><span class="pill gain">Net result = +'+fmtPct(a.budgetBonus)+'</span>'+
         '<span class="pill mass">+'+Math.round(a.massPct*100)+'% weight</span></span></span>';
       el.addEventListener('click', function(){
         if(blocksRemoval){
@@ -846,14 +907,19 @@
       } else if(!selected && state.protections[featuredKey]){
         freedByThis = P.protections[featuredKey].cost;
       }
+      // Homes: FrontFoot Dampers keep most of the shaking out of the house,
+      // so while they're selected the other options are greyed out as not
+      // required (they can't be combined with them anyway).
+      var notRequired = P.isHouse && k!==featuredKey && !!state.protections[featuredKey];
       var affordable = selected || fits(budgetRemaining() + freedByThis - p.cost);
-      var blocked = unsuitable || !affordable;
+      var blocked = unsuitable || notRequired || !affordable;
       var el = document.createElement('button');
       el.type = 'button';
       el.className = 'card toggle' + (selected ? ' selected' : '') + (blocked ? ' disabled' : '') + (p.featured && !unsuitable ? ' featured' : '');
       el.setAttribute('aria-pressed', selected ? 'true' : 'false');
       if(blocked) el.setAttribute('aria-disabled', 'true');
       var badge = unsuitable ? '<span class="badge muted">Not suitable for the primary structural system</span>'
+        : notRequired ? '<span class="badge muted">Not required with ' + P.protections[featuredKey].label + '</span>'
         : (p.featured ? '<span class="badge">Recommended</span>' : '');
       el.innerHTML =
         '<span class="check" aria-hidden="true"></span>'+
@@ -867,6 +933,11 @@
             .map(function(sk){ return P.systems[sk].label.toLowerCase(); });
           flashNote('protect-note', p.label + " isn't suitable for " + P.systems[state.systemKey].label.toLowerCase() +
             ' - it works with a ' + fits.join(' or ') + '.');
+          return;
+        }
+        if(notRequired){
+          flashNote('protect-note', p.label + " isn't required: " + P.protections[featuredKey].label +
+            ' already keep most of the shaking out of your home. Untick ' + P.protections[featuredKey].label + ' if you would rather use this instead.');
           return;
         }
         if(!affordable){
@@ -883,7 +954,11 @@
           Object.keys(P.protections).forEach(function(ok){
             if(ok!==k && state.protections[ok]){ cleared.push(P.protections[ok].label); state.protections[ok] = false; }
           });
-          if(cleared.length) flashNote('protect-note', p.label+' replaces other protection choices - removed '+cleared.join(' and ')+'.');
+          if(cleared.length){
+            flashNote('protect-note', P.isHouse
+              ? p.label+' keep most of the shaking out of your home, so other protection isn\'t required. We\'ve removed '+cleared.join(' and ')+'.'
+              : p.label+' replaces other protection choices - removed '+cleared.join(' and ')+'.');
+          }
         } else if(turningOn && k!==featuredKey && state.protections[featuredKey]){
           state.protections[featuredKey] = false;
           flashNote('protect-note', 'Removed '+P.protections[featuredKey].label+' - it can\'t be combined with other protections.');
@@ -1399,8 +1474,14 @@
       for(var si=0; si<n; si++) maps['s'+si] = chain[si];
       maps.roof = chain.roof;
       maps['in'] = chain[0];
+      // Tilt-up panels are the shed's long wall: they sway with the storey
+      // (a collapse below takes them over from here).
+      for(var pk=0; pk<(info.panels || 0); pk++) maps['tp'+pk] = chain[0];
 
       if(mode==='tiltup'){
+        // Unclamped time, so the last panel and the gable finish falling in
+        // the settling pause after the shaking stops.
+        var fracX = elapsed/animMs;
         /* Tilt-up shed: the long wall's panels break their connections and
            fall outward one after another, the gable end leans out and the
            roof comes down inside. */
@@ -1408,7 +1489,7 @@
         var order = [2, 0, 4, 1, 3];
         for(var k=0; k<info.panels; k++){
           (function(k){
-            var c = clamp((frac - (sched.collapse + 0.045*order.indexOf(k)))/0.17, 0, 1), b = 1.45*c*c, cb = Math.cos(b), sb = Math.sin(b);
+            var c = clamp((fracX - (sched.collapse + 0.045*order.indexOf(k)))/0.17, 0, 1), b = 1.45*c*c, cb = Math.cos(b), sb = Math.sin(b);
             maps['tp'+k] = function(p){ return s0([p[0], Ly + (p[1]-Ly)*cb + (p[2]-zb)*sb, zb - (p[1]-Ly)*sb + (p[2]-zb)*cb]); };
             if(c >= 1 && !landed['tp'+k]){
               landed['tp'+k] = true;
@@ -1417,9 +1498,9 @@
             }
           })(k);
         }
-        var cg = clamp((frac - (sched.collapse + 0.22))/0.15, 0, 1), eg = 0.28*cg*cg, ceg = Math.cos(eg), seg = Math.sin(eg);
+        var cg = clamp((fracX - (sched.collapse + 0.22))/0.15, 0, 1), eg = 0.28*cg*cg, ceg = Math.cos(eg), seg = Math.sin(eg);
         maps.s0 = function(p){ return s0([Lx + (p[0]-Lx)*ceg + (p[2]-zb)*seg, p[1], zb - (p[0]-Lx)*seg + (p[2]-zb)*ceg]); };
-        var cr = clamp((frac - (sched.collapse + 0.14))/0.18, 0, 1), drop = (h - 8)*cr*cr;
+        var cr = clamp((fracX - (sched.collapse + 0.14))/0.18, 0, 1), drop = (h - 8)*cr*cr;
         maps.roof = function(p){ return chain.roof([p[0], p[1], p[2] - drop*(0.3 + 0.7*p[1]/Ly)]); };
         if(cr >= 1 && !landed.roof){
           landed.roof = true;
@@ -1672,7 +1753,6 @@
     if(canFeature) document.getElementById('btn-whatif').addEventListener('click', retestWithFeaturedToggle);
 
     renderLeaderboardCard(result);
-    document.getElementById('share-status').textContent = '';
 
     showScreen('results');
     track('result', {
@@ -1742,38 +1822,6 @@
     track('what_if_retest', { protection:P.featuredKey, on:turningOn });
     prepareShakeScreen();
     startShake();
-  }
-
-  /* =========================================================
-     SHARING
-  ========================================================= */
-  function shareText(result){
-    if(!result) return 'Can you design a building that thrives in an earthquake?';
-    var q = M.QUAKES[result.levelKey].label.toLowerCase();
-    var tier = result.level.tier;
-    if(tier==='thrive') return 'My building thrived in a ' + q + ' earthquake - ' + result.score + ' points on Survive or Thrive? Can you beat it?';
-    if(tier==='survive') return 'My building survived a ' + q + ' earthquake (' + result.score + ' points). Can you design one that thrives?';
-    return 'My building collapsed in a ' + q + ' earthquake. Can you design one that survives - or thrives?';
-  }
-
-  function shareResult(){
-    var result = state.lastRun;
-    var text = shareText(result);
-    var statusEl = document.getElementById('share-status');
-    track('share', { tier: result ? result.level.tier : 'none' });
-    if(navigator.share){
-      navigator.share({ title:'Survive or Thrive?', text:text, url:SHARE_URL }).catch(function(){});
-      return;
-    }
-    var full = text + ' ' + SHARE_URL;
-    var done = function(){ statusEl.textContent = 'Link copied - paste it anywhere to share.'; statusEl.className = 'lb-status ok'; };
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(full).then(done, function(){
-        statusEl.textContent = full; statusEl.className = 'lb-status';
-      });
-    } else {
-      statusEl.textContent = full; statusEl.className = 'lb-status';
-    }
   }
 
   /* =========================================================
@@ -1898,9 +1946,9 @@
   /* =========================================================
      LANDING ILLUSTRATION
   ========================================================= */
-  /* The landing illustration: three buildings drawn by the same isometric
-     scene code as the shake test - a home on FrontFoot dampers, a shed and
-     an office block with Quake Defender bracing - standing on one shared
+  /* The landing illustration: three static buildings drawn by the same
+     isometric scene code as the shake test - a home on FrontFoot dampers, a
+     shed and an office block with Quake Defender bracing - standing on one shared
      strip of ground that runs off both sides of the frame. Buildings are
      placed in 3D along the screen's horizontal (u), so they share one
      consistent ground plane; v runs towards the viewer. */
@@ -1923,7 +1971,9 @@
       var cu = cursor + half;
       cursor = cu + half + gap;
       maxHalf = Math.max(maxHalf, half);
-      return { pk:pk, cu:cu, r:S.render(pk.d, { noIsland:true, margin:0 }) };
+      // The landing shed is drawn without the concrete yard and the long
+      // wall's window strip (the shake test keeps both).
+      return { pk:pk, cu:cu, r:S.render(pk.d, { noIsland:true, noYard:true, noWallWindow:true, margin:0 }) };
     });
     var shift = (cursor - gap)/2;
     var minX = Infinity, maxX = -Infinity, minY = Infinity;
@@ -1932,7 +1982,7 @@
       var so = S.project([c[0] - pl.pk.w/2, c[1] - pl.pk.dep/2, 0]);
       var vb = pl.r.viewBox;
       minX = Math.min(minX, vb[0] + so[0]); maxX = Math.max(maxX, vb[0] + vb[2] + so[0]); minY = Math.min(minY, vb[1] + so[1]);
-      return '<g transform="translate('+so[0].toFixed(1)+','+so[1].toFixed(1)+')"><g class="'+['sway','sway b2','sway b3'][i]+'">'+pl.r.markup+'</g></g>';
+      return '<g transform="translate('+so[0].toFixed(1)+','+so[1].toFixed(1)+')">'+pl.r.markup+'</g>';
     });
 
     // The shared ground: a long strip (far wider than the frame) whose front
@@ -1976,7 +2026,10 @@
     function showAdditions(){
       renderAdditionCards(); renderAddonSummary();
       showScreen('additions');
+      if(!upgradesInfoShown){ upgradesInfoShown = true; openModal('upgrades-info'); }
     }
+    wireModal('upgrades-info');
+    document.getElementById('btn-upgrades-info').addEventListener('click', function(){ openModal('upgrades-info'); });
     function showSystem(){
       renderSystemCards(); syncBuildNav();
       showScreen('system');
@@ -2021,7 +2074,6 @@
       track('game_replayed', { mode:'new_design' });
       startNewDesign();
     }
-    document.getElementById('btn-build-again').addEventListener('click', buildAgain);
     document.getElementById('btn-build-again-lb').addEventListener('click', buildAgain);
 
     // Opens the shake test with the level being viewed on the results
@@ -2032,14 +2084,11 @@
     });
 
     document.getElementById('btn-to-leaderboard').addEventListener('click', function(){
-      document.getElementById('share-status').textContent = '';
       showScreen('leaderboard');
     });
     document.getElementById('btn-back-results').addEventListener('click', function(){
       showScreen('results');
     });
-
-    document.getElementById('btn-share').addEventListener('click', shareResult);
   }
 
   /* =========================================================

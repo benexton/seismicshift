@@ -315,7 +315,7 @@
     var Lx = 160, Ly = 100, Hw = 56, r = 18, bay = 32;
     var P = d.protections || {}, A = d.additions || {}, sys = d.systemKey;
     var isolated = !!P.isolation;
-    var zb = ground(B, Lx, Ly, isolated, false, Hw + 6);
+    var zb = ground(B, Lx, Ly, isolated, false, NO_YARD ? 0 : Hw + 6);
     var H = zb + Hw, apex = H + r;
     var tilt = sys === 'shearwalls', qd = !!P.quakeDefender;
     var wallCol = tilt ? PAL.conc : PAL.clad, wallR = shade(wallCol,-.16);
@@ -411,8 +411,10 @@
     L.poly(qL(0,Lx,zb,H,Ly), wallCol);
     {
       for(var x = 6; x < Lx; x += 6) L.line([x,Ly,zb+1],[x,Ly,H-1], PAL.rib, 0.7);
-      L.poly(qL(bay+4,Lx-bay-4,H-19,H-12,Ly), PAL.glass, { sw:SW*0.6 });
-      for(var w = bay*2; w < Lx-bay; w += bay) L.line([w,Ly,H-19],[w,Ly,H-12], PAL.frame, 1.1);
+      if(!NO_WALL_WINDOW){
+        L.poly(qL(bay+4,Lx-bay-4,H-19,H-12,Ly), PAL.glass, { sw:SW*0.6 });
+        for(var w = bay*2; w < Lx-bay; w += bay) L.line([w,Ly,H-19],[w,Ly,H-12], PAL.frame, 1.1);
+      }
     }
     L.poly(qL(74,88,zb,zb+26,Ly), PAL.rollDoor, { sw:SW*0.8 });
     {
@@ -517,13 +519,15 @@
   /* ---------- entry point ---------- */
   // opts.noIsland: leave out the grass island, for scenes that put several
   // buildings on one shared ground (the landing page).
-  var NO_ISLAND = false;
+  // opts.noYard / opts.noWallWindow: leave out the industrial shed's concrete
+  // yard and the window strip on its long wall (the landing page).
+  var NO_ISLAND = false, NO_YARD = false, NO_WALL_WINDOW = false;
   function render(d, opts){
     opts = opts || {};
-    NO_ISLAND = !!opts.noIsland;
+    NO_ISLAND = !!opts.noIsland; NO_YARD = !!opts.noYard; NO_WALL_WINDOW = !!opts.noWallWindow;
     var B = new Builder();
     var info = d.typeKey === 'house' ? drawHouse(B, d) : (d.typeKey === 'industrial' ? drawIndustrial(B, d) : drawCommercial(B, d));
-    NO_ISLAND = false;
+    NO_ISLAND = false; NO_YARD = false; NO_WALL_WINDOW = false;
     var m = opts.margin == null ? 10 : opts.margin;
     var vb = [B.minX - m, B.minY - m - (opts.headroom || 0), (B.maxX - B.minX) + 2*m, (B.maxY - B.minY) + 2*m + (opts.headroom || 0)];
     return { markup:B.markup(), viewBox:vb, pieces:B.pieces.map(function(pc){ return { key:pc.key, group:pc.group, ref:pc.ref }; }), info:info };
