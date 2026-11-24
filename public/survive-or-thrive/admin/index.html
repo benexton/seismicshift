@@ -118,6 +118,7 @@
         <div class="row">
           <button type="button" class="btn" id="btn-csv">Download CSV</button>
           <button type="button" class="btn" id="btn-reload">Reload</button>
+          <button type="button" class="btn" id="btn-logout">Log out</button>
         </div>
       </div>
     </div>
@@ -150,6 +151,14 @@
 
   var password = '';
   var scores = [];
+
+  /* The password is kept for this browser tab only (sessionStorage), so a
+     refresh stays logged in but closing the tab logs out - safer on a
+     shared laptop than remembering it indefinitely. Storage can be blocked
+     (private mode), so every access is guarded. */
+  var PW_KEY = 'sot-admin-pw';
+  function savePw(v){ try{ if(v) sessionStorage.setItem(PW_KEY, v); else sessionStorage.removeItem(PW_KEY); }catch(e){} }
+  function storedPw(){ try{ return sessionStorage.getItem(PW_KEY) || ''; }catch(e){ return ''; } }
 
   function esc(s){
     var d = document.createElement('div');
@@ -222,7 +231,7 @@
     password = document.getElementById('pw').value;
     if(!password) return;
     btn.disabled = true; btn.textContent = 'Checking...';
-    load().catch(function(e){
+    load().then(function(){ savePw(password); }).catch(function(e){
       err.textContent = e.message || 'Could not load the list.';
       err.style.display = 'block';
     }).finally(function(){
@@ -296,7 +305,25 @@
     setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 0);
   }
 
+  function logout(){
+    savePw('');
+    password = ''; scores = [];
+    document.getElementById('pw').value = '';
+    document.getElementById('winner').style.display = 'none';
+    document.getElementById('results').style.display = 'none';
+    document.getElementById('gate').style.display = '';
+  }
+
+  // Back in after a refresh: reuse this tab's password. If it no longer
+  // works (e.g. it was changed), forget it and show the login box.
+  var remembered = storedPw();
+  if(remembered){
+    password = remembered;
+    load().catch(function(){ savePw(''); password = ''; });
+  }
+
   document.getElementById('btn-login').addEventListener('click', login);
+  document.getElementById('btn-logout').addEventListener('click', logout);
   document.getElementById('pw').addEventListener('keydown', function(e){ if(e.key==='Enter') login(); });
   document.getElementById('btn-reload').addEventListener('click', function(){
     var actErr = document.getElementById('act-err');
