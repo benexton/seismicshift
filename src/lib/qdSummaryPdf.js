@@ -1,33 +1,48 @@
 // Draws the QD sizing calculator's summary PDF in the browser. The calculator
 // component decides the content (headings, paragraphs, tables, all as text);
-// this file only lays it out on A4 pages. pdf-lib and the Noto Sans fonts load
-// only when someone asks for the PDF, so the inputs never leave the browser.
+// this file only lays it out on A4 pages, styled like the site: DM Sans, the
+// Seismic Shift logo top right, slate text, rounded cards and brand-blue table
+// heads. pdf-lib and the fonts load only when someone asks for the PDF, so the
+// inputs never leave the browser.
 //
-// Noto Sans has the Greek letters the notation needs (μ, φ, Δ, δ, θ, ξ, λ) but
-// not ≤ or ≥, so content should say "max" / "min" instead.
+// DM Sans has no Greek, so any character it lacks (μ, φ, Δ, δ, θ, ξ, λ) is drawn
+// in Noto Sans, the fallback font the component passes in. Neither font is
+// needed for ≤ or ≥: content says "max" / "min".
 import { loadFont, wrap } from './pdfText'
+import dmRegularUrl from '../assets/fonts/DMSans-Regular.ttf?url'
+import dmBoldUrl from '../assets/fonts/DMSans-Bold.ttf?url'
+import dmBlackUrl from '../assets/fonts/DMSans-Black.ttf?url'
+
+const LOGO_URL = '/logo.png'
 
 const PAGE = [595.28, 841.89] // A4 in points
 const M = 42 // page margin
-const BRAND = [0.09, 0.388, 0.561] // #17638f
-const BRAND_DARK = [0.059, 0.298, 0.431] // #0f4c6e
-const INK = [0.059, 0.09, 0.165] // slate-900
-const BODY = [0.2, 0.255, 0.333] // slate-700
-const GREY = [0.392, 0.455, 0.545] // slate-500
-const RULE = [0.886, 0.91, 0.941] // slate-200
-const TINT = [0.933, 0.945, 0.953] // #eef1f3
-const OK = [0.086, 0.639, 0.29] // #16a34a
-const OK_BG = [0.941, 0.992, 0.957]
-const BAD = [0.863, 0.149, 0.149] // red-600
-const BAD_BG = [0.996, 0.949, 0.949]
-const WARN = [0.478, 0.29, 0.063] // #7a4a10
-const WARN_BG = [0.992, 0.965, 0.925] // #fdf6ec
-const WARN_RULE = [0.753, 0.486, 0.11] // #c07c1c
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255)
+const BRAND = hex('#17638f')
+const INK = hex('#0f172a') // slate-900
+const BODY = hex('#334155') // slate-700
+const MUTED = hex('#64748b') // slate-500
+const FAINT = hex('#94a3b8') // slate-400
+const RULE = hex('#e2e8f0') // slate-200
+const RULE_SOFT = hex('#f1f5f9') // slate-100
+const CARD = hex('#f8fafc') // slate-50
+const TINT = hex('#eef1f3') // brand tint
+const OK = hex('#16a34a')
+const OK_BG = hex('#f0fdf4') // green-50
+const OK_RULE = hex('#bbf7d0') // green-200
+const BAD = hex('#dc2626') // red-600
+const BAD_TEXT = hex('#b91c1c') // red-700
+const BAD_BG = hex('#fef2f2') // red-50
+const BAD_RULE = hex('#fecaca') // red-200
+const EQ = hex('#c07c1c')
+const WARN = hex('#7a4a10')
+const WARN_BG = hex('#fdf6ec')
+const WARN_RULE = hex('#e5cba4') // #c07c1c at 40% on white
 
 const TONE = { ok: OK, bad: BAD, warn: WARN }
 
 /**
- * doc = { title, kicker, meta: [string], footer, filenameTitle, blocks: [block] }
+ * doc = { title, kicker, subject, meta: [string], footer, blocks: [block] }
  * block types:
  *   { type: 'banner', ok, big, sub }            pass / fail headline
  *   { type: 'callout', title, text }            amber note
@@ -36,9 +51,10 @@ const TONE = { ok: OK, bad: BAD, warn: WARN }
  *   { type: 'stats', items: [{ k, v, unit }] }  tiles, three to a row
  *   { type: 'table', head, rows, widths, tint } cells are strings or { text, sub, tone, bold }
  *   { type: 'messages', items: [{ level, text }] }
+ * A 'stats' block straight after a 'banner' shares its card, as on the page.
  */
 export async function buildQdSummaryPdf(model, fontUrls) {
-  const [{ PDFDocument, rgb }, fontkit] = await Promise.all([
+  const [{ PDFDocument, rgb, pushGraphicsState, popGraphicsState, setCharacterSpacing }, fontkit] = await Promise.all([
     import('pdf-lib'),
     import('@pdf-lib/fontkit').then((m) => m.default ?? m),
   ])
@@ -47,9 +63,43 @@ export async function buildQdSummaryPdf(model, fontUrls) {
   doc.setTitle(model.title)
   doc.setAuthor('Seismic Shift')
   doc.setSubject(model.subject ?? model.title)
-  const [regularBytes, boldBytes] = await Promise.all([loadFont(fontUrls.regular), loadFont(fontUrls.bold)])
-  const regular = await doc.embedFont(regularBytes, { subset: true })
-  const bold = await doc.embedFont(boldBytes, { subset: true })
+
+  const [dmReg, dmBold, dmBlack, notoReg, notoBold, logoBytes] = await Promise.all([
+    loadFont(dmRegularUrl),
+    loadFont(dmBoldUrl),
+    loadFont(dmBlackUrl),
+    loadFont(fontUrls.regular),
+    loadFont(fontUrls.bold),
+    fetch(LOGO_URL).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null),
+  ])
+  const embed = (bytes) => doc.embedFont(bytes, { subset: true })
+  const [fReg, fBold, fBlack, fbReg, fbBold] = await Promise.all([embed(dmReg), embed(dmBold), embed(dmBlack), embed(notoReg), embed(notoBold)])
+  // The logo is a nice-to-have: the PDF still builds without it.
+  let logo = null
+  try { if (logoBytes) logo = await doc.embedPng(logoBytes) } catch { logo = null }
+
+  // A face is DM Sans with Noto Sans filling in the characters DM Sans lacks.
+  // It measures like a pdf-lib font, so wrap() in pdfText works with it.
+  const face = (primary, fallback) => {
+    const has = new Set(primary.getCharacterSet())
+    const runs = (str) => {
+      const out = []
+      for (const ch of String(str)) {
+        const font = has.has(ch.codePointAt(0)) ? primary : fallback
+        const last = out[out.length - 1]
+        if (last && last.font === font) last.text += ch
+        else out.push({ font, text: ch })
+      }
+      return out
+    }
+    return {
+      runs,
+      widthOfTextAtSize: (str, size) => runs(str).reduce((s, r) => s + r.font.widthOfTextAtSize(r.text, size), 0),
+    }
+  }
+  const REG = face(fReg, fbReg)
+  const BOLD = face(fBold, fbBold)
+  const BLACK = face(fBlack, fbBold)
 
   const color = (c) => rgb(c[0], c[1], c[2])
   const W = PAGE[0] - M * 2
@@ -57,191 +107,368 @@ export async function buildQdSummaryPdf(model, fontUrls) {
   let page
   let y
 
+  // Draws one line of text in a face, with optional letter spacing (em).
+  const draw = (str, { x, y: by, size, font = REG, col = BODY, tracking = 0 }) => {
+    const tc = tracking * size
+    if (tc) page.pushOperators(pushGraphicsState(), setCharacterSpacing(tc))
+    let cx = x
+    for (const r of font.runs(str)) {
+      page.drawText(r.text, { x: cx, y: by, size, font: r.font, color: color(col) })
+      cx += r.font.widthOfTextAtSize(r.text, size) + tc * [...r.text].length
+    }
+    if (tc) page.pushOperators(popGraphicsState())
+    return cx - x
+  }
+  const widthOf = (str, size, font = REG, tracking = 0) => font.widthOfTextAtSize(str, size) + tracking * size * [...String(str)].length
+
+  // Rounded rectangle from its top-left corner. corners = [tl, tr, br, bl].
+  const roundRect = (x, top, w, h, r, { fill, border, borderWidth = 0.75, corners = [1, 1, 1, 1] } = {}) => {
+    const [tl, tr, br, bl] = corners.map((c) => (c ? Math.min(r, w / 2, h / 2) : 0))
+    const path = [
+      `M ${tl} 0`, `H ${w - tr}`, tr ? `A ${tr} ${tr} 0 0 1 ${w} ${tr}` : '',
+      `V ${h - br}`, br ? `A ${br} ${br} 0 0 1 ${w - br} ${h}` : '',
+      `H ${bl}`, bl ? `A ${bl} ${bl} 0 0 1 0 ${h - bl}` : '',
+      `V ${tl}`, tl ? `A ${tl} ${tl} 0 0 1 ${tl} 0` : '', 'Z',
+    ].join(' ')
+    const opts = { x, y: top }
+    if (fill) opts.color = color(fill)
+    if (border) { opts.borderColor = color(border); opts.borderWidth = borderWidth }
+    page.drawSvgPath(path, opts)
+  }
+
+  // Logo, top right, at a given height. Returns its width (0 without a logo).
+  const drawLogo = (top, h) => {
+    if (!logo) return 0
+    const w = (logo.width / logo.height) * h
+    page.drawImage(logo, { x: PAGE[0] - M - w, y: top - h, width: w, height: h })
+    return w
+  }
+
   const newPage = () => {
     page = doc.addPage(PAGE)
-    y = PAGE[1] - M
+    // Running head on continuation pages: title left, small logo right.
+    const top = PAGE[1] - M + 14
+    const lw = drawLogo(top, 20)
+    draw(model.title, { x: M, y: top - 13, size: 8, font: BLACK, col: FAINT, tracking: -0.01 })
+    if (!lw) draw('Seismic Shift', { x: PAGE[0] - M - widthOf('Seismic Shift', 8, BLACK), y: top - 13, size: 8, font: BLACK, col: INK })
+    page.drawLine({ start: { x: M, y: top - 28 }, end: { x: M + W, y: top - 28 }, thickness: 0.5, color: color(RULE) })
+    y = top - 28 - 14
   }
   const room = (h) => y - h >= BOTTOM
   const ensure = (h) => { if (!room(h)) newPage() }
 
-  const lineH = (size, lead = 1.38) => size * lead
-  const textHeight = (str, { font = regular, size = 9.5, width = W, lead = 1.38 } = {}) =>
+  const lineH = (size, lead = 1.4) => size * lead
+  const textHeight = (str, { font = REG, size = 9.5, width = W, lead = 1.4 } = {}) =>
     wrap(str, font, size, width).length * lineH(size, lead)
 
-  const text = (str, { font = regular, size = 9.5, col = BODY, width = W, lead = 1.38, x = M, gap = 0, keep = false } = {}) => {
+  const text = (str, { font = REG, size = 9.5, col = BODY, width = W, lead = 1.4, x = M, gap = 0, keep = false, tracking = 0 } = {}) => {
     const lines = wrap(str, font, size, width)
-    if (keep) ensure(lines.length * lineH(size, lead))
-    for (const line of lines) {
-      ensure(lineH(size, lead))
+    const lh = lineH(size, lead)
+    // Keep short paragraphs whole, and never leave a single line of a longer
+    // one alone at the foot or head of a page.
+    let breakAt = -1
+    if (keep || lines.length <= 4) ensure(lines.length * lh)
+    else {
+      const fit = Math.floor((y - BOTTOM) / lh)
+      if (fit < 2) newPage()
+      else if (fit < lines.length) breakAt = lines.length - fit === 1 ? fit - 1 : fit
+    }
+    for (const [i, line] of lines.entries()) {
+      if (i === breakAt) newPage()
+      ensure(lh)
       y -= lineH(size, lead)
-      if (line) page.drawText(line, { x, y: y + size * 0.28, size, font, color: color(col) })
+      if (line) draw(line, { x, y: y + size * 0.3, size, font, col, tracking })
     }
     y -= gap
   }
 
+  // Word-wraps runs of differently styled text together (a bold lead-in
+  // followed by body text). segs = [{ text, font, col }]. Returns lines of
+  // pieces [{ text, font, col, x }].
+  const richLines = (segs, size, width) => {
+    const words = []
+    for (const s of segs) for (const w of String(s.text).split(/\s+/).filter(Boolean)) words.push({ ...s, text: w })
+    const space = (f) => f.widthOfTextAtSize(' ', size)
+    const lines = []
+    let line = []
+    let lx = 0
+    for (const w of words) {
+      const ww = w.font.widthOfTextAtSize(w.text, size)
+      const sp = line.length ? space(w.font) : 0
+      if (line.length && lx + sp + ww > width) {
+        lines.push(line)
+        line = []
+        lx = 0
+      }
+      const gap = line.length ? space(w.font) : 0
+      line.push({ ...w, x: lx + gap })
+      lx += gap + ww
+    }
+    if (line.length) lines.push(line)
+    return lines
+  }
+
   // ── Header on page 1 ──────────────────────────────────────────────────────
-  newPage()
-  const headH = 78
-  page.drawRectangle({ x: 0, y: PAGE[1] - headH, width: PAGE[0], height: headH, color: color(BRAND) })
-  page.drawText(model.kicker, { x: M, y: PAGE[1] - 26, size: 8, font: bold, color: rgb(1, 1, 1), opacity: 0.85 })
-  page.drawText(model.title, { x: M, y: PAGE[1] - 54, size: 20, font: bold, color: rgb(1, 1, 1) })
-  y = PAGE[1] - headH - 10
-  for (const line of model.meta) text(line, { size: 8.5, col: GREY, lead: 1.35 })
-  y -= 8
+  page = doc.addPage(PAGE)
+  {
+    const top = PAGE[1] - M + 6
+    const logoH = 40
+    const lw = drawLogo(top, logoH)
+    const textW = W - (lw ? lw + 20 : 0)
+    y = top
+    // Eyebrow, as on the site: small, black weight, uppercase, wide tracking.
+    y -= 9
+    draw(model.kicker.toUpperCase(), { x: M, y, size: 7.5, font: BLACK, col: FAINT, tracking: 0.1 })
+    y -= 6
+    text(model.title, { font: BLACK, size: 23, col: INK, lead: 1.15, width: textW, tracking: -0.03 })
+    y = Math.min(y, top - logoH) - 12
+    page.drawLine({ start: { x: M, y }, end: { x: M + W, y }, thickness: 0.5, color: color(RULE) })
+    y -= 6
+    for (const line of model.meta) text(line, { size: 8.5, col: MUTED, lead: 1.4 })
+    y -= 12
+  }
 
   // ── Blocks ────────────────────────────────────────────────────────────────
-  const drawBanner = ({ ok, big, sub }) => {
-    const pad = 12
-    const subH = sub ? textHeight(sub, { size: 9, width: W - pad * 2 - 62 }) : 0
-    const h = pad * 2 + 22 + subH
-    ensure(h + 8)
-    const top = y
-    page.drawRectangle({ x: M, y: top - h, width: W, height: h, color: color(ok ? OK_BG : BAD_BG), borderColor: color(ok ? OK : BAD), borderWidth: 0.8 })
-    // Chip
+  const paraStyle = (b) => ({ size: b.small ? 8 : 9, col: b.small ? MUTED : BODY, lead: 1.4 })
+
+  const TABLE = { size: 8.2, subSize: 6.7, padX: 7, padY: 3.6, R: 7 }
+  // Wraps every cell of a table to its column. Used to draw it and to measure it.
+  const tableCells = ({ head, rows, widths }) => {
+    const { size, subSize, padX } = TABLE
+    const colW = widths.map((fr) => fr * W)
+    const cell = (c) => (typeof c === 'string' || typeof c === 'number' || c == null ? { text: String(c ?? '') } : c)
+    const layout = (row, header) =>
+      row.map((c0, i) => {
+        const c = cell(c0)
+        const font = header ? BLACK : c.bold ? BOLD : i === 0 ? REG : BOLD
+        const inner = colW[i] - padX * 2
+        const lines = wrap(c.text, font, size, inner)
+        const subLines = c.sub ? wrap(c.sub, REG, subSize, inner) : []
+        const h = lines.length * lineH(size, 1.3) + subLines.length * lineH(subSize, 1.3)
+        return { c, font, lines, subLines, h }
+      })
+    return { colW, headCells: head ? layout(head, true) : null, bodyCells: rows.map((r) => layout(r, false)) }
+  }
+  const rowH = (cells) => Math.max(...cells.map((x) => x.h)) + TABLE.padY * 2
+
+  const messageHeight = (m) => 8 * 2 + textHeight(m.text, { size: 8.8, width: W - 11 * 2 })
+
+  const statLayout = (items) => {
+    const cols = 3
+    const gap = 7
+    const w = (W - 28 - gap * (cols - 1)) / cols
+    const h = 36
+    const rows = Math.ceil(items.length / cols)
+    return { cols, gap, w, h, rows, height: rows * h + (rows - 1) * gap }
+  }
+
+  const drawStatTiles = (items, x0, L) => {
+    for (let i = 0; i < items.length; i += L.cols) {
+      const top = y
+      items.slice(i, i + L.cols).forEach((it, j) => {
+        const x = x0 + j * (L.w + L.gap)
+        roundRect(x, top, L.w, L.h, 7, { fill: [1, 1, 1], border: RULE_SOFT })
+        draw(it.k, { x: x + 9, y: top - 12, size: 7, font: BLACK, col: FAINT })
+        const vSize = 13
+        const vw = draw(it.v, { x: x + 9, y: top - 28, size: vSize, font: BLACK, col: it.tone ? TONE[it.tone] : INK, tracking: -0.02 })
+        if (it.unit) draw(it.unit, { x: x + 9 + vw + 3, y: top - 28, size: 7.5, font: BOLD, col: FAINT })
+      })
+      y = top - L.h - L.gap
+    }
+    y += L.gap
+  }
+
+  // The headline card: pass / fail chip, the result, the reason, then the stat
+  // tiles, on a slate-50 card like the page's summary.
+  const drawSummaryCard = ({ ok, big, sub }, stats) => {
+    const pad = 14
+    const inner = W - pad * 2
+    const bigSize = 17
     const chip = ok ? 'PASS' : 'FAIL'
-    const chipW = bold.widthOfTextAtSize(chip, 8.5) + 16
-    page.drawRectangle({ x: M + pad, y: top - pad - 17, width: chipW, height: 15, color: color(ok ? OK : BAD) })
-    page.drawText(chip, { x: M + pad + 8, y: top - pad - 13, size: 8.5, font: bold, color: rgb(1, 1, 1) })
-    const tx = M + pad + chipW + 10
-    page.drawText(big, { x: tx, y: top - pad - 15, size: 15, font: bold, color: color(INK) })
-    y = top - pad - 22
-    if (sub) text(sub, { size: 9, col: BODY, width: W - (tx - M) - pad, x: tx })
-    y = top - h - 10
+    const chipSize = 7.5
+    const chipW = widthOf(chip, chipSize, BLACK, 0.08) + 14
+    const chipH = 15
+    const bigLines = wrap(big, BLACK, bigSize, inner - chipW - 10)
+    const subLines = sub ? wrap(sub, REG, 9.5, inner) : []
+    const L = stats ? statLayout(stats.items) : null
+    const h = pad + bigLines.length * lineH(bigSize, 1.2) + (subLines.length ? 4 + subLines.length * lineH(9.5) : 0) + (L ? 12 + L.height : 0) + pad
+    ensure(h + 10)
+    const top = y
+    roundRect(M, top, W, h, 12, { fill: CARD, border: RULE_SOFT })
+    // Chip, vertically centred on the first line of the headline.
+    const firstMid = top - pad - lineH(bigSize, 1.2) / 2
+    roundRect(M + pad, firstMid + chipH / 2, chipW, chipH, chipH / 2, { fill: ok ? OK_BG : BAD_BG, border: ok ? OK_RULE : BAD_RULE })
+    draw(chip, { x: M + pad + 7, y: firstMid - chipSize * 0.35, size: chipSize, font: BLACK, col: ok ? OK : BAD, tracking: 0.08 })
+    y = top - pad
+    bigLines.forEach((line) => {
+      y -= lineH(bigSize, 1.2)
+      draw(line, { x: M + pad + chipW + 10, y: y + bigSize * 0.28, size: bigSize, font: BLACK, col: INK, tracking: -0.03 })
+    })
+    if (subLines.length) {
+      y -= 4
+      text(sub, { size: 9.5, col: MUTED, width: inner, x: M + pad })
+    }
+    if (L) {
+      y -= 12
+      drawStatTiles(stats.items, M + pad, L)
+    }
+    y = top - h - 12
+  }
+
+  const drawStatsAlone = ({ items }) => {
+    const L = statLayout(items)
+    ensure(L.height + 8)
+    drawStatTiles(items, M + 14, L)
+    y -= 12
   }
 
   const drawCallout = ({ title, textBody }) => {
-    const pad = 10
-    const body = title ? `${title} ${textBody}` : textBody
-    const h = pad * 2 + textHeight(body, { size: 8.5, width: W - pad * 2 - 4 })
-    ensure(h + 8)
+    const pad = 11
+    const size = 9
+    const segs = [...(title ? [{ text: title, font: BLACK, col: EQ }] : []), { text: textBody, font: REG, col: BODY }]
+    const lines = richLines(segs, size, W - pad * 2)
+    const h = pad * 2 + lines.length * lineH(size, 1.5) - 2
+    ensure(h + 10)
     const top = y
-    page.drawRectangle({ x: M, y: top - h, width: W, height: h, color: color(WARN_BG) })
-    page.drawRectangle({ x: M, y: top - h, width: 3, height: h, color: color(WARN_RULE) })
-    y = top - pad
-    text(body, { size: 8.5, col: BODY, width: W - pad * 2 - 4, x: M + pad + 4 })
-    y = top - h - 10
+    roundRect(M, top, W, h, 12, { fill: WARN_BG, border: WARN_RULE })
+    y = top - pad + 1
+    for (const line of lines) {
+      y -= lineH(size, 1.5)
+      for (const piece of line) draw(piece.text, { x: M + pad + piece.x, y: y + size * 0.35, size, font: piece.font, col: piece.col })
+    }
+    y = top - h - 12
   }
 
-  const drawHeading = ({ text: t, eyebrow }) => {
-    // Keep a heading with at least a few lines of what follows it.
-    ensure((eyebrow ? 12 : 0) + 22 + 60)
+  // Height a heading needs below it so it isn't stranded at the foot of a page:
+  // a short paragraph whole (and the start of what follows it), a table's
+  // header and first two rows, or the first message.
+  const startHeight = (i) => {
+    const b = model.blocks[i]
+    if (!b) return 0
+    if (b.type === 'p') {
+      const { size, lead } = paraStyle(b)
+      const lines = wrap(b.text, REG, size, W).length
+      return lines <= 4 ? lines * lineH(size, lead) + 7 + startHeight(i + 1) : 2 * lineH(size, lead)
+    }
+    if (b.type === 'table') {
+      const { headCells, bodyCells } = tableCells(b)
+      return (headCells ? rowH(headCells) : 0) + bodyCells.slice(0, 2).reduce((s, c) => s + rowH(c), 0)
+    }
+    if (b.type === 'messages' && b.items.length) return messageHeight(b.items[0])
+    return 40
+  }
+
+  const drawHeading = ({ text: t, eyebrow }, i) => {
+    ensure((eyebrow ? 9 : 0) + 8 + lineH(14, 1.25) + 6 + startHeight(i + 1))
     y -= 8
     if (eyebrow) {
-      y -= 10
-      page.drawText(eyebrow.toUpperCase(), { x: M, y, size: 7, font: bold, color: color(GREY) })
+      y -= 8
+      draw(eyebrow.toUpperCase(), { x: M, y, size: 7, font: BLACK, col: FAINT, tracking: 0.1 })
+      y -= 1
     }
-    text(t, { font: bold, size: 12.5, col: INK, lead: 1.3 })
-    y -= 4
+    text(t, { font: BLACK, size: 14, col: INK, lead: 1.25, tracking: -0.03 })
+    y -= 6
   }
 
-  const drawStats = ({ items }) => {
-    const cols = 3
-    const gap = 6
-    const w = (W - gap * (cols - 1)) / cols
-    const h = 38
-    for (let i = 0; i < items.length; i += cols) {
-      ensure(h + gap)
+  const drawTable = (b) => {
+    const { tint } = b
+    const { colW, headCells, bodyCells } = tableCells(b)
+    const { size, subSize, padX, padY, R } = TABLE
+    const drawRow = (cells, { header = false, fill = null, last = false } = {}) => {
+      const h = rowH(cells)
       const top = y
-      items.slice(i, i + cols).forEach((it, j) => {
-        const x = M + j * (w + gap)
-        page.drawRectangle({ x, y: top - h, width: w, height: h, color: rgb(1, 1, 1), borderColor: color(RULE), borderWidth: 0.8 })
-        page.drawText(it.k, { x: x + 8, y: top - 13, size: 7, font: bold, color: color(GREY) })
-        const vSize = 12
-        page.drawText(it.v, { x: x + 8, y: top - 30, size: vSize, font: bold, color: color(it.tone ? TONE[it.tone] : INK) })
-        if (it.unit) {
-          page.drawText(it.unit, { x: x + 8 + bold.widthOfTextAtSize(it.v, vSize) + 4, y: top - 30, size: 7.5, font: bold, color: color(GREY) })
-        }
-      })
-      y = top - h - gap
-    }
-    y -= 4
-  }
-
-  const drawTable = ({ head, rows, widths, tint }) => {
-    const size = 8
-    const subSize = 6.6
-    const padX = 5
-    const padY = 4
-    const colW = widths.map((fr) => fr * W)
-    const cell = (c) => (typeof c === 'string' || typeof c === 'number' || c == null ? { text: String(c ?? '') } : c)
-    const layout = (row, font) =>
-      row.map((c0, i) => {
-        const c = cell(c0)
-        const inner = colW[i] - padX * 2
-        const lines = wrap(c.text, c.bold ? bold : font, size, inner)
-        const subLines = c.sub ? wrap(c.sub, regular, subSize, inner) : []
-        const h = lines.length * lineH(size, 1.3) + subLines.length * lineH(subSize, 1.3)
-        return { c, lines, subLines, h }
-      })
-    const drawRow = (cells, { header = false, fill = null } = {}) => {
-      const h = Math.max(...cells.map((x) => x.h)) + padY * 2
-      const top = y
-      if (fill) page.drawRectangle({ x: M, y: top - h, width: W, height: h, color: color(fill) })
+      if (fill) roundRect(M, top, W, h, R, { fill, corners: header ? [1, 1, 0, 0] : last ? [0, 0, 1, 1] : [0, 0, 0, 0] })
       let x = M
-      cells.forEach(({ c, lines, subLines }, i) => {
+      cells.forEach(({ c, font, lines, subLines }, i) => {
         const right = i > 0
-        const font = header || c.bold ? bold : regular
+        // First column reads as a label (slate-700), values as figures (slate-900).
         const col = header ? [1, 1, 1] : c.tone ? TONE[c.tone] : i === 0 ? BODY : INK
         let ty = top - padY
         for (const line of lines) {
           ty -= lineH(size, 1.3)
           const lw = font.widthOfTextAtSize(line, size)
-          page.drawText(line, { x: right ? x + colW[i] - padX - lw : x + padX, y: ty + size * 0.3, size, font, color: color(col) })
+          draw(line, { x: right ? x + colW[i] - padX - lw : x + padX, y: ty + size * 0.3, size, font, col })
         }
         for (const line of subLines) {
           ty -= lineH(subSize, 1.3)
-          const lw = regular.widthOfTextAtSize(line, subSize)
-          page.drawText(line, { x: right ? x + colW[i] - padX - lw : x + padX, y: ty + subSize * 0.3, size: subSize, font: regular, color: color(GREY) })
+          const lw = REG.widthOfTextAtSize(line, subSize)
+          draw(line, { x: right ? x + colW[i] - padX - lw : x + padX, y: ty + subSize * 0.32, size: subSize, font: REG, col: header ? [0.85, 0.9, 0.94] : MUTED })
         }
         x += colW[i]
       })
       y = top - h
-      if (!header) page.drawLine({ start: { x: M, y }, end: { x: M + W, y }, thickness: 0.5, color: color(RULE) })
-      return h
+      if (!header && !last) page.drawLine({ start: { x: M, y }, end: { x: M + W, y }, thickness: 0.5, color: color(RULE) })
     }
-    const headCells = head ? layout(head, bold) : null
-    const headH = headCells ? Math.max(...headCells.map((x) => x.h)) + padY * 2 : 0
-    const bodyCells = rows.map((r) => layout(r, regular))
-    const rowH = (cells) => Math.max(...cells.map((x) => x.h)) + padY * 2
+    const headH = headCells ? rowH(headCells) : 0
+    const n = bodyCells.length
+    const tail = bodyCells.slice(-3).reduce((s, c) => s + rowH(c), 0)
+    // Would row i start a new page if the page's y were yAt?
+    const breaksAt = (i, yAt) => {
+      if (i >= n) return false
+      const fits = (h) => yAt - h >= BOTTOM
+      // Widow control: if the last three rows won't all fit, move all three
+      // over together rather than leaving one or two alone on the next page.
+      const atTail = n >= 6 && i === n - 3
+      return !fits(rowH(bodyCells[i])) || (atTail && !fits(tail))
+    }
+    // Each page's part of the table gets its own rounded frame.
+    let segTop
+    const startSegment = () => {
+      segTop = y
+      if (headCells) drawRow(headCells, { header: true, fill: BRAND })
+    }
+    const endSegment = () => roundRect(M, segTop, W, segTop - y, R, { border: RULE })
+
     // Start on a new page if the header and first two rows won't fit.
     ensure(headH + bodyCells.slice(0, 2).reduce((s, c) => s + rowH(c), 0))
-    if (headCells) drawRow(headCells, { header: true, fill: BRAND })
-    // Widow control: if the last three rows won't all fit, move all three
-    // over together rather than leaving one or two alone on the next page.
-    const tail = bodyCells.slice(-3).reduce((s, c) => s + rowH(c), 0)
+    startSegment()
     bodyCells.forEach((cells, i) => {
-      const atTail = bodyCells.length >= 6 && i === bodyCells.length - 3
-      if (!room(rowH(cells)) || (atTail && !room(tail))) {
+      if (breaksAt(i, y)) {
+        endSegment()
         newPage()
-        if (headCells) drawRow(headCells, { header: true, fill: BRAND })
+        startSegment()
       }
-      drawRow(cells, { fill: tint && tint(i) ? TINT : null })
+      const lastHere = i === n - 1 || breaksAt(i + 1, y - rowH(cells))
+      drawRow(cells, { fill: tint && tint(i) ? TINT : null, last: lastHere })
     })
-    y -= 8
+    endSegment()
+    y -= 12
   }
 
+  const MSG = {
+    bad: { fg: BAD_TEXT, bg: BAD_BG, rule: BAD_RULE },
+    warn: { fg: WARN, bg: WARN_BG, rule: WARN_RULE },
+    info: { fg: BODY, bg: TINT, rule: RULE },
+  }
   const drawMessages = ({ items }) => {
     for (const m of items) {
-      const pad = 7
-      const fg = m.level === 'bad' ? BAD : m.level === 'warn' ? WARN : BODY
-      const bg = m.level === 'bad' ? BAD_BG : m.level === 'warn' ? WARN_BG : TINT
-      const h = pad * 2 + textHeight(m.text, { size: 8.5, width: W - pad * 2 })
-      ensure(h + 5)
+      const st = MSG[m.level] ?? MSG.info
+      const padX = 11
+      const padY = 8
+      const h = messageHeight(m)
+      ensure(h + 6)
       const top = y
-      page.drawRectangle({ x: M, y: top - h, width: W, height: h, color: color(bg) })
-      y = top - pad
-      text(m.text, { size: 8.5, col: fg, width: W - pad * 2, x: M + pad })
-      y = top - h - 5
+      roundRect(M, top, W, h, 9, { fill: st.bg, border: st.rule })
+      y = top - padY
+      text(m.text, { size: 8.8, col: st.fg, width: W - padX * 2, x: M + padX })
+      y = top - h - 6
     }
-    y -= 5
+    y -= 6
   }
 
-  for (const b of model.blocks) {
-    if (b.type === 'banner') drawBanner(b)
-    else if (b.type === 'callout') drawCallout({ title: b.title, textBody: b.text })
-    else if (b.type === 'h') drawHeading(b)
-    else if (b.type === 'p') text(b.text, { size: b.small ? 8 : 9, col: b.small ? GREY : BODY, gap: 6 })
-    else if (b.type === 'stats') drawStats(b)
+  const blocks = model.blocks
+  for (let i = 0; i < blocks.length; i += 1) {
+    const b = blocks[i]
+    if (b.type === 'banner') {
+      const next = blocks[i + 1]
+      if (next && next.type === 'stats') {
+        drawSummaryCard(b, next)
+        i += 1
+      } else drawSummaryCard(b, null)
+    } else if (b.type === 'callout') drawCallout({ title: b.title, textBody: b.text })
+    else if (b.type === 'h') drawHeading(b, i)
+    else if (b.type === 'p') text(b.text, { ...paraStyle(b), gap: 7 })
+    else if (b.type === 'stats') drawStatsAlone(b)
     else if (b.type === 'table') drawTable(b)
     else if (b.type === 'messages') drawMessages(b)
   }
@@ -249,10 +476,11 @@ export async function buildQdSummaryPdf(model, fontUrls) {
   // ── Footer on every page ──────────────────────────────────────────────────
   const pages = doc.getPages()
   pages.forEach((p, n) => {
+    page = p
     p.drawLine({ start: { x: M, y: M - 2 }, end: { x: PAGE[0] - M, y: M - 2 }, thickness: 0.5, color: color(RULE) })
-    p.drawText(model.footer, { x: M, y: M - 13, size: 7, font: regular, color: color(GREY) })
+    draw(model.footer, { x: M, y: M - 14, size: 7, font: REG, col: FAINT })
     const pn = `Page ${n + 1} of ${pages.length}`
-    p.drawText(pn, { x: PAGE[0] - M - regular.widthOfTextAtSize(pn, 7), y: M - 13, size: 7, font: bold, color: color(BRAND_DARK) })
+    draw(pn, { x: PAGE[0] - M - widthOf(pn, 7, BLACK), y: M - 14, size: 7, font: BLACK, col: BRAND })
   })
 
   return doc.save()
