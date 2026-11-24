@@ -2,30 +2,13 @@ import { useState } from 'react'
 import AccessBadge from './AccessBadge'
 import { formatDistance, formatDuration, walkMinutes } from '../../lib/geo'
 import { WALK, stopColor } from './theme'
-import { openMapsLink } from '../../lib/mapsRoute'
 
-function directionsUrl(from, to) {
-  const origin = `${from.lat},${from.lng}`
-  const destination = `${to.lat},${to.lng}`
-  return `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=walking`
-}
-
-function LegLine({ fromPoint, toPoint, meters, printMode }) {
+// Distance and walking time for the leg arriving at a stop. Directions come
+// from the whole-route Google Maps button above the map, not per leg.
+function LegLine({ meters }) {
   return (
     <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold mb-1.5 tabular-nums">
       <span>{formatDistance(meters)} · {formatDuration(walkMinutes(meters))}</span>
-      {!printMode && (
-        <a
-          href={directionsUrl(fromPoint, toPoint)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline print:hidden"
-          style={{ color: WALK.maroon }}
-          onClick={(e) => { window.gtag?.('event', 'directions_opened'); openMapsLink(e, directionsUrl(fromPoint, toPoint)) }}
-        >
-          Open in maps
-        </a>
-      )}
     </div>
   )
 }
@@ -69,7 +52,7 @@ export default function RouteItinerary({ stops, legs, closingLeg, startPoint = n
             </div>
 
             <div className="flex-1 pb-6 min-w-0">
-              {leg && <LegLine fromPoint={leg.fromPoint} toPoint={stop} meters={leg.meters} printMode={printMode} />}
+              {leg && <LegLine meters={leg.meters} />}
 
               <button
                 type="button"
@@ -119,7 +102,7 @@ export default function RouteItinerary({ stops, legs, closingLeg, startPoint = n
             </div>
           </div>
           <div className="flex-1 min-w-0">
-            <LegLine fromPoint={closingLeg.fromPoint} toPoint={closingLeg.toPoint} meters={closingLeg.meters} printMode={printMode} />
+            <LegLine meters={closingLeg.meters} />
             <p className="font-bold text-slate-900 leading-tight">Return to start</p>
           </div>
         </li>

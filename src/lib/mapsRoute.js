@@ -17,7 +17,14 @@ const MAX_WAYPOINTS = 9
 // didn't resolve to a single place as name + address, so they have their own
 // wording. A point with no address (the walker's live location) stays as
 // coordinates.
+//
+// Canterbury Museum is closed for its rebuild, and Google's "Canterbury
+// Museum" listing now points at the pop-up at 66 Gloucester St, about 400 m
+// from the building the walk visits. The bare street address lands on the
+// Rolleston Ave building, within about 20 m of the walk map's pin (checked in
+// Google Maps 2026-11-24). Google labels that stop "11 Rolleston Avenue".
 const QUERY_OVERRIDES = {
+  'canterbury-museum': '11 Rolleston Avenue, Christchurch Central City, Christchurch 8013',
   'christ-church-cathedral': 'ChristChurch Cathedral, Christchurch',
   'earthquake-memorial': 'Canterbury Earthquake National Memorial, Christchurch',
   'christchurch-hospital-waipapa': 'Waipapa, Christchurch Hospital, Christchurch',

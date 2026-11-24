@@ -12,9 +12,9 @@ function metaLine(building) {
 }
 
 export default function BuildingCard({ building, selected, onToggle, onViewDetail, distanceMeters = null }) {
-  // The whole card toggles selection on tap - much easier to hit on a phone
-  // than the checkbox alone. The thumbnail and title stay dedicated "view
-  // details" targets by stopping the click from bubbling to this handler.
+  // The whole card, photo and title included, toggles selection on tap - much
+  // easier to hit on a phone than the checkbox alone. Only "More info" opens
+  // the details, by stopping its click from bubbling to this handler.
   const stop = (e) => e.stopPropagation()
   const context = isContextSite(building)
   const refreshment = isRefreshment(building)
@@ -27,12 +27,7 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
       style={{ borderColor: selected ? accent : WALK.line }}
     >
       {selected && <span aria-hidden="true" className="absolute left-0 inset-y-0 w-1" style={{ backgroundColor: accent }} />}
-      <button
-        type="button"
-        onClick={(e) => { stop(e); onViewDetail(building) }}
-        className="group flex-shrink-0 w-full h-40 sm:w-28 sm:h-28 rounded-lg bg-slate-100 overflow-hidden"
-        aria-label={`View details for ${building.name}`}
-      >
+      <div className="group flex-shrink-0 w-full h-40 sm:w-28 sm:h-28 rounded-lg bg-slate-100 overflow-hidden">
         {building.image && (
           <img
             src={building.image}
@@ -41,21 +36,21 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
             className="w-full h-full object-cover transition-transform duration-300 ease-out group-hover:scale-110"
           />
         )}
-      </button>
+      </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-3">
-          <button type="button" onClick={(e) => { stop(e); onViewDetail(building) }} className="text-left min-w-0">
+          <div className="text-left min-w-0">
             {context && <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500 mb-0.5">Context stop</p>}
             {refreshment && <p className="text-[10px] font-bold uppercase tracking-[0.16em] mb-0.5" style={{ color: WALK.coffee }}>Refreshments</p>}
-            <h3 className="font-bold text-[15px] sm:text-base text-slate-900 leading-snug hover:underline underline-offset-2">{building.name}</h3>
+            <h3 className="font-bold text-[15px] sm:text-base text-slate-900 leading-snug">{building.name}</h3>
             {metaLine(building) && <p className="text-xs text-slate-500 mt-0.5 truncate">{metaLine(building)}</p>}
             {distanceMeters != null && (
               <p className="text-xs font-semibold mt-0.5 tabular-nums" style={{ color: WALK.maroon }}>
                 {formatDistance(distanceMeters)} · {formatDuration(walkMinutes(distanceMeters))} from your start
               </p>
             )}
-          </button>
+          </div>
           <label className="flex-shrink-0 inline-flex items-center p-2 -m-2" onClick={stop}>
             <input
               type="checkbox"
@@ -90,9 +85,8 @@ export default function BuildingCard({ building, selected, onToggle, onViewDetai
               </>
             )}
           </div>
-          {/* An explicit button as well as the tappable title/photo: field
-              testing found people ticked sites without ever discovering the
-              full story behind the summary. */}
+          {/* The one way into the full story from a card: field testing found
+              people ticked sites without ever discovering it. */}
           <button
             type="button"
             onClick={(e) => { stop(e); onViewDetail(building) }}

@@ -145,7 +145,14 @@ export default function TourApp() {
   // solveRoute always keeps a fixed start at position 0, so whenever a
   // virtual start was fed in it's necessarily the first ordered point.
   const hasVirtualStart = !!virtualStart
-  const stops = hasVirtualStart ? orderedPoints.slice(1) : orderedPoints
+  // Memoised so it's the same array between renders: RouteMap redraws, and
+  // re-fits its view, whenever `stops` changes, so a fresh slice on every
+  // render reset the map (zoom, open popups, location follow) each time
+  // anything else on the page changed, like opening a site's details.
+  const stops = useMemo(
+    () => (hasVirtualStart ? orderedPoints.slice(1) : orderedPoints),
+    [orderedPoints, hasVirtualStart]
+  )
 
   const legs = useMemo(() => {
     if (!routeResult) return []
@@ -158,8 +165,10 @@ export default function TourApp() {
     })
   }, [routeResult, stops, orderedPoints, hasVirtualStart])
 
+  // The walk back to the start. Needs two points on the route, which with a
+  // separate start point (Te Pae, say) is a single stop: start, stop, back.
   const closingLeg = useMemo(() => {
-    if (!routeResult || !loop || stops.length < 2) return null
+    if (!routeResult || !loop || orderedPoints.length < 2) return null
     const meters = routeResult.legMeters[routeResult.legMeters.length - 1]
     return { fromPoint: stops[stops.length - 1], toPoint: orderedPoints[0], meters }
   }, [routeResult, loop, stops, orderedPoints])
@@ -313,6 +322,10 @@ export default function TourApp() {
             {' '}- walking time only; allow time at each stop.
           </p>
 
+          <div className="mb-6">
+            <RouteMap stops={stops} geometry={geometry} startPoint={hasVirtualStart ? virtualStart : null} userLocation={userLocation} loop={loop} />
+          </div>
+
           <RouteActions
             orderedPoints={orderedPoints}
             stops={stops}
@@ -321,10 +334,6 @@ export default function TourApp() {
             loop={loop}
             totalMeters={routeResult.totalMeters}
           />
-
-          <div className="mb-6">
-            <RouteMap stops={stops} geometry={geometry} startPoint={hasVirtualStart ? virtualStart : null} userLocation={userLocation} loop={loop} />
-          </div>
 
           <RouteItinerary stops={stops} legs={legs} closingLeg={closingLeg} startPoint={hasVirtualStart ? virtualStart : null} onViewDetail={viewDetail} />
         </div>

@@ -49,12 +49,11 @@ export default function StartPointPicker({ buildings, startId, onStartChange, lo
 
         <select
           aria-label="Start point"
-          value={userLocation ? HERE : startId ?? ''}
-          onChange={(e) => e.target.value !== HERE && onStartChange(e.target.value || null)}
+          value={userLocation ? HERE : startId}
+          onChange={(e) => e.target.value !== HERE && onStartChange(e.target.value)}
           className="px-3 py-2 sm:py-1.5 rounded-lg border border-[#e7dfe0] font-semibold text-base sm:text-xs text-slate-700 bg-white max-w-full"
         >
           {userLocation && <option value={HERE}>My location</option>}
-          <option value="">No fixed start</option>
           {buildings.map((b) => (
             <option key={b.id} value={b.id}>{b.id === VENUE_ID ? `${b.name} (conference venue)` : b.name}</option>
           ))}
