@@ -478,7 +478,7 @@
 
 </div>
 
-<script src="/survive-or-thrive/model.js?v=2026-11-25b"></script>
+<script src="/survive-or-thrive/model.js?v=2026-11-25c"></script>
 <script src="/survive-or-thrive/scene-iso.js?v=2026-11-25b"></script>
 <script>
 (function(){
@@ -1752,7 +1752,7 @@
 
     var learn = P.isHouse ? LEARN_MORE.house : LEARN_MORE.standard;
     document.getElementById('link-row').innerHTML =
-      '<a class="link-btn solid" id="lnk-learn" href="'+learn.url+'" target="_blank" rel="noopener">'+learn.label+'</a>'+
+      '<a class="link-btn ghost" id="lnk-learn" href="'+learn.url+'" target="_blank" rel="noopener">'+learn.label+'</a>'+
       '<a class="link-btn ghost" id="lnk-contact" href="'+CONTACT_URL+'" target="_blank" rel="noopener">Talk to an engineer</a>';
     document.getElementById('lnk-learn').addEventListener('click', function(){ track('learn_more_click', { type:d.typeKey }); });
     document.getElementById('lnk-contact').addEventListener('click', function(){ track('contact_click', { type:d.typeKey }); });
@@ -1761,7 +1761,7 @@
     var hasFeatured = !!d.protections[P.featuredKey];
     var canFeature = M.suitable(d.typeKey, d.systemKey, P.featuredKey);
     document.getElementById('whatif-slot').innerHTML = canFeature
-      ? '<button type="button" class="btn btn-feature mt" id="btn-whatif">What would this look like '+
+      ? '<button type="button" class="btn btn-secondary mt" id="btn-whatif">What would this look like '+
         (hasFeatured ? 'without' : 'with') + ' ' + featuredLabel + '?</button>'
       : '';
     if(canFeature) document.getElementById('btn-whatif').addEventListener('click', retestWithFeaturedToggle);

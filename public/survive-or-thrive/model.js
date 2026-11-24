@@ -485,7 +485,7 @@
   // Upgrade ladders: a later system is a straight upgrade on an earlier one
   // (same building otherwise). Other systems are alternatives, not upgrades.
   var SYSTEM_LADDER = { house:['plasterboard','plywood'] };
-  var FEATURED_MIN = 85, FEATURED_MAX = 100;
+  var FEATURED_MIN = 85, FEATURED_MAX = 98;   // nothing scores a perfect 100
 
   /* Cost efficiency: every 1% of build cost spent on the structure and
      protection takes 2% off the score (never below 0.8). Upgrades are a
