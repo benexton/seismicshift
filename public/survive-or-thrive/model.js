@@ -71,8 +71,8 @@
   var HOUSE_SYSTEM_ORDER = ['plasterboard','plywood'];
 
   var STANDARD_SYSTEMS = {
-    moment:     { key:'moment',     label:'Moment Frame',  desc:'Rigid joints share the load evenly.' },
-    braced:     { key:'braced',     label:'Braced Frame',  desc:'Diagonal braces resist sideways sway.' },
+    moment:     { key:'moment',     label:'Moment Frame',  desc:'Joints are used to provide lateral resistance.' },
+    braced:     { key:'braced',     label:'Braced Frame',  desc:'Diagonal braces stiffen the frame against sway.' },
     shearwalls: { key:'shearwalls', label:'Shear Walls',   desc:'Solid walls give strong lateral resistance.' }
   };
   var STANDARD_SYSTEM_ORDER = ['moment','braced','shearwalls'];
@@ -125,7 +125,7 @@
      designed for. massPct is a fraction of the building's weight. */
   var HOUSE_ADDITIONS = {
     solar:    { key:'solar',    label:'Solar Panels', massPct:0.15, desc:'Power savings and feed-in earn back more than the install cost, but the panels add weight to the roof.' },
-    tileRoof: { key:'tileRoof', label:'Tile Roof',    massPct:0.28, desc:'Kerb appeal adds resale value, but tiles are far heavier than a metal roof, right at the top.' },
+    tileRoof: { key:'tileRoof', label:'Tile Roof',    massPct:0.28, desc:'Kerb appeal adds resale value, but tiles are far heavier than a metal roof, and they sit right at the top.' },
     chimney:  { key:'chimney',  label:'Brick Chimney', massPct:0.12, desc:'A fireplace adds character and resale value. But unreinforced masonry up high is a classic quake weak point and a life-safety hazard.' }
   };
   var HOUSE_ADDITION_ORDER = ['solar','tileRoof','chimney'];
@@ -133,7 +133,7 @@
   var STANDARD_ADDITIONS = {
     solar:     { key:'solar',     label:'Solar Array',           massPct:0.14, desc:'Energy revenue earns back well over the install cost, but the panels add weight to the roof.' },
     greenroof: { key:'greenroof', label:'Green Roof',            massPct:0.30, desc:'Amenity and stormwater value, but saturated soil is heavy, and it is all up high.' },
-    signage:   { key:'signage',   label:'Rooftop Plant & Signage', massPct:0.10, desc:'Lease income from advertising and services, for a lighter load up top.' }
+    signage:   { key:'signage',   label:'Rooftop Plant & Signage', massPct:0.10, desc:'Lease income from advertising and services. Lighter than solar or a green roof, but still extra weight up high.' }
   };
   var STANDARD_ADDITION_ORDER = ['solar','greenroof','signage'];
 

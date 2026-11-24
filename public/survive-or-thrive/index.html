@@ -317,7 +317,7 @@
     <div class="hero-art" aria-hidden="true">
       <svg id="hero-scene" viewBox="0 0 400 176"></svg>
     </div>
-    <p class="sub">Choose a building and its structure, spend your budget on protection, then put it through an earthquake.</p>
+    <p class="sub">Choose a building, its upgrades and its structure, spend your budget on protection, then put it through an earthquake.</p>
     <p class="teaser">Score 80 or more to go in the draw for a <b>$100 Prezzy card</b>.</p>
     <div class="nav-buttons">
       <button class="btn btn-primary" id="btn-start">Start Designing</button>
@@ -370,7 +370,7 @@
   <!-- STEP 4: SEISMIC PROTECTION -->
   <section class="screen" id="screen-protect">
     <h2 tabindex="-1">Add Seismic Protection</h2>
-    <p class="sub">Spend what's left of your upgrade budget on technology/changes that helps your building ride out the shake. Unspent budget will contribute positively towards your final score.</p>
+    <p class="sub">Spend what's left of your upgrade budget on changes or technology that help your building ride out the shake. Any budget you don't spend adds to your final score.</p>
 
     <div class="budget">
       <div class="label">Upgrade budget left</div>
@@ -406,7 +406,7 @@
 
     <div class="group-title">Earthquake level</div>
     <div class="level-select" id="level-select"></div>
-    <p class="level-note">Watch your building in any of the three. Your score covers all three earthquakes, weighted towards Strong, the design-level earthquake that buildings are designed for.</p>
+    <p class="level-note">Watch your building in any of the three. Your score covers all three earthquakes, weighted towards Strong, the earthquake buildings are designed for.</p>
 
     <button class="btn btn-shake" id="btn-shake" disabled>Shake It</button>
 
@@ -421,7 +421,7 @@
     <p class="result-subtag" id="result-subtag"></p>
     <div id="score-block">
       <div class="score-hero"><span class="num" id="score-num">0</span><span class="unit">/100</span></div>
-      <p class="score-caption">Overall score, across all three earthquakes</p>
+      <p class="score-caption">Overall score</p>
     </div>
     <div class="profile-title">Across all three earthquakes</div>
     <p class="profile-hint">Tap a level to see how your building fares in it.</p>
@@ -478,7 +478,7 @@
 
 </div>
 
-<script src="/survive-or-thrive/model.js?v=2026-11-24"></script>
+<script src="/survive-or-thrive/model.js?v=2026-11-25"></script>
 <script src="/survive-or-thrive/scene-iso.js?v=2026-11-24"></script>
 <script>
 (function(){
@@ -868,7 +868,7 @@
         '<span class="impact">Adds '+fmtPct(a.value)+' to building value, costs '+fmtPct(a.installCost)+' to install</span>'+
         '<span class="desc">'+a.desc+'</span>'+
         '<span class="pills-row"><span class="pill gain">+'+fmtPct(a.budgetBonus)+' to your upgrade budget</span>'+
-        '<span class="pill mass">+'+Math.round(a.massPct*100)+'% roof weight</span></span></span>';
+        '<span class="pill mass">+'+Math.round(a.massPct*100)+'% weight, on the roof</span></span></span>';
       el.addEventListener('click', function(){
         if(blocksRemoval){
           flashNote('addition-note', "This add-on's value is already paying for your protection - remove some protection first.");
