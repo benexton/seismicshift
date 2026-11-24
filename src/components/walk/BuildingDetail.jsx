@@ -20,7 +20,7 @@ export default function BuildingDetail({ building, selected = false, onToggle, o
   const dialogRef = useDialog(!!building, onClose)
   if (!building) return null
 
-  // story is free text from /walkadmin/; blank lines separate paragraphs.
+  // story is free text from buildings.csv; blank lines separate paragraphs.
   const paragraphs = (building.story || building.summary).split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
 
   return (

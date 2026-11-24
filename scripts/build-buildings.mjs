@@ -47,9 +47,8 @@ function parseCsv(text) {
 }
 
 function coerce(key, raw) {
-  // Normalise Windows line endings: text pasted into the Supabase SQL editor
-  // or /walkadmin/ textareas arrives as CRLF, which otherwise shows up as a
-  // spurious diff every time the nightly sync regenerates buildings.json.
+  // Normalise Windows line endings, so text edited on Windows (CRLF)
+  // doesn't show up as a spurious diff every time buildings.json is rebuilt.
   const value = raw.replace(/\r\n?/g, '\n').trim()
   if (value === '') {
     if (LIST_FIELDS.has(key)) return []
@@ -112,7 +111,7 @@ function main() {
     // A photo in public/images/walk/ named after the id replaces the
     // placeholder automatically (scripts/build-walk-photos.mjs, run just
     // before this, has already turned a dropped te-pae.jpg into te-pae.webp). An image set explicitly in
-    // /walkadmin/ or Supabase still wins, unless it is just the placeholder.
+    // buildings.csv still wins, unless it is just the placeholder.
     // With neither, point at the generated placeholder plate
     // (scripts/build-placeholder-images.mjs, run straight after this as part
     // of build:data) rather than a blank tile.

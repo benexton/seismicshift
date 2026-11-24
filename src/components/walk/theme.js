@@ -12,8 +12,8 @@ export const WALK = {
   coffee: '#7b5a3c',
 }
 
-// Sites with category 'context' (walk_buildings.category, editable in
-// /walkadmin/) are memorials and exhibitions rather than engineering case
+// Sites with category 'context' (the category column in
+// src/data/buildings.csv) are memorials and exhibitions rather than engineering case
 // studies: listed in their own section and drawn in charcoal instead of
 // maroon on the card, map and itinerary. Category 'refreshments' (cafes and
 // bars) gets a third section below that, drawn in coffee brown, with opening
