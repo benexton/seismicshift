@@ -51,6 +51,7 @@ const TONE = { ok: OK, bad: BAD, warn: WARN }
  *   { type: 'stats', items: [{ k, v, unit }] }  tiles, three to a row
  *   { type: 'table', head, rows, widths, tint } cells are strings or { text, sub, tone, bold }
  *   { type: 'messages', items: [{ level, text }] }
+ *   { type: 'figure', url, width, caption: [{ text, bold, small, tone }] }  PNG in a card, caption to its right
  * A 'stats' block straight after a 'banner' shares its card, as on the page.
  */
 export async function buildQdSummaryPdf(model, fontUrls) {
@@ -355,6 +356,7 @@ export async function buildQdSummaryPdf(model, fontUrls) {
       return (headCells ? rowH(headCells) : 0) + bodyCells.slice(0, 2).reduce((s, c) => s + rowH(c), 0)
     }
     if (b.type === 'messages' && b.items.length) return messageHeight(b.items[0])
+    if (b.type === 'figure') return 120
     return 40
   }
 
@@ -456,6 +458,39 @@ export async function buildQdSummaryPdf(model, fontUrls) {
     y -= 6
   }
 
+  // Figures (the typology sketch): fetched and embedded up front. Like the logo they are a nice-to-have, so one
+  // that fails to load is left out rather than stopping the PDF.
+  const figures = new Map()
+  await Promise.all(model.blocks.filter((b) => b.type === 'figure').map(async (b) => {
+    try {
+      const bytes = await fetch(b.url).then((r) => (r.ok ? r.arrayBuffer() : null))
+      if (bytes) figures.set(b.url, await doc.embedPng(bytes))
+    } catch { /* leave it out */ }
+  }))
+  const drawFigure = (b) => {
+    const img = figures.get(b.url)
+    if (!img) return
+    const pad = 6, gapX = 14
+    const boxW = b.width ?? 190
+    const imgW = boxW - pad * 2, imgH = (imgW * img.height) / img.width, boxH = imgH + pad * 2
+    const capX = M + boxW + gapX, capW = W - boxW - gapX
+    const caps = (b.caption ?? []).map((c) => ({
+      text: c.text,
+      size: c.small ? 7.6 : 9,
+      font: c.bold ? BOLD : REG,
+      col: c.tone === 'bad' ? BAD_TEXT : c.small ? MUTED : c.bold ? INK : BODY,
+    }))
+    const capH = caps.reduce((s, c) => s + textHeight(c.text, { font: c.font, size: c.size, width: capW }) + 3, 0)
+    const h = Math.max(boxH, capH)
+    ensure(h + 12)
+    const top = y
+    roundRect(M, top, boxW, boxH, 9, { fill: [1, 1, 1], border: RULE })
+    page.drawImage(img, { x: M + pad, y: top - pad - imgH, width: imgW, height: imgH })
+    y = top
+    for (const c of caps) text(c.text, { x: capX, width: capW, size: c.size, font: c.font, col: c.col, gap: 3, keep: true })
+    y = top - h - 12
+  }
+
   const blocks = model.blocks
   for (let i = 0; i < blocks.length; i += 1) {
     const b = blocks[i]
@@ -471,6 +506,7 @@ export async function buildQdSummaryPdf(model, fontUrls) {
     else if (b.type === 'stats') drawStatsAlone(b)
     else if (b.type === 'table') drawTable(b)
     else if (b.type === 'messages') drawMessages(b)
+    else if (b.type === 'figure') drawFigure(b)
   }
 
   // ── Footer on every page ──────────────────────────────────────────────────
