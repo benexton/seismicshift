@@ -255,7 +255,7 @@ const SOIL_OPTIONS = [
 const OUT_OF_SCOPE_TEXT = 'Currently out of scope of this web calculator - contact Seismic Shift.'
 const TYPOLOGY_OPTIONS = [
   ['T01', 'T01 · Portal frame, single-tier wall bracing', 'QD at the base of each wall-brace diagonal.'],
-  ['T02', 'T02 · Long portal frame, braced at both ends', 'QD in the braced end bays.'],
+  ['T02', 'T02 · Multiple bays of bracing', 'QD in multiple bays.'],
   ['T03', 'T03 · Twin-span portal frame', OUT_OF_SCOPE_TEXT],
   ['T04', 'T04 · Tall portal frame, stacked wall bracing', 'QD at the base of the lower tier only.'],
   ['T05', 'T05 · Flat-roof braced frame', OUT_OF_SCOPE_TEXT],
@@ -267,7 +267,7 @@ const OUT_OF_SCOPE_TYPOLOGY = new Set(['T03', 'T05'])
 // The page 2 drawing for each typology, as a reminder under the drop-down and in the summary PDF.
 const TYPOLOGY_DRAWING = {
   T01: { caption: 'QD at the base of each wall-brace diagonal.', size: [753, 417] },
-  T02: { caption: 'QD in the braced end bays.', size: [771, 363] },
+  T02: { caption: 'QD in multiple bays.', size: [771, 363] },
   T03: { caption: 'QD in both external walls and the valley line.', size: [757, 426] },
   T04: { caption: 'QD at the base of the lower tier only.', size: [758, 476] },
   T05: { caption: 'QD in every braced wall, both directions.', size: [751, 416] },
@@ -1535,16 +1535,53 @@ function ComparisonSection({ s, db4, db3, h }) {
   )
 }
 
-const equations = (P) => (isRb(P)
-  ? EQUATIONS.replace('brace flexibility f = axial elongation ÷ force, scaled by (SRF·A) for other bars', 'brace flexibility f = axial elongation ÷ force (RB16 with E,eq)')
-  : EQUATIONS)
+// The working, grouped by what each step does, in the methodology's Appendix A notation.
+function workingEquations(P, input) {
+  const roof = isRoofBracing(input)
+  return [
+    ['From your model, the 0.1g case', [
+      ['K/W = (2π ÷ T,e)² ÷ g', 'Stiffness per unit seismic weight.'],
+      [roof ? 'S,a,0.1 = K/W × Δ*' : 'S,a,0.1 = K/W × Δ,0.1', 'V/W of the load case; close to 0.1 when T,e, the seismic weight and Δ,0.1 are consistent.'],
+      ['f = e,0.1 ÷ F,0.1', isRb(P) ? 'Brace flexibility (RB16 with E,eq).' : 'Brace flexibility, scaled by (SRF × A) for the other bar sizes.'],
+      ['Δ,o = (Δ,0.1 − e,0.1 ÷ cos θ) ÷ F,0.1', 'Roof displacement per kN of brace force from elements other than the critical brace.'],
+    ]],
+    ['Backbone, at QD travel δ', [
+      ['F(δ)', 'From the QD loop.'],
+      [roof ? 'Δ(δ) = F (f ÷ cos θ + Δ,o) ÷ Γ + δ ÷ cos θ' : 'Δ(δ) = F (f ÷ cos θ + Δ,o) + δ ÷ cos θ', roof ? 'Single-mass roof displacement.' : 'Roof displacement.'],
+      ['V/W = (1 − p) S,a,0.1 F ÷ F,0.1 + p (K/W) Δ', 'Base shear coefficient; p is the share of storey shear taken by other elements.'],
+    ]],
+    ['Demand at each point', [
+      ['T = 2π √(Δ ÷ (g V/W))', 'Effective (secant) period.'],
+      ['ξ = 0.05 + A(δ) ÷ (π F cos θ Δ) × braced-line share of V', 'Equivalent viscous damping; A(δ) is the QD loop area.'],
+      ['η(ξ) = √(0.07 ÷ (0.02 + ξ))', 'Spectrum reduction for that damping.'],
+      ['S,d = λ × S,p factor × η(ξ) × C(T) × g (T ÷ 2π)²', 'Demand displacement; λ = 1 at ULS and 1.5 at CALS, S,p factor per the option chosen.'],
+    ]],
+    ...(roof ? [['T06 roof bracing', [
+      ['Δ* = Δ,0.1 ÷ Γ', 'Equivalent single-mass displacement, used for K/W and S,a,0.1.'],
+      ['Δ,peak = F (f ÷ cos θ + Δ,o) + δ ÷ cos θ', 'Peak of the roof, used for drift; f and Δ,o from the peak values.'],
+    ]]] : []),
+  ]
+}
 
-const EQUATIONS = `K/W = (2π/T,e)² / g            load case S,a = K/W × Δ,e
-F(δ) from the QD loop           brace flexibility f = axial elongation ÷ force, scaled by (SRF·A) for other bars
-Δ(δ) = F (f/cos θ + other) + δ/cos θ,  other = (Δ,e − e/cos θ) ÷ F,e
-V/W = F ÷ F-per-g of the braced line + (other elements' stiffness) × Δ
-T = 2π √(Δ / (g V/W))      ξ = 0.05 + A(δ) / (π F cos θ Δ) × braced-line share of V
-S,d = λ × S,p factor × η(ξ) × C(T) × g (T/2π)²   (S,p factor per the S,p option chosen)`
+function Equations({ groups }) {
+  return (
+    <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 md:p-5 space-y-5">
+      {groups.map(([title, rows]) => (
+        <div key={title}>
+          <p className="text-sm font-black tracking-tight text-slate-700 mb-2">{title}</p>
+          <dl className="space-y-2">
+            {rows.map(([eq, what]) => (
+              <div key={eq} className="md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-6">
+                <dt className="text-sm font-bold text-slate-800">{eq}</dt>
+                <dd className="text-sm text-slate-500 leading-relaxed">{what}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 function PerformancePoints({ s, input }) {
   const P = useProduct()
@@ -1590,12 +1627,6 @@ function PerformancePoints({ s, input }) {
   )
 }
 
-const T06_EQUATIONS = `
-
-T06 (roof bracing), on the equivalent single mass:
-Δ* = Δ,0.1 ÷ Γ in K/W and S,a,0.1       Δ(δ) = F (f/cos θ + other) ÷ Γ + δ/cos θ
-drift at the peak of the roof: Δ,peak = F (f/cos θ + other) + δ/cos θ,  with f and other from the peak values`
-
 function Working({ s, input }) {
   const P = useProduct()
   const label = (size) => labelOf(P, size)
@@ -1629,7 +1660,7 @@ function Working({ s, input }) {
           {bb('Device limit, δ = 33 mm', s.pts.d33)}
           {bb('Hard stop, Δ,stop', s.pts.stop)}
         </Table>
-        <pre className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-xl p-4 overflow-x-auto leading-relaxed">{equations(P)}{isRoofBracing(input) ? T06_EQUATIONS : ''}</pre>
+        <Equations groups={workingEquations(P, input)} />
       </div>
     </details>
   )
