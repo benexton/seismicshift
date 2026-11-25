@@ -316,6 +316,16 @@ const ROOF_FIELD = {
   De: { label: 'Peak roof displacement in the 0.1g case (mm)', help: 'At the point of peak displacement of the roof bracing, usually mid-span.' },
 }
 
+// The label a field shows on this page: the 0.1g-case and T06 wording on the main calculator.
+function fieldLabel(key, form, P) {
+  if (key === 'soil') return 'Site subsoil class'
+  return (!isRb(P) && isRoofBracing(form) && ROOF_FIELD[key]?.label) || (!isRb(P) && CASE_FIELD[key]?.label) || NUMERIC[key].label
+}
+const FIELD_ORDER = ['braceLength', 'angle', 'Te', 'Fe', 'ee', 'De', 'pShare', 'h', 'panels', 'Z', 'soil', 'R', 'faultD', 'wind', 'Sp', 'Rs', 'lamC', 'kdm']
+// Building values from the worked example, cleared when T06 is selected (the example is a T01 wall bay). Fields the
+// user has edited are kept; Load worked example puts the rest back.
+const T06_CLEARS = ['angle', 'Te', 'Fe', 'ee', 'De', 'panels', 'h', 'wind', 'Z', 'soil', 'R', 'faultD']
+
 const sizeOptions = (P) => [
   ['auto', 'Smallest size that passes'],
   ...P.set.sizes.map((s) => [s, labelOf(P, s)]),
@@ -345,6 +355,7 @@ function fieldError(key, raw) {
 
 function parseForm(form) {
   const errors = {}
+  const pending = []
   const input = { ...form }
   for (const key of Object.keys(NUMERIC)) {
     // Only the fields this product's form has (brace length is QD65 + RB16 only).
@@ -353,12 +364,17 @@ function parseForm(form) {
     if (key === 'panels' && !isRoofBracing(form)) { delete input.panels; continue }
     // S,p is hidden (and unused) with the S,p = 1.0 option, so don't let a stale
     // invalid value there block the result.
-    const err = key === 'Sp' && form.spMethod === 'unity' ? null : fieldError(key, form[key])
+    const skip = key === 'Sp' && form.spMethod === 'unity'
+    // A blank field is waiting for input, not an error: the results wait for it rather than flagging it red.
+    if (!skip && String(form[key] ?? '').trim() === '') { pending.push(key); continue }
+    const err = skip ? null : fieldError(key, form[key])
     if (err) errors[key] = err
     input[key] = Number(form[key])
   }
+  if ('soil' in form && !form.soil) pending.push('soil')
+  pending.sort((a, b) => FIELD_ORDER.indexOf(a) - FIELD_ORDER.indexOf(b))
   input.pShare = input.pShare / 100
-  return { input, errors, ok: Object.keys(errors).length === 0 }
+  return { input, errors, pending, ok: Object.keys(errors).length === 0 && pending.length === 0 }
 }
 
 function trackEvent(event, params) {
@@ -506,18 +522,24 @@ function NumberField({ name, value, error, onChange, label, help: helpOverride }
         className={error ? FIELD_INVALID_CLASS : FIELD_CLASS}
       />
       <p id={`${id}-help`} className={`text-xs mt-1.5 ${error ? 'text-red-600 font-bold' : 'text-slate-400'}`}>
-        {error || help}
+        {error || (
+          <>
+            {String(value ?? '').trim() === '' && <strong className="font-bold text-slate-500">Required. </strong>}
+            {help}
+          </>
+        )}
       </p>
     </div>
   )
 }
 
-function SelectField({ name, text, value, options, onChange, help, helpClass = 'text-slate-400' }) {
+function SelectField({ name, text, value, options, onChange, help, helpClass = 'text-slate-400', placeholder }) {
   const id = useId()
   return (
     <div>
       <label htmlFor={id} className={LABEL_CLASS}>{text}</label>
       <select id={id} value={value} onChange={(e) => onChange(name, e.target.value)} aria-describedby={help ? `${id}-help` : undefined} className={FIELD_CLASS}>
+        {placeholder && value === '' && <option value="" disabled>{placeholder}</option>}
         {options.map(([v, l]) => (
           <option key={v} value={v}>{l}</option>
         ))}
@@ -599,7 +621,16 @@ function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
 
       <Group title="Hazard and wind">
         {numberField('Z')}
-        <SelectField name="soil" text="Site subsoil class" value={form.soil} options={SOIL_OPTIONS} onChange={onChange} />
+        <SelectField
+          name="soil"
+          text="Site subsoil class"
+          value={form.soil}
+          options={SOIL_OPTIONS}
+          placeholder="Select the subsoil class"
+          help={form.soil ? undefined : 'Required.'}
+          helpClass="text-slate-500 font-bold"
+          onChange={onChange}
+        />
         {numberField('R')}
         {numberField('faultD')}
         {numberField('wind')}
@@ -874,7 +905,7 @@ const SOIL_LABEL = Object.fromEntries(SOIL_OPTIONS)
 
 function inputRows(inp, P) {
   const roof = isRoofBracing(inp)
-  const lab = (key) => (roof && ROOF_FIELD[key]?.label) || (!isRb(P) && CASE_FIELD[key]?.label) || NUMERIC[key].label
+  const lab = (key) => fieldLabel(key, inp, P)
   const num = (key, d) => [lab(key), f(inp[key], d)]
   const rows = [
     ...(isRb(P) ? [] : [['Typology (methodology page 2)', TYPOLOGY_LABEL[inp.typology ?? 'T01']]]),
@@ -1240,6 +1271,28 @@ function summaryStats(r, P) {
 const sizingOnlyText = (P) => (isRb(P)
   ? 'These checks size QD65 with RB16 ReidBrace from your initial model; they are not the design. The real configuration, with QD65 and RB16 in every braced bay, is checked'
   : 'These checks select a QD and DonoBrace size from your initial model; they are not the design. The real configuration, with the selected QD and DonoBrace in every braced bay, is checked')
+
+// Shown in place of the results while any input is blank.
+function Waiting({ form, pending }) {
+  const P = useProduct()
+  const roof = !isRb(P) && isRoofBracing(form)
+  return (
+    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 sm:p-6">
+      <p className="text-lg font-black tracking-tight text-slate-900">
+        {roof ? 'Enter the results from your T06 model to see the sizing.' : 'Enter the remaining inputs to see the sizing.'}
+      </p>
+      <p className="text-sm text-slate-500 mt-3 mb-1">Still needed:</p>
+      <ul className="list-disc pl-5 text-sm text-slate-700 space-y-0.5">
+        {pending.map((k) => <li key={k}>{fieldLabel(k, form, P)}</li>)}
+      </ul>
+      {roof && (
+        <p className="text-sm text-slate-500 leading-relaxed mt-3">
+          The worked example is a T01 wall bay, so selecting T06 clears its building values. Load worked example puts them back.
+        </p>
+      )}
+    </div>
+  )
+}
 
 function Summary({ r }) {
   const P = useProduct()
@@ -1682,6 +1735,8 @@ export default function QdSizingCalculator({ product = 'donobrace' }) {
 function Calculator({ P }) {
   const [form, setForm] = useState(() => exampleForm(P))
   const [errors, setErrors] = useState({})
+  const [pending, setPending] = useState([])
+  const edited = useRef(new Set())
   const [result, setResult] = useState(() => runQdSizing(P.example, P.set))
   // Analytics events carry which page they came from.
   const track = (event, params) => trackEvent(event, { ...params, product: P.key })
@@ -1699,6 +1754,9 @@ function Calculator({ P }) {
     setForm(next)
     const parsed = parseForm(next)
     setErrors(parsed.errors)
+    setPending(parsed.pending)
+    // A "fix the inputs first" message from the PDF button no longer applies once the inputs are complete.
+    if (parsed.ok) setStatus((st) => (st.error ? { text: '', error: false } : st))
     if (!parsed.ok) return
     try {
       setResult(runQdSizing(parsed.input, P.set))
@@ -1708,12 +1766,16 @@ function Calculator({ P }) {
     }
   }
 
-  const onChange = (key, value) => recalc({
-    ...form,
-    [key]: value,
-    // Selecting T06 fills in 2 panels (Γ = 1) when the field is empty.
-    ...(key === 'typology' && value === 'T06' && !String(form.panels ?? '').trim() ? { panels: '2' } : {}),
-  })
+  const onChange = (key, value) => {
+    if (key !== 'typology') edited.current.add(key)
+    const next = { ...form, [key]: value }
+    // Selecting T06 clears the worked example's building values (and leaves panels blank) so the engineer enters
+    // their own; anything they have already typed is kept.
+    if (key === 'typology' && value === 'T06' && form.typology !== 'T06') {
+      for (const k of T06_CLEARS) if (!edited.current.has(k)) next[k] = ''
+    }
+    recalc(next)
+  }
 
   function onSize(size) {
     if (size === form.size) return
@@ -1728,12 +1790,14 @@ function Calculator({ P }) {
   }
 
   function loadExample() {
+    edited.current = new Set()
     recalc(exampleForm(P))
     setStatus({ text: isRb(P) ? 'Example loaded.' : 'Worked example loaded.', error: false })
     track('qd_sizing_load_example')
   }
 
-  const stale = Object.keys(errors).length > 0 || evalFailed
+  const waiting = pending.length > 0
+  const stale = Object.keys(errors).length > 0 || waiting || evalFailed
   const s = result.selected
 
   // Builds the summary PDF in the browser and downloads it. Refuses while the
@@ -1742,7 +1806,7 @@ function Calculator({ P }) {
   async function downloadSummary() {
     if (pdfBusy) return
     if (stale) {
-      setStatus({ text: 'Fix the highlighted inputs first: the summary must match the inputs shown.', error: true })
+      setStatus({ text: waiting ? 'Enter the remaining inputs first.' : 'Fix the highlighted inputs first: the summary must match the inputs shown.', error: true })
       return
     }
     setPdfBusy(true)
@@ -1810,21 +1874,31 @@ function Calculator({ P }) {
             <div className="border border-[#c07c1c]/40 bg-[#fdf6ec] rounded-2xl p-5 text-sm text-slate-700 leading-relaxed">
               <strong style={{ color: EQ }}>For sizing only.</strong> {sizingOnlyText(P)} in your full structural model: re-run it with the selected size and complete the full design (Steps 5 to 9 of the methodology) in your own calculations. <TermsButton onOpen={onTerms} />
             </div>
-            {stale && (
+            {stale && !waiting && (
               <p className="border border-red-200 bg-red-50 text-red-700 rounded-xl px-4 py-2.5 text-sm font-bold">
                 {evalFailed
                   ? 'These inputs could not be evaluated. Showing the last valid result - check the values entered.'
                   : 'Showing the last valid result. Fix the highlighted fields to update it.'}
               </p>
             )}
-            <Summary r={result} />
-            <Messages messages={result.messages} />
+            {waiting ? (
+              <Waiting form={form} pending={pending} />
+            ) : (
+              <>
+                <Summary r={result} />
+                <Messages messages={result.messages} />
+              </>
+            )}
           </div>
-          <ModelBasis B={result.basis} input={result.input} />
-          <DeviceSection s={s} B={result.basis} />
-          <ChecksSection s={s} input={result.input} />
-          <ComparisonSection s={s} db4={result.donoBrace} db3={result.donoBraceCat3} h={result.input.h} />
-          <Working s={s} input={result.input} />
+          {!waiting && (
+            <>
+              <ModelBasis B={result.basis} input={result.input} />
+              <DeviceSection s={s} B={result.basis} />
+              <ChecksSection s={s} input={result.input} />
+              <ComparisonSection s={s} db4={result.donoBrace} db3={result.donoBraceCat3} h={result.input.h} />
+              <Working s={s} input={result.input} />
+            </>
+          )}
         </div>
       </div>
       <TermsDialog dialogRef={termsRef} />
