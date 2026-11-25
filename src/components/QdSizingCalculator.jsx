@@ -259,7 +259,7 @@ const TYPOLOGY_OPTIONS = [
   ['T03', 'T03 · Twin-span portal frame', OUT_OF_SCOPE_TEXT],
   ['T04', 'T04 · Tall portal frame, stacked wall bracing', 'QD at the base of the lower tier only.'],
   ['T05', 'T05 · Flat-roof braced frame', OUT_OF_SCOPE_TEXT],
-  ['T06', 'T06 · Portal frame with precast side wall', 'QD in the end panels of the roof bracing. The peak roof displacement is converted to an equivalent single mass (see Your model).'],
+  ['T06', 'T06 · Portal frame with precast side wall', 'QD in the end panels of the roof bracing. The peak roof displacement is converted to an equivalent single mass (see your model).'],
 ]
 const TYPOLOGY_LABEL = Object.fromEntries(TYPOLOGY_OPTIONS.map(([k, l]) => [k, l]))
 const TYPOLOGY_HELP = Object.fromEntries(TYPOLOGY_OPTIONS.map(([k, , h]) => [k, h]))
@@ -304,7 +304,7 @@ function aloneHint(r, P, size) {
   if (!d.ok || order.indexOf(d.brace) < 0 || order.indexOf(d.brace) > order.indexOf(x.brace)) return null
   return `Consider ${x.brace} on its own here`
 }
-const TE_HELP = 'From your model, in this direction, with the braces tension-only. A modal analysis keeps both diagonals of each X working: remove the compression diagonals, or use the period the 0.1g case implies (under Your model).'
+const TE_HELP = 'From your model, in this direction, with the braces tension-only. A modal analysis can sometimes keep both diagonals of each X working: if so, remove the compression diagonals, or use the period the 0.1g case implies (under your model).'
 // The three results read from the 0.1g case, labelled as such (main calculator; the QD65 page keeps NUMERIC's).
 const CASE_FIELD = {
   Fe: { label: 'Critical brace force in the 0.1g case (kN)' },
