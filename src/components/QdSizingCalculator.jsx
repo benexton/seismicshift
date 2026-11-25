@@ -305,9 +305,15 @@ function aloneHint(r, P, size) {
   return `Consider ${x.brace} on its own here`
 }
 const TE_HELP = 'From your model, in this direction, with the braces tension-only. A modal analysis keeps both diagonals of each X working: remove the compression diagonals, or use the period the 0.1g case implies (under Your model).'
+// The three results read from the 0.1g case, labelled as such (main calculator; the QD65 page keeps NUMERIC's).
+const CASE_FIELD = {
+  Fe: { label: 'Critical brace force in the 0.1g case (kN)' },
+  ee: { label: 'Critical brace axial elongation in the 0.1g case (mm)' },
+  De: { label: 'Roof displacement in the 0.1g case (mm)' },
+}
 const ROOF_FIELD = {
   angle: { help: 'In plan: the angle between the brace and the direction of loading.' },
-  De: { label: 'Peak roof displacement (mm)', help: 'At the point of peak displacement of the roof bracing, usually mid-span.' },
+  De: { label: 'Peak roof displacement in the 0.1g case (mm)', help: 'At the point of peak displacement of the roof bracing, usually mid-span.' },
 }
 
 const sizeOptions = (P) => [
@@ -523,10 +529,10 @@ function SelectField({ name, text, value, options, onChange, help, helpClass = '
 
 function Group({ title, intro, children }) {
   return (
-    <fieldset className="pt-6 first:pt-0 border-t border-slate-100 first:border-t-0">
-      <legend className="float-left w-full text-base font-black tracking-tight text-slate-900 mb-1">{title}</legend>
-      {intro && <p className="clear-left text-sm text-slate-400 leading-relaxed mb-3">{intro}</p>}
-      <div className="clear-left grid gap-4 pt-2">{children}</div>
+    <fieldset className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+      <legend className="float-left w-full text-base font-black tracking-tight text-slate-900 pb-2.5 mb-3 border-b border-slate-100">{title}</legend>
+      {intro && <p className="clear-left text-sm text-slate-500 leading-relaxed mb-3">{intro}</p>}
+      <div className="clear-left grid gap-4">{children}</div>
     </fieldset>
   )
 }
@@ -535,12 +541,12 @@ function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
   const P = useProduct()
   const rb = isRb(P)
   const roof = !rb && isRoofBracing(form)
-  const over = (name) => ({ ...(name === 'Te' && !rb ? { help: TE_HELP } : {}), ...(roof ? ROOF_FIELD[name] : {}) })
+  const over = (name) => ({ ...(name === 'Te' && !rb ? { help: TE_HELP } : {}), ...(!rb ? CASE_FIELD[name] : {}), ...(roof ? ROOF_FIELD[name] : {}) })
   const numberField = (name) => (
     <NumberField name={name} value={form[name]} error={errors[name]} onChange={onChange} {...over(name)} />
   )
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <Group
         title="Your initial elastic model"
         intro={rb
@@ -577,18 +583,18 @@ function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
       <Group
         title="Elastic 0.1g equivalent static case"
         intro={roof
-          ? `Apply a static lateral load of 0.1 × the seismic weight in this direction (the same seismic weight as the mass behind T,e), with the braces tension-only and ${rb ? 'the ReidBrace E,eq' : 'the DonoBrace SRF'} applied. Read all three results from that case: the force and axial elongation of the critical brace, in an end panel of the roof bracing where the QD goes, and the peak displacement of the roof bracing. QD is assumed in every end-panel brace, all the same size.`
-          : `Apply a static lateral load of 0.1 × the seismic weight in this direction (the same seismic weight as the mass behind T,e), with the braces tension-only and ${rb ? 'the ReidBrace E,eq' : 'the DonoBrace SRF'} applied. Read all three results from that case. Enter the force and axial elongation of one brace only, the critical one, however many braces are on the line: the roof displacement accounts for the rest. Where a braced line has more than one bay, QD is assumed in every bay of that line, all the same size.`}
+          ? `Apply a static lateral load of 0.1 × the seismic weight in this direction (the same seismic weight as the mass behind T,e), with the braces tension-only and ${rb ? 'the ReidBrace E,eq' : 'the DonoBrace SRF'} applied. Read all three results from that case: the force and axial elongation of the critical brace, in an end panel of the roof bracing where the QD goes, and the peak displacement of the roof bracing. QD is assumed in every end-panel brace, all the same size.${rb ? '' : ` ${SYMMETRY_NOTE}`}`
+          : `Apply a static lateral load of 0.1 × the seismic weight in this direction (the same seismic weight as the mass behind T,e), with the braces tension-only and ${rb ? 'the ReidBrace E,eq' : 'the DonoBrace SRF'} applied. Read all three results from that case. Enter the force and axial elongation of one brace only, the critical one, however many braces are on the line: the roof displacement accounts for the rest. Where a braced line has more than one bay, QD is assumed in every bay of that line, all the same size.${rb ? '' : ` ${SYMMETRY_NOTE}`}`}
       >
         {numberField('Fe')}
         {numberField('ee')}
         {numberField('De')}
-        {roof && numberField('panels')}
       </Group>
 
       <Group title="Building">
         {numberField('pShare')}
         {numberField('h')}
+        {roof && numberField('panels')}
       </Group>
 
       <Group title="Hazard and wind">
@@ -644,19 +650,11 @@ function Inputs({ form, errors, onChange, onSize, onSpMethod }) {
         </div>
       </Group>}
 
-      <details className="pt-6 border-t border-slate-100 group">
-        <summary className={`inline-flex items-center gap-2 cursor-pointer select-none text-sm font-black tracking-wide uppercase text-[#17638f] hover:text-[#0f4c6e] transition motion-reduce:transition-none list-none [&::-webkit-details-marker]:hidden rounded ${BUTTON_FOCUS}`}>
-          <span>Performance factors</span>
-          <svg className="w-3 h-3 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-            <path d="M5 8l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </summary>
-        <div className="grid gap-4 mt-4">
-          {numberField('Rs')}
-          {numberField('lamC')}
-          {numberField('kdm')}
-        </div>
-      </details>
+      <Group title="Performance factors">
+        {numberField('Rs')}
+        {numberField('lamC')}
+        {numberField('kdm')}
+      </Group>
     </div>
   )
 }
@@ -875,8 +873,9 @@ function AdrsChart({ s, input }) {
 const SOIL_LABEL = Object.fromEntries(SOIL_OPTIONS)
 
 function inputRows(inp, P) {
-  const num = (key, d) => [NUMERIC[key].label, f(inp[key], d)]
   const roof = isRoofBracing(inp)
+  const lab = (key) => (roof && ROOF_FIELD[key]?.label) || (!isRb(P) && CASE_FIELD[key]?.label) || NUMERIC[key].label
+  const num = (key, d) => [lab(key), f(inp[key], d)]
   const rows = [
     ...(isRb(P) ? [] : [['Typology (methodology page 2)', TYPOLOGY_LABEL[inp.typology ?? 'T01']]]),
     isRb(P)
@@ -886,10 +885,10 @@ function inputRows(inp, P) {
     num('Te', 3),
     num('Fe', 2),
     num('ee', 2),
-    [roof ? ROOF_FIELD.De.label : NUMERIC.De.label, f(inp.De, 2)],
-    ...(roof ? [[NUMERIC.panels.label, String(inp.panels)]] : []),
+    num('De', 2),
     [NUMERIC.pShare.label, f(inp.pShare * 100, 0)],
     num('h', 2),
+    ...(roof ? [[NUMERIC.panels.label, String(inp.panels)]] : []),
     [NUMERIC.Z.label, String(inp.Z)],
     ['Site subsoil class', SOIL_LABEL[inp.soil] ?? inp.soil],
     [NUMERIC.R.label, String(inp.R)],
@@ -921,6 +920,8 @@ function basisRows(B, inp, P) {
     ['Storey shear taken by the braces', pct(1 - B.p, 0)],
   ]
 }
+// Methodology Step 1: the critical brace stands for every QD in the direction, so the lines must activate together.
+const SYMMETRY_NOTE = 'Assumes the brace lines in this direction are symmetric, with the same QD size and similar stiffness, so they activate together (methodology Step 1).'
 const T06_NOTE = 'T06: the calculator treats the roof as one mass at the equivalent single-mass displacement, the peak ÷ Γ. Γ assumes equal panels, equal seismic weight on each frame line, deflection mostly from the bracing and walls that do not move. Displacements in the results are on that single-mass basis, as the ADRS reads them, except drift, which is at the peak of the roof: the elastic part × Γ plus the QD slide.'
 
 const okCell = (ok, pass = 'Pass', fail = 'Fail') => ({ text: ok ? pass : fail, tone: ok ? 'ok' : 'bad', bold: true })
@@ -959,6 +960,7 @@ function summaryModel(r, P, { project, when }) {
     })
   }
   blocks.push({ type: 'table', head: ['Input', 'Value'], widths: [0.62, 0.38], rows: inputRows(inp, P) })
+  if (!rb) blocks.push({ type: 'p', small: true, text: SYMMETRY_NOTE })
 
   blocks.push({ type: 'h', eyebrow: 'Your model', text: 'What the calculator reads from it' })
   blocks.push({
