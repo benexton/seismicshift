@@ -17,6 +17,7 @@ import {
   DRIFT_LIMIT,
   hazardC,
   hazardCs,
+  kMu,
 } from '../lib/qdSizing'
 // Noto Sans for the summary PDF: the built-in PDF fonts can't draw μ, φ, Δ or θ.
 import regularFontUrl from '../assets/fonts/NotoSans-Regular.ttf?url'
@@ -110,6 +111,7 @@ const TERMS = [
     ['Δ,stop', 'Δ at which the governing QD reaches δ,stop.'],
     ['Δ,lim', 'Governing ULS displacement limit (Step 2).'],
     ['μ', 'Displacement ductility, Δ at the performance point ÷ Δ,y.'],
+    ['μ,eq', 'Equivalent ductility for a force-based check: the μ that, in C,d = C(T) S,p ÷ k,μ, gives the base shear at the ULS performance point. Not the displacement ductility.'],
     ['T,e', 'Elastic period of the DonoBrace-only model (no QD).'],
     ['T,eff, ξ,eff', 'Effective (secant) period and equivalent viscous damping at a performance point: 5% inherent plus hysteretic.'],
     ['V/W', 'Base shear coefficient: storey shear ÷ seismic weight.'],
@@ -135,7 +137,7 @@ const TERMS_QD65 = TERMS.map(([group, rows]) => {
     })]
   }
   return [group, rows
-    .filter(([t]) => t !== 'Rayleigh period' && t !== 'Γ')
+    .filter(([t]) => t !== 'Rayleigh period' && t !== 'Γ' && t !== 'μ,eq')
     .map(([t, d]) => {
       if (t === 'T,e') return [t, 'Elastic period of the ReidBrace-only model (no QD).']
       if (t === 'θ') return [t, 'Brace angle to the direction of loading.']
@@ -304,6 +306,28 @@ function aloneHint(r, P, size) {
   if (!d.ok || order.indexOf(d.brace) < 0 || order.indexOf(d.brace) > order.indexOf(x.brace)) return null
   return `Consider ${x.brace} on its own here`
 }
+// Equivalent ductility for force-based design, in the sense Tectonus use it: the mu that, in
+// C,d = C(T) S,p / k,mu (NZS 1170.5 cl 5.2.1.1, k,mu from the engine), gives the base shear at the ULS performance
+// point. It differs from the displacement ductility because the QD keeps gaining force after it slips.
+function equivalentMu(x, input) {
+  if (!x.uls) return null
+  const Sp = (input.spMethod ?? 'marriott') === 'unity' ? 1 : input.Sp
+  const target = (hazardC(input)(x.Te) * Sp) / x.uls.Sa
+  if (!(target > 1)) return { elastic: true, Sp }
+  let lo = 1
+  let hi = 20
+  if (kMu(hi, x.Te, input.soil) < target) return { mu: Infinity, Sp }
+  for (let i = 0; i < 60; i += 1) {
+    const m = (lo + hi) / 2
+    if (kMu(m, x.Te, input.soil) < target) lo = m
+    else hi = m
+  }
+  return { mu: (lo + hi) / 2, Sp }
+}
+const muEqText = (q) => (!q ? '-' : q.elastic ? 'elastic' : Number.isFinite(q.mu) ? f(q.mu, 2) : '> 20')
+// The note under the sizes table (main calculator): which ductility is which, as a recommendation.
+const MU_NOTE = 'μ is the displacement ductility at the ULS performance point, Δ,PP ÷ Δ,y, the measure NZS 3404 Table 12.2.4 uses for the ductility category; Category 2 (S,p = 0.7) needs it above 1.25. μ,eq is the equivalent ductility for a force-based check: the μ that gives the same ULS base shear in C,d = C(T) S,p ÷ k,μ (NZS 1170.5 cl 5.2.1.1), with your S,p. The two differ because the QD keeps gaining force after it slips, so we recommend basing the capacity design of the load path on F,max rather than C,d.'
+
 const TE_HELP = 'From your model, in this direction, with the braces tension-only. A modal analysis can sometimes keep both diagonals of each X working: if so, remove the compression diagonals, or use the period the 0.1g case implies (under your model).'
 // The three results read from the 0.1g case, labelled as such (main calculator; the QD65 page keeps NUMERIC's).
 const CASE_FIELD = {
@@ -1009,7 +1033,8 @@ function summaryModel(r, P, { project, when }) {
       ['Locking', (x) => f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)],
       ['ULS', (x) => f(x.op.uls.ratio, 2)],
       ['CALS', (x) => f(x.op.cals.ratio, 2)],
-      ['μ at ULS', (x) => (x.uls ? f(x.uls.mu, 2) : `> ${f(x.muStop, 2)}`)],
+      [isRb(P) ? 'μ at ULS' : 'μ at ULS, Δ ÷ Δ,y', (x) => (x.uls ? f(x.uls.mu, 2) : `> ${f(x.muStop, 2)}`)],
+      ...(isRb(P) ? [] : [['μ,eq, force-based', (x) => muEqText(equivalentMu(x, r.input))]]),
       ['δ at ULS (mm)', (x) => (x.uls ? f(x.uls.dqd) : '-')],
       ['δ at CALS (mm)', (x) => (x.cals ? f(x.cals.dqd) : 'past stop')],
     ]
@@ -1024,7 +1049,7 @@ function summaryModel(r, P, { project, when }) {
         ['Result', ...sizes.map((z) => ({ ...okCell(r.all[z].pass), ...(aloneHint(r, P, z) ? { sub: aloneHint(r, P, z) } : {}) }))],
       ],
     })
-    blocks.push({ type: 'p', small: true, text: `Locking, ULS and CALS are demand ÷ limit, passing at 1.00 or less. μ is the actual displacement ductility at the ULS performance point; Category 2 (S,p = 0.7) needs μ above 1.25. Sizes other than your model’s are estimated by scaling the brace stiffness; re-run your model with the size you choose. The rest of this summary is for ${label(s.size)}.` })
+    blocks.push({ type: 'p', small: true, text: `Locking, ULS and CALS are demand ÷ limit, passing at 1.00 or less. ${isRb(P) ? 'μ is the actual displacement ductility at the ULS performance point; Category 2 (S,p = 0.7) needs μ above 1.25.' : MU_NOTE} Sizes other than your model’s are estimated by scaling the brace stiffness; re-run your model with the size you choose. The rest of this summary is for ${label(s.size)}.` })
   }
 
   blocks.push({ type: 'h', eyebrow: 'Step 3', text: `Locking checks for ${label(s.size)}` })
@@ -1169,7 +1194,8 @@ function SizeTable({ r }) {
     ['Locking', (x) => f(Math.max(x.lockSLS.ratio, x.lockWind.ratio), 2)],
     ['ULS', (x) => f(x.op.uls.ratio, 2)],
     ['CALS', (x) => f(x.op.cals.ratio, 2)],
-    ['μ at ULS', (x) => (x.uls ? f(x.uls.mu, 2) : `> ${f(x.muStop, 2)}`)],
+    [isRb(P) ? 'μ at ULS' : 'μ at ULS, Δ ÷ Δ,y', (x) => (x.uls ? f(x.uls.mu, 2) : `> ${f(x.muStop, 2)}`)],
+    ...(isRb(P) ? [] : [['μ,eq, force-based', (x) => muEqText(equivalentMu(x, r.input))]]),
     ['δ at ULS (mm)', (x) => (x.uls ? f(x.uls.dqd) : '-')],
     ['δ at CALS (mm)', (x) => (x.cals ? f(x.cals.dqd) : 'past stop')],
   ]
@@ -1258,7 +1284,11 @@ function summaryStats(r, P) {
   return [
     { k: 'QD travel at ULS', v: u ? f(u.dqd) : '-', unit: 'of 33 mm' },
     { k: 'QD travel at CALS', v: c ? f(c.dqd) : 'past stop', unit: c ? 'of 50 mm' : '' },
-    { k: 'Ductility μ at ULS', v: u ? f(u.mu, 2) : '-', unit: '' },
+    { k: isRb(P) ? 'Ductility μ at ULS' : 'Displacement ductility μ at ULS', v: u ? f(u.mu, 2) : '-', unit: isRb(P) ? '' : 'Δ ÷ Δ,y' },
+    ...(isRb(P) ? [] : [(() => {
+      const q = equivalentMu(s, r.input)
+      return { k: 'Equivalent ductility μ,eq', v: muEqText(q), unit: q ? `force-based, S,p ${q.Sp}` : '' }
+    })()]),
     { k: 'Brace force at ULS', v: u ? f(u.F) : '-', unit: 'kN' },
     isRb(P)
       ? { k: `${db.brace} alone, Cat 4 / Cat 3`, v: `${okText(db)} / ${okText(r.donoBraceCat3)}`, unit: '' }
@@ -1321,7 +1351,7 @@ function Summary({ r }) {
 
       <SizeTable r={r} />
       <Note>
-        Locking, ULS and CALS are demand ÷ limit, passing at 1.00 or less. μ is the actual displacement ductility at the ULS performance point, Δ,PP ÷ Δ,y; Category 2 (S,p = 0.7) needs μ above 1.25.{multiSize(P) && <> Sizes other than your model&rsquo;s are estimated by scaling the brace stiffness; re-run your model with the size you choose.</>}
+        Locking, ULS and CALS are demand ÷ limit, passing at 1.00 or less. {isRb(P) ? 'μ is the actual displacement ductility at the ULS performance point, Δ,PP ÷ Δ,y; Category 2 (S,p = 0.7) needs μ above 1.25.' : MU_NOTE}{multiSize(P) && <> Sizes other than your model&rsquo;s are estimated by scaling the brace stiffness; re-run your model with the size you choose.</>}
       </Note>
     </div>
   )
@@ -1458,7 +1488,7 @@ function ChecksSection({ s, input }) {
         {opRow('Ductility μ > 1.25, at 1.25 Δ,y', s.op.duct, 1, '≥')}
       </Table>
       <Note>
-        The ductility check confirms μ above 1.25 from one spectrum reading. The actual ductility at the ULS performance point is {u ? `μ = ${f(u.mu, 2)}` : 'not available'}.
+        The ductility check confirms μ above 1.25 from one spectrum reading. The actual {isRb(P) ? 'ductility' : 'displacement ductility'} at the ULS performance point is {u ? `μ = ${f(u.mu, 2)}` : 'not available'}{!isRb(P) && u ? `; the equivalent ductility for a force-based check is μ,eq = ${muEqText(equivalentMu(s, input))}` : ''}.
       </Note>
       </section>
       <section>
