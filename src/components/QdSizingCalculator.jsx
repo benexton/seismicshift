@@ -311,7 +311,9 @@ function aloneHint(r, P, size) {
 // point. It differs from the displacement ductility because the QD keeps gaining force after it slips.
 function equivalentMu(x, input) {
   if (!x.uls) return null
-  const Sp = (input.spMethod ?? 'marriott') === 'unity' ? 1 : input.Sp
+  // S,p for a force-based check: NZS 3404 cl 12.2.2.1 by ductility category (Table 12.2.4, from the displacement
+  // ductility): 0.7 for Categories 1 and 2 (above 1.25), 0.9 for Categories 3 and 4.
+  const Sp = x.uls.mu > 1.25 ? 0.7 : 0.9
   const target = (hazardC(input)(x.Te) * Sp) / x.uls.Sa
   if (!(target > 1)) return { elastic: true, Sp }
   let lo = 1
@@ -326,7 +328,7 @@ function equivalentMu(x, input) {
 }
 const muEqText = (q) => (!q ? '-' : q.elastic ? 'elastic' : Number.isFinite(q.mu) ? f(q.mu, 2) : '> 20')
 // The note under the sizes table (main calculator): which ductility is which, as a recommendation.
-const MU_NOTE = 'μ is the displacement ductility at the ULS performance point, Δ,PP ÷ Δ,y, the measure NZS 3404 Table 12.2.4 uses for the ductility category; Category 2 (S,p = 0.7) needs it above 1.25. μ,eq is the equivalent ductility for a force-based check: the μ that gives the same ULS base shear in C,d = C(T) S,p ÷ k,μ (NZS 1170.5 cl 5.2.1.1), with your S,p. The two differ because the QD keeps gaining force after it slips, so we recommend basing the capacity design of the load path on F,max rather than C,d.'
+const MU_NOTE = 'μ is the displacement ductility at the ULS performance point, Δ,PP ÷ Δ,y, the measure NZS 3404 Table 12.2.4 uses for the ductility category; Category 2 (S,p = 0.7) needs it above 1.25. μ,eq is the equivalent ductility for a force-based check: the μ that gives the same ULS base shear in C,d = C(T) S,p ÷ k,μ (NZS 1170.5 cl 5.2.1.1), with S,p from NZS 3404 cl 12.2.2.1 for the ductility category (0.7 for Category 2). The two differ because the QD keeps gaining force after it slips, so we recommend basing the capacity design of the load path on F,max rather than C,d.'
 
 const TE_HELP = 'From your model, in this direction, with the braces tension-only. A modal analysis can sometimes keep both diagonals of each X working: if so, remove the compression diagonals, or use the period the 0.1g case implies (under your model).'
 // The three results read from the 0.1g case, labelled as such (main calculator; the QD65 page keeps NUMERIC's).
